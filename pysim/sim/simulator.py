@@ -1,8 +1,10 @@
 from ast import Call
-from ctypes import Union
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Iterable, NewType, Protocol, Tuple
+import logging
+
+from pysim.sim.logger import ModelLogger
 
 
 EventId = NewType('EventId', int)
@@ -138,10 +140,13 @@ class Simulator:
     
     @property
     def time(self) -> float:
-        """
-        Получить текущее модельное время
-        """
+        """Получить текущее модельное время."""
         return self._kernel.get_model_time()
+    
+    @property
+    def logger(self) -> ModelLogger:
+        """Получить логгер."""
+        return self._kernel.logger
 
 
 class ExitReason(Enum):
@@ -162,8 +167,23 @@ class ExecutionStats:
 
 
 class Kernel:
-    def __init__(self):
+    def __init__(self, model_name: str):
+        # Настраиваем название модели и логгер
+        self._model_name = model_name
+        self._logger = ModelLogger(self._model_name)
+        self._logger.set_time_getter(self.get_model_time)
+
+        # Объявляем поля, которые потом передаются через сеттеры
+        self._initializer: Initializer | None = None
         ...  # TODO: implement
+    
+    @property
+    def model_name(self) -> str:
+        return self._model_name
+    
+    @property
+    def logger(self) -> ModelLogger:
+        return self._logger
 
     def schedule(
         self,
@@ -184,6 +204,7 @@ class Kernel:
         return 0.0  # TODO: implement
     
     def set_initializer(self, fn: Initializer) -> None:
+        self._initializer = fn
         ...  # TODO: implement
     
     def set_finalizer(self, fn: Finalizer) -> None:
@@ -206,6 +227,16 @@ class Kernel:
         ...  # TODO: implement
     
     def run(self) -> Tuple[ExecutionStats, object, object | None]:
+        self._logger.setup()
+        self._logger.debug("this is a debug message")
+        self._logger.info("this is an info message")
+        self._logger.warning("this is a warning message")
+        self._logger.error("this is an error message")
+        self._logger.critical("this is a critical message")
+        print("Just some line")
+        if self._initializer:
+            self._initializer(Simulator(self))
+
         # TODO: implement
 
         # 1) Инициалзировать часы
@@ -239,7 +270,8 @@ class Kernel:
         )
 
 
-def simulate(    
+def simulate(
+    model_name: str,
     init: Initializer,
     fin: Finalizer | None = None,
     context: object | None = None,
@@ -271,6 +303,7 @@ def simulate(
     элементе кортежа-результата.
 
     Args:
+        model_name: название модели
         init: функция инициализации, обязательная
         fin: функция финализации, опциональная
         context: контекст, словарь или объект
@@ -284,7 +317,8 @@ def simulate(
         fin_ret (object | None): результат вызова finalize(), если был вызов
     """
     # Создаем ядро
-    kernel = Kernel()
+    kernel = Kernel(model_name)
+    kernel.logger.setup()
 
     # Настраиваем ядро
     kernel.set_initializer(init)
@@ -302,6 +336,8 @@ def simulate(
         kernel.set_context(context)
     else:
         kernel.set_context(None)  # explicit is better than implicit (ZoP:2)
+    
+    kernel.logger.info("starting kernel %d", 42)
 
     # Запускаем модель и возвращаем все, что она вернет
     return kernel.run()

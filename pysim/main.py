@@ -1,7 +1,8 @@
 import importlib
+import logging
 import pkgutil
 import click
-from pysim import models
+from pysim.sim import simulator
 
 
 models_list = []  # Заполняется в коде инициализации, в конце файла
@@ -28,6 +29,16 @@ def list_models():
 @cli.group("run")
 def run():
     pass
+
+
+@cli.command("sim")
+def run_simulate():
+    def initialize(sim: simulator.Simulator):
+        sim.logger.info("запускаем инициализацию")
+
+    logging.warning("calling simulate()")    
+    simulator.simulate("dummy", init=initialize, max_num_events=1)
+    print("Just another line at the end (EOS)")
 
 
 
@@ -62,6 +73,7 @@ def run():
 # * echo
 #############################################################################
 def __initialize__():
+    from pysim import models  # type: ignore
     for submodule in pkgutil.iter_modules(models.__path__):
         name = submodule.name
         try:
