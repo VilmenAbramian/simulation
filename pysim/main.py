@@ -3,6 +3,7 @@ import logging
 import pkgutil
 import click
 from pysim.sim import simulator
+from pysim.sim.logger import ModelLoggerConfig
 
 
 models_list = []  # Заполняется в коде инициализации, в конце файла
@@ -37,7 +38,16 @@ def run_simulate():
         sim.logger.info("запускаем инициализацию")
 
     logging.warning("calling simulate()")    
-    simulator.simulate("dummy", init=initialize, max_num_events=1)
+    simulator.simulate(
+        model_name="dummy", 
+        init=initialize, 
+        max_num_events=1,
+        logger_config=ModelLoggerConfig(
+            file_name="model.log",
+            file_level=logging.WARNING,
+            file_name_no_run_id=True
+        )
+    )
     print("Just another line at the end (EOS)")
 
 

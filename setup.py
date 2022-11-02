@@ -11,7 +11,8 @@ setup(
     url="https://github.com/ipu64/pyrfidsim",
     packages=["pysim"],
     install_requires=[
-        "click"
+        "click",
+        "colorama",
     ],
     entry_points='''
         [console_scripts]

@@ -1,10 +1,8 @@
-from ast import Call
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Iterable, NewType, Protocol, Tuple
-import logging
 
-from pysim.sim.logger import ModelLogger
+from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
 
 EventId = NewType('EventId', int)
@@ -277,7 +275,8 @@ def simulate(
     context: object | None = None,
     max_real_time: float | None = None,
     max_sim_time: float | None = None,
-    max_num_events: int | None = None
+    max_num_events: int | None = None,
+    logger_config: ModelLoggerConfig | None = None,
 ) -> Tuple[ExecutionStats, object, object | None]:
     """
     Запустить симуляцию модели.
@@ -310,6 +309,7 @@ def simulate(
         max_real_time: реальное время, по достижении которого надо остановиться
         max_sim_time: модельное время, по достижении которого надо остановиться
         max_num_events: сколько событий обработать до остановки
+        logger_config: конфигурация логгера
 
     Returns:
         stats (ExecutionStats): статистика выполнения модели
@@ -318,7 +318,7 @@ def simulate(
     """
     # Создаем ядро
     kernel = Kernel(model_name)
-    kernel.logger.setup()
+    kernel.logger.setup(logger_config)
 
     # Настраиваем ядро
     kernel.set_initializer(init)

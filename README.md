@@ -54,13 +54,8 @@ pip install -e .
 
 ## Модели
 
-### `mm1` - M/M/1 queueing system
+### `pingpong` - Модель пинг-понга
 
-> TODO
-
-### `echo` - Echo protocol
-
-> TODO
 
 ### `rfid` - RFID Simulator
 
