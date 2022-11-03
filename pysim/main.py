@@ -89,15 +89,15 @@ def __initialize__():
         try:
             module = importlib.import_module(".cli", f'pysim.models.{name}')            
             try:
-                cmd : click.Command = getattr(module, "run")
+                cmd : click.Command = getattr(module, "cli_run")
             except AttributeError:
-                print(f"WARNING: no function 'run(...)' found in {name}")
+                print(f"WARNING: no function 'cli_run(...)' found in {name}")
                 continue
             if isinstance(cmd, click.Command):
                 run.add_command(cmd, name)
                 models_list.append(name)
             else:
-                print("WARNING: run() must be a Click command or group")
+                print("WARNING: cli_run() must be a Click command or group")
         except ModuleNotFoundError:
             pass
 

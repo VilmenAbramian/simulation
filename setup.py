@@ -13,6 +13,7 @@ setup(
     install_requires=[
         "click",
         "colorama",
+        "pydantic",
     ],
     entry_points='''
         [console_scripts]

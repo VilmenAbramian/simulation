@@ -9,8 +9,12 @@ EventId = NewType('EventId', int)
 
 
 # Определения простых сигнатур функций:
-Initializer = Callable[["Simulator"], None]
 Finalizer = Callable[["Simulator"], object]
+
+
+class Initializer(Protocol):
+    """Определение сигнатуры инициализатора."""
+    def __call__(self, sim: "Simulator", *args: Any) -> None: ...
 
 
 class Handler(Protocol):
@@ -45,6 +49,11 @@ class Simulator:
     def context(self) -> object:
         """Получить контекст модели."""
         return self._context
+
+    @context.setter
+    def context(self, ctx: object) -> None:
+        """Назначить контекст."""
+        self._context = ctx
     
     def schedule(
         self,
@@ -173,6 +182,7 @@ class Kernel:
 
         # Объявляем поля, которые потом передаются через сеттеры
         self._initializer: Initializer | None = None
+        self._initializer_args: Iterable[Any] = ()
         ...  # TODO: implement
     
     @property
@@ -201,9 +211,13 @@ class Kernel:
     def get_model_time(self) -> float:
         return 0.0  # TODO: implement
     
-    def set_initializer(self, fn: Initializer) -> None:
+    def set_initializer(
+        self, 
+        fn: Initializer, 
+        args: Iterable[Any] = ()
+    ) -> None:
         self._initializer = fn
-        ...  # TODO: implement
+        self._initializer_args = args
     
     def set_finalizer(self, fn: Finalizer) -> None:
         ...  # TODO: implement
@@ -233,7 +247,7 @@ class Kernel:
         self._logger.critical("this is a critical message")
         print("Just some line")
         if self._initializer:
-            self._initializer(Simulator(self))
+            self._initializer(Simulator(self), *self._initializer_args)
 
         # TODO: implement
 
@@ -271,6 +285,7 @@ class Kernel:
 def simulate(
     model_name: str,
     init: Initializer,
+    init_args: Iterable[Any] = (),
     fin: Finalizer | None = None,
     context: object | None = None,
     max_real_time: float | None = None,
