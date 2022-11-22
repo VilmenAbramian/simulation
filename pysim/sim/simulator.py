@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Iterable, NewType, Protocol, Tuple
+from typing import Any, Callable, Iterable, NewType, Tuple
 
 from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
@@ -10,16 +10,8 @@ EventId = NewType('EventId', int)
 
 # Определения простых сигнатур функций:
 Finalizer = Callable[["Simulator"], object]
-
-
-class Initializer(Protocol):
-    """Определение сигнатуры инициализатора."""
-    def __call__(self, sim: "Simulator", *args: Any) -> None: ...
-
-
-class Handler(Protocol):
-    """Определение сигнатуры обработчиков событий (более сложный вариант)."""
-    def __call__(self, sim: "Simulator", *args: Any) -> None: ...
+Initializer = Callable[["Simulator", ...], None]
+Handler = Callable[["Simulator", ...], None]
 
 
 class SchedulingInPastError(ValueError):
@@ -43,15 +35,15 @@ class Simulator:
 
     def __init__(self, kernel: "Kernel", context: object | None = None):
         self._kernel = kernel
-        self._context: object = {} if context is None else context
+        self._context: object | dict = {} if context is None else context
     
     @property
-    def context(self) -> object:
+    def context(self) -> object | dict:
         """Получить контекст модели."""
         return self._context
 
     @context.setter
-    def context(self, ctx: object) -> None:
+    def context(self, ctx: object | dict) -> None:
         """Назначить контекст."""
         self._context = ctx
     
@@ -170,7 +162,8 @@ class ExecutionStats:
     time_elapsed: float        # сколько времени длилась симуляция, сек.
     exit_reason: ExitReason    # причина завершения симуляции 
     stop_message: str = ""     # сообщение, переданное в вызов stop()
-    last_handler: object | None = None  # последний выполненный обработчик
+    # последний выполненный обработчик и его аргументы
+    last_handler: tuple[Handler, tuple[...]] | None = None
 
 
 class Kernel:
@@ -212,8 +205,8 @@ class Kernel:
         return 0.0  # TODO: implement
     
     def set_initializer(
-        self, 
-        fn: Initializer, 
+        self,
+        fn: Initializer,
         args: Iterable[Any] = ()
     ) -> None:
         self._initializer = fn
@@ -236,6 +229,15 @@ class Kernel:
         ...  # TODO: implement
     
     def set_max_num_events(self, value: int) -> None:
+        ...  # TODO: implement
+
+    def future_events(self) -> list[tuple[EventId, float, Handler, tuple[Any]]]:
+        """
+        Получить список всех событий, которые сейчас находятся в очереди.
+
+        Returns:
+
+        """
         ...  # TODO: implement
     
     def run(self) -> Tuple[ExecutionStats, object, object | None]:
@@ -306,9 +308,9 @@ def simulate(
     остановится, когда любое из условий будет выполнено.
 
     Функцию инициализации надо передать обязательно, ее задача - запланировать
-    первые события. Функцию финализации можно передавать или не передавать. 
-    Если  передать функцию `fin`, то она будет вызвана после завершения 
-    симуляции, ее результат будет возвращен в третьем элеменете 
+    первые события. Функцию завершения можно передавать или не передавать.
+    Если  передать функцию `fin`, то она будет вызвана после завершения
+    симуляции, ее результат будет возвращен в третьем элементе
     кортежа-результата.
 
     Контекст можно передать явно, в виде словаря или объекта (например, 
@@ -317,14 +319,15 @@ def simulate(
     элементе кортежа-результата.
 
     Args:
-        model_name: название модели
-        init: функция инициализации, обязательная
-        fin: функция финализации, опциональная
-        context: контекст, словарь или объект
-        max_real_time: реальное время, по достижении которого надо остановиться
-        max_sim_time: модельное время, по достижении которого надо остановиться
-        max_num_events: сколько событий обработать до остановки
-        logger_config: конфигурация логгера
+        model_name: название модели.
+        init: функция инициализации, обязательная.
+        init_args: кортеж аргументов функции инициализации.
+        fin: функция завершения, опциональная.
+        context: контекст, словарь или объект.
+        max_real_time: реальное время, через которое надо остановиться.
+        max_sim_time: модельное время, через которое надо остановиться.
+        max_num_events: сколько событий обработать до остановки.
+        logger_config: конфигурация логгера.
 
     Returns:
         stats (ExecutionStats): статистика выполнения модели
@@ -336,7 +339,7 @@ def simulate(
     kernel.logger.setup(logger_config)
 
     # Настраиваем ядро
-    kernel.set_initializer(init)
+    kernel.set_initializer(init, init_args)
     if fin is not None:
         kernel.set_finalizer(fin)
     if max_real_time is not None:
@@ -344,7 +347,7 @@ def simulate(
     if max_sim_time is not None:
         kernel.set_max_sim_time(max_sim_time)
     if max_num_events is not None:
-        kernel.set_max_num_events
+        kernel.set_max_num_events(max_num_events)
     
     # Создаем и передаем ядру контекст
     if context is not None:

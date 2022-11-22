@@ -4,6 +4,7 @@ from .config import Config
 from .result import Result
 from .model import Model
 
+
 def initialize(sim: Simulator, config: Config):
     # Init context
     model = Model(config=config, logger=sim.logger)
@@ -14,6 +15,7 @@ def initialize(sim: Simulator, config: Config):
 
 def finalize(sim: Simulator) -> Result:
     assert isinstance(sim.context, Model)
+    # noinspection PyTypeChecker
     model: Model = sim.context
 
     return Result(

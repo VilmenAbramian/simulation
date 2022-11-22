@@ -46,7 +46,6 @@ class ColoredFormatter(logging.Formatter):
         return log_fmt.format(record)
 
 
-
 # Формат вывода по-умолчанию. Используются часть стандартных полей,
 # а также два дополнительных, которые добавляются классом ModelLogger:
 #

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import random
+from typing import Optional
 
 from pysim.sim.logger import ModelLogger
 from .config import Config
@@ -30,14 +31,22 @@ class Model:
         logger.debug("Model was successfully initialized")
 
 
+class Node:
+    """
+    Базовый класс для клиента и сервера, интерфейс для канала.
+    """
+    def handle_receive(self, sim: Simulator, pkt: "Packet"):
+        raise NotImplemented
+
+
 @dataclass
 class Packet:
-    sender: "Client" | "Server"
-    receiver: "Client" | "Server"
+    sender: Node
+    receiver: Node
     number: int
 
 
-class Client:
+class Client(Node):
     """
     Модель отправителя.
     """
@@ -68,14 +77,14 @@ class Client:
         self._server = server
     
     @property
-    def server(self) -> "Server" | None:
+    def server(self) -> Optional["Server"]:
         return self._server
 
     def set_channel(self, channel: "Channel"):
         self._channel = channel
     
     @property
-    def channel(self) -> "Channel" | None:
+    def channel(self) -> Optional["Channel"]:
         return self._channel
     
     def handle_timeout(self, sim: Simulator) -> None:
@@ -114,7 +123,7 @@ class Client:
 
         Args:
             sim (Simulator): экземпляр симулятора
-            number (int): число из Pong-а
+            packet (Packet): число из Pong-а
         """
         if packet.number == self.number:
             sim.logger.debug("client received pong (good)")
@@ -128,7 +137,7 @@ class Client:
         return "client"
 
 
-class Server:
+class Server(Node):
     def __init__(self, loss_prob: float, delay: float):
         self.loss_prob = loss_prob
         self.delay = delay
@@ -138,7 +147,7 @@ class Server:
         self._channel = channel
     
     @property
-    def channel(self) -> "Channel" | None:
+    def channel(self) -> Optional["Channel"]:
         return self._channel
     
     def handle_receive(self, sim: Simulator, ping: Packet) -> None:
@@ -151,7 +160,7 @@ class Server:
 
         Args:
             sim (Simulator): симулятор
-            number (int): число из Ping-а
+            ping (Packet): число из Ping-а
         """
         if random.random() > self.loss_prob:
             # Пакет не потерян (1 >= X > Pl <=> 0 <= X < 1 - Pl)
@@ -167,7 +176,7 @@ class Server:
 
         Args:
             sim (Simulator): симулятор
-            number (int): число из Ping-а
+            ping (Packet): число из Ping-а
         """
         assert self.channel is not None
 

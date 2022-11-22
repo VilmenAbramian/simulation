@@ -7,25 +7,17 @@ from .handlers import initialize, finalize
 
 MODEL_NAME = "PingPongOOP"
 
+
 @click.command()
-# Common
-@click.option("--max-sim-time", type=float, help="Max simulation time")
-@click.option("--max-real-time", type=float, help="Max real time elapsed")
-@click.option("--max-num-events", type=int, help="Max number of events")
-@click.option(
-    "--use-log-file", type=str, help=f"Record log to file {MODEL_NAME}.log"
-)
-@click.option(
-    "--log-runid/--no-log-runid", type=bool, default=False,
-    help="Show "
-)
-# Semi-common
-@click.option("--json")
-@click.argument()
-# Custom
-@click.option("--max-sim-time", type=float, help="Max simulation time")
 def cli_run():
-    print("Running echo model")
+    print(f"Running {MODEL_NAME} model")
+    run_model(Config(
+        interval=10.0,
+        channel_delay=2.0,
+        service_delay=1.0,
+        loss_prob=0.1,
+        max_pings=1_000_000
+    ), ModelLoggerConfig())
 
 
 def run_model(
@@ -45,5 +37,5 @@ def run_model(
         max_num_events=max_num_events,
         logger_config=logger_config
     )
-    assert isinstance(result, Result)
+    # assert isinstance(result, Result)
     return result
