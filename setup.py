@@ -15,6 +15,9 @@ setup(
         "colorama",
         "pydantic",
     ],
+    test_requires=[
+        "pytest",
+    ],
     entry_points='''
         [console_scripts]
         sim=pysim.main:cli

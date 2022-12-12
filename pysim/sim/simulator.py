@@ -240,7 +240,7 @@ class Kernel:
         """
         ...  # TODO: implement
     
-    def run(self) -> Tuple[ExecutionStats, object, object | None]:
+    def run(self) -> Tuple[ExecutionStats, object | dict, object | dict | None]:
         self._logger.setup()
         self._logger.debug("this is a debug message")
         self._logger.info("this is an info message")
@@ -294,7 +294,7 @@ def simulate(
     max_sim_time: float | None = None,
     max_num_events: int | None = None,
     logger_config: ModelLoggerConfig | None = None,
-) -> Tuple[ExecutionStats, object, object | None]:
+) -> Tuple[ExecutionStats, object | dict, object | dict | None]:
     """
     Запустить симуляцию модели.
 
