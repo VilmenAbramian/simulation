@@ -1,6 +1,6 @@
 import click
 
-from pysim.sim import simulate, ModelLoggerConfig
+from pysim.sim import build_simulation, run_simulation, ModelLoggerConfig
 from .config import Config
 from .result import Result
 from .handlers import initialize, finalize
@@ -27,15 +27,16 @@ def run_model(
     max_sim_time: float | None = None,
     max_num_events: int | None = None,
 ) -> Result:
-    sim_time, _, result = simulate(
-        MODEL_NAME,
-        init=initialize,
-        init_args=(config,),
-        fin=finalize,
-        max_real_time=max_real_time,
-        max_sim_time=max_sim_time,
-        max_num_events=max_num_events,
-        logger_config=logger_config
-    )
+    sim_time, _, result = run_simulation(
+        build_simulation(
+            MODEL_NAME,
+            init=initialize,
+            init_args=(config,),
+            fin=finalize,
+            max_real_time=max_real_time,
+            max_sim_time=max_sim_time,
+            max_num_events=max_num_events,
+            logger_config=logger_config
+        ))
     # assert isinstance(result, Result)
     return result

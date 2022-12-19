@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Iterable, NewType, Tuple
+from typing import Any, Callable, Iterable, NewType, Tuple, Iterator
 
 from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
@@ -17,6 +17,30 @@ Handler = Callable[["Simulator", ...], None]
 class SchedulingInPastError(ValueError):
     """Исключение, возникающее при попытке запланировать событие в прошлом."""
     ...
+
+
+class ExitReason(Enum):
+    NO_MORE_EVENTS = 0
+    REACHED_REAL_TIME_LIMIT = 1
+    REACHED_SIM_TIME_LIMIT = 2
+    STOPPED = 3
+    INTERRUPTED = 4  # выполнение не закончилось - прерывание при отладке
+
+
+@dataclass
+class ExecutionStats:
+    num_events_processed: int  # сколько было обработано событий
+    sim_time: float            # сколько времени на модельных часах в конце
+    time_elapsed: float        # сколько времени длилась симуляция, сек.
+    exit_reason: ExitReason    # причина завершения симуляции
+    stop_message: str = ""     # сообщение, переданное в вызов stop()
+    # последний выполненный обработчик и его аргументы
+    last_handler: tuple[Handler, tuple[...]] | None = None
+    next_handler: tuple[Handler, tuple[...]] | None = None
+    last_sim_time: float = 0   # для режима отладки: предыдущий момент времени
+
+
+ExecResult = Tuple[ExecutionStats, object | dict, object | dict | None]
 
 
 class Simulator:
@@ -148,24 +172,6 @@ class Simulator:
         return self._kernel.logger
 
 
-class ExitReason(Enum):
-    NO_MORE_EVENTS = 0
-    REACHED_REAL_TIME_LIMIT = 1
-    REACHED_SIM_TIME_LIMIT = 2
-    STOPPED = 3
-
-
-@dataclass
-class ExecutionStats:
-    num_events_processed: int  # сколько было обработано событий
-    sim_time: float            # сколько времени на модельных часах в конце
-    time_elapsed: float        # сколько времени длилась симуляция, сек.
-    exit_reason: ExitReason    # причина завершения симуляции 
-    stop_message: str = ""     # сообщение, переданное в вызов stop()
-    # последний выполненный обработчик и его аргументы
-    last_handler: tuple[Handler, tuple[...]] | None = None
-
-
 class Kernel:
     def __init__(self, model_name: str):
         # Настраиваем название модели и логгер
@@ -176,6 +182,10 @@ class Kernel:
         # Объявляем поля, которые потом передаются через сеттеры
         self._initializer: Initializer | None = None
         self._initializer_args: Iterable[Any] = ()
+
+        # Переменные отладчика
+        self._debug = False
+
         ...  # TODO: implement
     
     @property
@@ -185,6 +195,18 @@ class Kernel:
     @property
     def logger(self) -> ModelLogger:
         return self._logger
+
+    @property
+    def debug(self) -> bool:
+        return self._debug
+
+    def set_debug(self, value: bool):
+        if value != self._debug:
+            if value:
+                self.logger.info("Enter debugger mode")
+            else:
+                self.logger.info("Exit debugger mode")
+            self._debug = value
 
     def schedule(
         self,
@@ -240,16 +262,26 @@ class Kernel:
         """
         ...  # TODO: implement
     
-    def run(self) -> Tuple[ExecutionStats, object | dict, object | dict | None]:
+    def build_runner(self, debug: bool = False) -> Iterator[ExecResult]:
+        """
+        Начать выполнение
+
+        Args:
+            debug:
+
+        Returns:
+
+        """
         self._logger.setup()
         self._logger.debug("this is a debug message")
         self._logger.info("this is an info message")
         self._logger.warning("this is a warning message")
         self._logger.error("this is an error message")
         self._logger.critical("this is a critical message")
-        print("Just some line")
         if self._initializer:
             self._initializer(Simulator(self), *self._initializer_args)
+
+        self.set_debug(debug)
 
         # TODO: implement
 
@@ -266,11 +298,24 @@ class Kernel:
 
         # 4.2) Изменить модельное время
 
-        # 4.3) Выполнить обработчик
+        # 4.3) Если в режиме debug, завершиться, причем вернуть:
+        #      - в ExecutionStats:
+        #        * exit_reason=INTERRUPTED,
+        #        * time_elapsed можно не считать;
+        #        * next_handler - очередной хендлер, который надо выполнить
+        #          (который был извлечен из очереди на шаге 4.1)
+        #        * last_handler - предыдущий хендлер, если он был
+        #      - второй компонент - контекст, как и при нормальном выходе
+        #      - finalize() НЕ вызывать, последний компонент результата - None
 
-        # 5) Вызвать код финализации
+        # 4.4) Если не в режиме debug() или если опять вызвали run(),
+        #      выполнить обработчик
 
-        return (
+        # 5) Вызвать код финализации (результат выполнения self._finalizer())
+        # if self._finalize:
+        #   fin_ret = self._finalize()
+
+        yield (
             ExecutionStats(
                 num_events_processed=0,  # сколько обработали событий
                 sim_time=0.0,            # время на модельных часах
@@ -280,11 +325,11 @@ class Kernel:
                 last_handler=self.get_curr_handler(),  # последний обработчик
             ),
             {},  # контекст из объекта Simulator
-            None,  # что-то, что вернула функция finalize(), если вызывалась
+            None,  # fin_ret, что-то, что вернула функция finalize(), если была
         )
 
 
-def simulate(
+def build_simulation(
     model_name: str,
     init: Initializer,
     init_args: Iterable[Any] = (),
@@ -294,7 +339,8 @@ def simulate(
     max_sim_time: float | None = None,
     max_num_events: int | None = None,
     logger_config: ModelLoggerConfig | None = None,
-) -> Tuple[ExecutionStats, object | dict, object | dict | None]:
+    debug: bool = False,
+) -> Iterator[ExecResult]:
     """
     Запустить симуляцию модели.
 
@@ -309,7 +355,7 @@ def simulate(
 
     Функцию инициализации надо передать обязательно, ее задача - запланировать
     первые события. Функцию завершения можно передавать или не передавать.
-    Если  передать функцию `fin`, то она будет вызвана после завершения
+    Если передать функцию `fin`, то она будет вызвана после завершения
     симуляции, ее результат будет возвращен в третьем элементе
     кортежа-результата.
 
@@ -319,15 +365,16 @@ def simulate(
     элементе кортежа-результата.
 
     Args:
-        model_name: название модели.
-        init: функция инициализации, обязательная.
-        init_args: кортеж аргументов функции инициализации.
-        fin: функция завершения, опциональная.
-        context: контекст, словарь или объект.
-        max_real_time: реальное время, через которое надо остановиться.
-        max_sim_time: модельное время, через которое надо остановиться.
-        max_num_events: сколько событий обработать до остановки.
-        logger_config: конфигурация логгера.
+        model_name: название модели
+        init: функция инициализации, обязательная
+        init_args: кортеж аргументов функции инициализации
+        fin: функция завершения, опциональная
+        context: контекст, словарь или объект
+        max_real_time: реальное время, когда надо остановиться
+        max_sim_time: модельное время, через которое надо остановиться
+        max_num_events: сколько событий обработать до остановки
+        logger_config: конфигурация логгера
+        debug: если True, то запуститься в режиме отладки
 
     Returns:
         stats (ExecutionStats): статистика выполнения модели
@@ -354,8 +401,20 @@ def simulate(
         kernel.set_context(context)
     else:
         kernel.set_context(None)  # explicit is better than implicit (ZoP:2)
-    
-    kernel.logger.info("starting kernel %d", 42)
+
+    kernel.set_debug(debug)
 
     # Запускаем модель и возвращаем все, что она вернет
-    return kernel.run()
+    return kernel.build_runner()
+
+
+def run_simulation(sim: Iterator[ExecResult]) -> ExecResult:
+    ret = None
+    try:
+        while True:
+            ret = next(sim)
+    except StopIteration:
+        pass
+    if ret is None:
+        raise RuntimeError("simulation yield no results")
+    return ret

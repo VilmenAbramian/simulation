@@ -51,7 +51,6 @@ def run_simulate():
     print("Just another line at the end (EOS)")
 
 
-
 #############################################################################
 # ИНИЦИАЛИЗАЦИЯ
 #
@@ -89,7 +88,7 @@ def __initialize__():
         try:
             module = importlib.import_module(".cli", f'pysim.models.{name}')            
             try:
-                cmd : click.Command = getattr(module, "cli_run")
+                cmd: click.Command = getattr(module, "cli_run")
             except AttributeError:
                 print(f"WARNING: no function 'cli_run(...)' found in {name}")
                 continue
@@ -100,6 +99,7 @@ def __initialize__():
                 print("WARNING: cli_run() must be a Click command or group")
         except ModuleNotFoundError:
             pass
+
 
 __initialize__()
 
