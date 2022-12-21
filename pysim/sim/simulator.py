@@ -194,7 +194,7 @@ class EventQueue:
         return event_id # Возвращаем порядковый номер помещённого в кучу события
 
     def pop(self):
-        # Удаление наименьшего(?) события
+        # Удаление ближайшего по времени события
         if self.empty:
             raise IndexError("Удаление из пустой очереди")
         t_fire, event_id, item = heapq.heappop(self._heap) 
@@ -212,6 +212,10 @@ class EventQueue:
 
     def __len__(self):
         return len(self._dict)
+
+    @property
+    def empty(self):
+        return len(self._dict) == 0
 
     def clear(self):
         # Очищаем всю очередь
