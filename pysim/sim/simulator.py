@@ -241,6 +241,8 @@ class Kernel:
         # Переменные отладчика
         self._debug = False
 
+        self._queue = EventQueue()
+
         ...  # TODO: implement
     
     @property
@@ -270,6 +272,8 @@ class Kernel:
         args: Iterable[Any] = (),
         msg: str = ""
     ) -> EventId:
+        if delay is not None:
+            return self._queue.push(self.get_model_time + delay, (handler, args))
         return EventId(0)  # TODO: implement
     
     def cancel(self, event_id: EventId) -> int:
