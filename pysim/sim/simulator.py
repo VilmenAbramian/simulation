@@ -4,6 +4,8 @@ from typing import Any, Callable, Iterable, NewType, Tuple, Iterator
 
 from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
+import itertools    # Библиотека, с помощью которой создаётся бесконечный генератор порядковых номеров событий
+import heapq        # Библиотека, необходимые для работы неупорядоченной кучи событий
 
 EventId = NewType('EventId', int)
 
@@ -28,7 +30,7 @@ class ExitReason(Enum):
 
 
 @dataclass
-class ExecutionStats:
+class ExecutionStats:          # Статистика исполнения
     num_events_processed: int  # сколько было обработано событий
     sim_time: float            # сколько времени на модельных часах в конце
     time_elapsed: float        # сколько времени длилась симуляция, сек.
@@ -171,6 +173,57 @@ class Simulator:
         """Получить логгер."""
         return self._kernel.logger
 
+class EventQueue:
+    '''
+    Класс, создающий объект очереди. Именно здесь формируется очередь.
+    В этом классе реализована непосредственно сама куча, добавление и удаление
+    событий из неё. Остальные объекты и функции лишь обращаются через различные
+    прокси-объекты к данному классу, где реализована сама логика.
+    '''
+    def __init__(self):                      # Инициализируем поля объекта очереди
+        self._event_list  = []               # Лист записей, положенных в кучу
+        self._event_dict  = {}               # Словарь, сопоставляющий задачи с записями в листе
+        self._counter = itertools.count()    # Уникальный порядковый номер 
+        self.removed = '<removed-task>'      # Заполнитель для удалённого события (можно взамен использовать None)
+
+    def push(self, time, task):                   # Добавляем новое событиеили обновляем приоритет существующего
+        '''
+        Куча - это просто list, но отсортированный, исходя из правил наименьшего
+        бинарного дерева. Здесь нет преобразования данных list по правилам кучи,
+        потому что list изначально пуст и события в него добавляются сразу же 
+        исходя из правил кучи
+        '''
+        if task in self._event_dict:              # Атрибуты объекта внутри класса нужно вызывать через self.
+            self.remove_task(task)                # Методы внутри класса нужно вызывать через self.
+        number = next(self._counter)
+        event = [time, number, task]              # Формируем список входа события в кучу: (приоритет, уникальный порядковый номер, название записи)
+        self._event_dict[task] = event            # Кладём в словарь под ключ названия записи весь вход в кучу
+        heapq.heappush(self._event_list, event)   # Добавляем ("пушим") событие в кучу
+        print("Лист событий: ", self._event_list)
+        print("Словарь событий: ", self._event_dict)
+
+    def remove_task(self, task):
+        entry = self._event_dict.pop(task)        # Кекаем событие из словаря и получаем его в переменную "вход"
+        entry[-1] = self.removed                  # Даём название удалённой задачи <removed-task>
+
+    def pop_task(self):                         # Удаление ближайшего по времени события
+        while self._event_list:
+            (priority, count, task) = heapq.heappop(self._event_list)
+            if task is not self.removed:
+                del self._event_dict[task]
+                return task
+        raise KeyError('pop from an empty priority queue')
+
+    def len(self):                              # Метод, возвращающий количество событий в очереди
+        return len(self._event_dict)
+
+    def cancel(self, event_id):                 # Метод, отменяющий конкретное событие
+        if event_id != self.removed and event_id in self._event_dict:
+            self._event_dict.pop(event_id)
+
+    def clear(self):                    # Полностью очищаем очередь
+        self._event_list.clear()
+        self._event_dict.clear()
 
 class Kernel:
     def __init__(self, model_name: str):
