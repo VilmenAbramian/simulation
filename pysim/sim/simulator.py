@@ -180,50 +180,104 @@ class EventQueue:
     событий из неё. Остальные объекты и функции лишь обращаются через различные
     прокси-объекты к данному классу, где реализована сама логика.
     '''
-    def __init__(self):                      # Инициализируем поля объекта очереди
-        self._event_list  = []               # Лист записей, положенных в кучу
+    def __init__(self):  
+        '''
+        Инициализируем атрибуты объекта очереди
+        ''' 
+        self._event_list  = []               # Лист событий, который будет упорядочен, как приоритетная минимальная куча
         self._event_dict  = {}               # Словарь, сопоставляющий задачи с записями в листе
         self._counter = itertools.count()    # Уникальный порядковый номер 
-        self.removed = '<removed-task>'      # Заполнитель для удалённого события (можно взамен использовать None)
+        # self.removed = '<removed-task>'      # Заполнитель для удалённого события (можно взамен использовать None)
 
-    def push(self, time, task):                   # Добавляем новое событиеили обновляем приоритет существующего
+    def push(self, time, task):
         '''
+        Добавление нового события по правилам кучи
+
+        params:
+        self - объект класса
+        time - число (int, float), характеризующее время (приоритет) события
+        task - string, просто текстовое назвние события
+
+        Returns:
+        number - уникальный порядковый номер события
+
         Куча - это просто list, но отсортированный, исходя из правил наименьшего
         бинарного дерева. Здесь нет преобразования данных list по правилам кучи,
         потому что list изначально пуст и события в него добавляются сразу же 
         исходя из правил кучи
         '''
-        if task in self._event_dict:              # Атрибуты объекта внутри класса нужно вызывать через self.
-            self.remove_task(task)                # Методы внутри класса нужно вызывать через self.
-        number = next(self._counter)
-        event = [time, number, task]              # Формируем список входа события в кучу: (приоритет, уникальный порядковый номер, название записи)
-        self._event_dict[task] = event            # Кладём в словарь под ключ названия записи весь вход в кучу
+        number = next(self._counter)              # Генерируем уникольный номер события
+        event = [time, number, task]              # Формируем list события: (время (приоритет), уникальный порядковый номер, название события)
+        self._event_dict[number] = event          # Кладём в словарь. Ключ - название записи, значение - list события
         heapq.heappush(self._event_list, event)   # Добавляем ("пушим") событие в кучу
-        print("Лист событий: ", self._event_list)
-        print("Словарь событий: ", self._event_dict)
+        return number
+        # print("Лист событий: ", self._event_list)
+        # print("Словарь событий: ", self._event_dict)
 
-    def remove_task(self, task):
-        entry = self._event_dict.pop(task)        # Кекаем событие из словаря и получаем его в переменную "вход"
-        entry[-1] = self.removed                  # Даём название удалённой задачи <removed-task>
 
-    def pop_task(self):                         # Удаление ближайшего по времени события
-        while self._event_list:
-            (priority, count, task) = heapq.heappop(self._event_list)
-            if task is not self.removed:
-                del self._event_dict[task]
-                return task
+    def pop(self):                         
+        '''
+        Удаление ближайшего по времени события.
+        Не требует передачи аргументов.
+
+        :raises:
+        - KeyError: если очередь пуста
+        '''
+        # print(self._event_dict)
+        if self.empty:
+            raise KeyError("Удаление из пустой очереди событий!")
+        (time, number, task) = heapq.heappop(self._event_list)
+        while task is None:
+            (time, number, task) = heapq.heappop(self._event_list)
+            # print('here')
+        self._event_dict.pop(number)
+        return (time, number, task)
         raise KeyError('pop from an empty priority queue')
 
-    def len(self):                              # Метод, возвращающий количество событий в очереди
+    def __len__(self):     
+        '''
+        Возвращает количество событий в очереди
+        '''
         return len(self._event_dict)
 
-    def cancel(self, event_id):                 # Метод, отменяющий конкретное событие
-        if event_id != self.removed and event_id in self._event_dict:
-            self._event_dict.pop(event_id)
+    def cancel(self, number):
+        '''
+        Отмена запланированного события в будущем
+        params: number - уникальный порядковый номер события, по которому оно находится и удаляется
+        '''
+        if number in self._event_dict and number is not None:
+            # event is [time, number, task]
+            event = self._event_dict.pop(number)      # Удаляем запись о событии из словаря (но не из кучи)
+            event[-1] = None
+            return (event)
+            
 
-    def clear(self):                    # Полностью очищаем очередь
+    def clear(self):
+        '''
+        Полная очистка очереди событий
+
+        Returns: None
+        '''
         self._event_list.clear()
         self._event_dict.clear()
+ 
+    @property
+    def empty(self):
+        '''
+        Метод, превращёный с помощью декоратора в поле
+        Returns: True - если очредь пуста, Falce, если в ней есть хоть одно событие
+        '''
+        return len(self._event_dict) == 0
+    
+    def to_list(self):
+        '''
+        Преобразование объекта класса EventQueue в list.
+        Позволяет просмотреть очередь за пределеми класса.
+
+        Returns: list, содержащий события очереди
+        '''
+        l = list(self._event_list)
+        return l
 
 class Kernel:
     def __init__(self, model_name: str):

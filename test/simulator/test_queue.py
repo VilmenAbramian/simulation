@@ -37,18 +37,21 @@ def test_pop():
 
 def test_cancel():
     queue = EventQueue()
-    queue.push(1, 'cat')        # 1
-    queue.push(3, 'dog')        # 2
-    queue.push(2, 'cow')        # 3
-    queue.push(4, 'horse')      # 4
-    queue.push(6, 'rooster')    # 5
+    queue.push(1, 'cat')        # 0
+    queue.push(3, 'dog')        # 1
+    queue.push(2, 'cow')        # 2
+    queue.push(4, 'horse')      # 3
+    queue.push(6, 'rooster')    # 4
     queue.cancel(2)             # cow
-    queue.cancel(6)             # rooster
+    queue.cancel(4)             # rooster
 
     assert (1, 0, 'cat') == queue.pop()
     assert (3, 1, 'dog') == queue.pop()
     assert (4, 3, 'horse') == queue.pop()
-    assert (6, 4, 'rooster') == queue.pop()
+
+    assert queue.empty
+    with pytest.raises(KeyError):
+        queue.pop()
 
 def test_len():
     queue = EventQueue()
