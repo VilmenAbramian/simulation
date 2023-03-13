@@ -5,7 +5,7 @@ from typing import Any, Callable, Iterable, NewType, Tuple, Iterator
 from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
 import itertools    # Библиотека, с помощью которой создаётся бесконечный генератор порядковых номеров событий
-import heapq        # Библиотека, необходимые для работы неупорядоченной кучи событий
+import heapq        # Библиотека, необходимая для работы неупорядоченной кучи событий
 
 EventId = NewType('EventId', int)
 
@@ -293,6 +293,14 @@ class Kernel:
         # Переменные отладчика
         self._debug = False
 
+        self._queue = EventQueue()  # Очередь событий
+
+        self._user_stop = False     # Атрибут ручной остановки моделирования
+
+        self._sim_time = 0.0        # Модельное время (в условных единицах)
+        # self._t_start = None        # Время начала симуляции
+        # self._t_stop = None         # Время остановки симуляции
+        # self._num_events_served = 0 # Количество обслуженных событий
         ...  # TODO: implement
     
     @property
@@ -322,16 +330,34 @@ class Kernel:
         args: Iterable[Any] = (),
         msg: str = ""
     ) -> EventId:
-        return EventId(0)  # TODO: implement
+        '''
+        Планирование нового события.
+        Больше информации в описании Simulator
+        '''
+        if delay is not None:
+            return self._queue.push(self._sim_time + delay, (handler, args, msg))
+        else:
+            return None
     
     def cancel(self, event_id: EventId) -> int:
-        return 0  # TODO: implement
+        '''
+        Отменить событие с идентификатором `event_id`.
+        Больше информации в описании Simulator
+        '''
+        if event_id in self._queue._event_dict:
+            self._queue.cancel(event_id)
+            return 1
+        else:
+            return 0
     
     def stop(self, msg: str) -> None:
-        ...  # TODO: implement
+        '''
+        Прекратить выполнение модели.
+        '''
+        self._user_stop = True
     
     def get_model_time(self) -> float:
-        return 0.0  # TODO: implement
+        return self._sim_time
     
     def set_initializer(
         self,
