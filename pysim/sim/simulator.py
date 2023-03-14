@@ -6,6 +6,7 @@ from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
 import itertools    # Библиотека, с помощью которой создаётся бесконечный генератор порядковых номеров событий
 import heapq        # Библиотека, необходимая для работы неупорядоченной кучи событий
+import time         # Библиотека, позволяющая определять текущее реальное время
 
 EventId = NewType('EventId', int)
 
@@ -290,18 +291,24 @@ class Kernel:
         self._initializer: Initializer | None = None
         self._initializer_args: Iterable[Any] = ()
 
-        # Переменные отладчика
-        self._debug = False
+        # Очередь событий
+        self._queue = EventQueue()
 
-        self._queue = EventQueue()  # Очередь событий
-
-        self._user_stop = False     # Атрибут ручной остановки моделирования
-
+        # Время и часы
         self._sim_time = 0.0        # Модельное время (в условных единицах)
-        # self._t_start = None        # Время начала симуляции
-        # self._t_stop = None         # Время остановки симуляции
-        # self._num_events_served = 0 # Количество обслуженных событий
+        self._t_start = None        # Реальное время начала симуляции
+        self._max_sim_time = None   # Пользовательское максимальное виртуальное время симуляции
+        self._max_real_time = None  # Пользовательское максимальное реальное время симуляции
+
+        # Прочее
+        self.context = None            # Контекст всей модели
+        self._debug = False            # Переменная отладчика
+        self._user_stop = False        # Атрибут ручной остановки моделирования
+        self._num_events_served = None # Количество обслуженных событий
+        self._max_num_events = None    # Пользовательское максимальное количество обслуживаемых событий
         ...  # TODO: implement
+
+        # self._state = self.State.READY
     
     @property
     def model_name(self) -> str:
@@ -355,6 +362,7 @@ class Kernel:
         Прекратить выполнение модели.
         '''
         self._user_stop = True
+        # TODO: что-то сделать с опциональным сообщением об остановке
     
     def get_model_time(self) -> float:
         return self._sim_time
@@ -371,6 +379,7 @@ class Kernel:
         ...  # TODO: implement
     
     def set_context(self, context: object) -> None:
+        self.context = context
         ...  # TODO: implement
 
     def get_curr_handler(self) -> object | None:
@@ -378,12 +387,15 @@ class Kernel:
         ...  # TODO: implement
     
     def set_max_sim_time(self, value: float) -> None:
+        self._max_sim_time = value
         ...  # TODO: implement
     
     def set_max_real_time(self, value: float) -> None:
+        self._max_real_time = value
         ...  # TODO: implement
     
     def set_max_num_events(self, value: int) -> None:
+        self._max_num_events = value
         ...  # TODO: implement
 
     def future_events(self) -> list[tuple[EventId, float, Handler, tuple[Any]]]:
@@ -391,12 +403,14 @@ class Kernel:
         Получить список всех событий, которые сейчас находятся в очереди.
 
         Returns:
-
+        list, в котором содержитмя приоритетная куча событий
         """
+        return EventQueue.to_list()
         ...  # TODO: implement
     
     def build_runner(self, debug: bool = False) -> Iterator[ExecResult]:
         """
+        Бывший run.
         Начать выполнение
 
         Args:
@@ -416,6 +430,8 @@ class Kernel:
 
         self.set_debug(debug)
 
+        self._num_events_served = 0
+        self._t_start = time.time()         # Текущее реальное время (от 1.01.1970)
         # TODO: implement
 
         # 1) Инициалзировать часы
