@@ -411,13 +411,14 @@ class Kernel:
     def build_runner(self, debug: bool = False) -> Iterator[ExecResult]:
         """
         Бывший run.
-        Начать выполнение
-
+        Начинает выполнение модели.
+        Извлекает события из очереди и вызывает их обработчики.
+        как писать длинные комментарии к переменным?
         Args:
-            debug:
+            debug: bool режим работы модели. В случае True ... В случае False обычная работа ядра
 
         Returns:
-
+            Описано в конце метода в yield
         """
         self._logger.setup()
         self._logger.debug("this is a debug message")
@@ -431,35 +432,52 @@ class Kernel:
         self.set_debug(debug)
 
         self._num_events_served = 0
-        self._t_start = time.time()         # Текущее реальное время (от 1.01.1970)
         # TODO: implement
 
         # 1) Инициалзировать часы
+        self._t_start = time.time()         # Текущее реальное время (от 1.01.1970)
 
         # 2) Создать экземпляр Simulator. Если контекст есть,
         #    использовать его. Если нет - использовать словарь (по-умолчанию)
-
+        sim = Simulator(self, self.context)
         # 3) Вызвать код инициализации модели
 
+        # item = (handler, args, msg)
+
         # 4) Начать выполнение цикла до стоп-условий или опустошения очереди
-
-        # 4.1) Взять очередное неотмененное событие
-
-        # 4.2) Изменить модельное время
-
-        # 4.3) Если в режиме debug, завершиться, причем вернуть:
-        #      - в ExecutionStats:
-        #        * exit_reason=INTERRUPTED,
-        #        * time_elapsed можно не считать;
-        #        * next_handler - очередной хендлер, который надо выполнить
-        #          (который был извлечен из очереди на шаге 4.1)
-        #        * last_handler - предыдущий хендлер, если он был
-        #      - второй компонент - контекст, как и при нормальном выходе
-        #      - finalize() НЕ вызывать, последний компонент результата - None
-
-        # 4.4) Если не в режиме debug() или если опять вызвали run(),
-        #      выполнить обработчик
-
+        while not self._queue.empty and not self.stop_conditions():
+            # 4.1) Взять очередное неотмененное событие
+            t, event_id, item = self._queue.pop()
+            # 4.2) Изменить модельное время
+            self._sim_time = t
+            # 4.3) Если в режиме debug, завершиться, причем вернуть:
+            #      - в ExecutionStats:
+            #        * exit_reason=INTERRUPTED,
+            #        * time_elapsed можно не считать;
+            #        * next_handler - очередной хендлер, который надо выполнить
+            #          (который был извлечен из очереди на шаге 4.1)
+            #        * last_handler - предыдущий хендлер, если он был
+            #      - второй компонент - контекст, как и при нормальном выходе
+            #      - finalize() НЕ вызывать, последний компонент результата - None
+            if self._debug == True:
+                self._user_stop = True      # Останавливаем модель?
+                return (
+                    ExecutionStats(
+                        exit_reason=ExitReason.INTERRUPTED,  # причина выхода
+                        time_elapsed=None,        # сколько времени потрачено
+                        next_handler = item[0],
+                        sim_time=0.0,            # время на модельных часах
+                        last_handler=self.get_curr_handler(),  # последний обработчик
+                    ),
+                    sim.context,  # контекст из объекта Simulator
+                    None,
+                )
+            # 4.4) Если не в режиме debug() или если опять вызвали run(),
+            #      выполнить обработчик
+            else:
+                handler, args, msg = item
+                handler(self, *args)
+                self._num_events_served += 1
         # 5) Вызвать код финализации (результат выполнения self._finalizer())
         # if self._finalize:
         #   fin_ret = self._finalize()
@@ -476,6 +494,20 @@ class Kernel:
             {},  # контекст из объекта Simulator
             None,  # fin_ret, что-то, что вернула функция finalize(), если была
         )
+    
+    @property
+    def real_time_elapsed(self):
+        return time.time() - self._t_start
+    
+    def stop_conditions(self):
+        '''
+        Возвращает стоп-условия
+        '''
+        return ((self._max_sim_time is not None and
+            self._sim_time > self._max_sim_time) or
+            (self._max_real_time is not None and
+            self.real_time_elapsed > self._max_real_time) or
+            self._user_stop)
 
 
 def build_simulation(
