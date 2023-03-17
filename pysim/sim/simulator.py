@@ -426,8 +426,6 @@ class Kernel:
         self._logger.warning("this is a warning message")
         self._logger.error("this is an error message")
         self._logger.critical("this is a critical message")
-        if self._initializer:
-            self._initializer(Simulator(self), *self._initializer_args)
 
         self.set_debug(debug)
 
@@ -440,7 +438,8 @@ class Kernel:
         # 2) Создать экземпляр Simulator. Если контекст есть,
         #    использовать его. Если нет - использовать словарь (по-умолчанию)
         sim = Simulator(self, self.context)
-        # 3) Вызвать код инициализации модели
+        
+        # 3) TODO: Вызвать код инициализации модели
 
         # item = (handler, args, msg)
 
