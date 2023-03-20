@@ -46,7 +46,7 @@ def initialize(
 
 
 def handle_timeout(sim: Simulator):
-    sim.call(handle_service, args=(sim.context['next_number']))
+    sim.call(handle_service, args=(sim.context['next_number'],))
 
 
 def handle_service(sim: Simulator, number: int):
@@ -111,8 +111,8 @@ def test_simulate_till_max():
         next(sim)
 
     # Проверяем статистику
-    assert elapsed < 2.0  # не более 2 секунд, реально должно быть еще меньше
-    assert pytest.approx(elapsed, rel=0.1) == stats.time_elapsed
+    assert elapsed.seconds < 2.0  # не более 2 секунд, реально должно быть еще меньше
+    assert pytest.approx(elapsed.seconds, rel=0.1) == stats.time_elapsed
     assert MAX_SERVED * 2 == stats.num_events_processed
     assert pytest.approx(INTERVAL * MAX_SERVED, rel=0.01) == stats.sim_time
     assert ExitReason.STOPPED == stats.exit_reason

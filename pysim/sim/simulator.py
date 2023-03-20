@@ -304,6 +304,7 @@ class Kernel:
         self.context = None            # Контекст всей модели
         self._debug = False            # Переменная отладчика
         self._user_stop = False        # Атрибут ручной остановки моделирования
+        self.stop_reason = None        # 
         self._num_events_served = None # Количество обслуженных событий
         self._max_num_events = None    # Пользовательское максимальное количество обслуживаемых событий
         ...  # TODO: implement
@@ -361,8 +362,22 @@ class Kernel:
         '''
         Прекратить выполнение модели.
         '''
+        self.stop_reason = ExitReason.STOPPED
         self._user_stop = True
         # TODO: что-то сделать с опциональным сообщением об остановке
+
+    def stop_conditions(self, msg: str = None) -> bool:
+        '''
+        Возвращает True для остановки модели
+        '''
+        if self._max_sim_time is not None and self._sim_time > self._max_sim_time:
+            self.stop_reason = ExitReason.REACHED_SIM_TIME_LIMIT
+            return True
+        elif self._max_real_time is not None and self.real_time_elapsed > self._max_real_time:
+            self.stop_reason = ExitReason.REACHED_REAL_TIME_LIMIT
+            return True
+        elif self._user_stop:
+            return True
     
     def get_model_time(self) -> float:
         return self._sim_time
@@ -388,12 +403,10 @@ class Kernel:
     
     def set_max_sim_time(self, value: float) -> None:
         self._max_sim_time = value
-        ...  # TODO: implement
     
     def set_max_real_time(self, value: float) -> None:
         self._max_real_time = value
-        ...  # TODO: implement
-    
+
     def set_max_num_events(self, value: int) -> None:
         self._max_num_events = value
         ...  # TODO: implement
@@ -421,11 +434,11 @@ class Kernel:
             Описано в конце метода в yield
         """
         self._logger.setup()
-        self._logger.debug("this is a debug message")
-        self._logger.info("this is an info message")
-        self._logger.warning("this is a warning message")
-        self._logger.error("this is an error message")
-        self._logger.critical("this is a critical message")
+        # self._logger.debug("this is a debug message")
+        # self._logger.info("this is an info message")
+        # self._logger.warning("this is a warning message")
+        # self._logger.error("this is an error message")
+        # self._logger.critical("this is a critical message")
 
         self.set_debug(debug)
 
@@ -440,9 +453,11 @@ class Kernel:
         sim = Simulator(self, self.context)
         
         # 3) TODO: Вызвать код инициализации модели
-
+        self._initializer(sim, *self._initializer_args)
         # item = (handler, args, msg)
 
+        if self._queue.empty:
+            self.stop_reason = ExitReason.NO_MORE_EVENTS
         # 4) Начать выполнение цикла до стоп-условий или опустошения очереди
         while not self._queue.empty and not self.stop_conditions():
             # 4.1) Взять очередное неотмененное событие
@@ -475,7 +490,7 @@ class Kernel:
             #      выполнить обработчик
             else:
                 handler, args, msg = item
-                handler(self, *args)
+                handler(sim, *args)         # Внимание! В обработчик надо передавать прокси-объект Simulator, а не объект ядра!!!
                 self._num_events_served += 1
         # 5) Вызвать код финализации (результат выполнения self._finalizer())
         # if self._finalize:
@@ -483,10 +498,10 @@ class Kernel:
 
         yield (
             ExecutionStats(
-                num_events_processed=0,  # сколько обработали событий
-                sim_time=0.0,            # время на модельных часах
+                num_events_processed=self._num_events_served,  # сколько обработали событий
+                sim_time=self._sim_time,            # время на модельных часах
                 time_elapsed=0.0,        # сколько времени потрачено
-                exit_reason=ExitReason.NO_MORE_EVENTS,  # причина выхода
+                exit_reason=self.stop_reason,  # причина выхода
                 stop_message="",         # сообщение, если было
                 last_handler=self.get_curr_handler(),  # последний обработчик
             ),
@@ -498,15 +513,7 @@ class Kernel:
     def real_time_elapsed(self):
         return time.time() - self._t_start
     
-    def stop_conditions(self):
-        '''
-        Возвращает стоп-условия
-        '''
-        return ((self._max_sim_time is not None and
-            self._sim_time > self._max_sim_time) or
-            (self._max_real_time is not None and
-            self.real_time_elapsed > self._max_real_time) or
-            self._user_stop)
+
 
 
 def build_simulation(
