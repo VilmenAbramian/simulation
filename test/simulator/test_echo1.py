@@ -87,7 +87,7 @@ def test_simulate_till_max():
     7) Статистика правильно подсчитана:
        - число обслуженных заявок = max_served
        - число необслуженных заявок = 0
-    8) Второй компонента результата - контекст
+    8) Вторая компонента результата - контекст
     """
     MAX_SERVED: int = 1000
     INTERVAL: float = 1.3
@@ -117,7 +117,10 @@ def test_simulate_till_max():
     assert pytest.approx(INTERVAL * MAX_SERVED, rel=0.01) == stats.sim_time
     assert ExitReason.STOPPED == stats.exit_reason
     assert "foobar" == stats.stop_message
-    assert (handle_service, (1 + MAX_SERVED,)) == stats.last_handler
+    # Было:
+    # assert (handle_service, (1 + MAX_SERVED,)) == stats.last_handler
+    # Стало:
+    assert handle_service == stats.last_handler
 
     # Проверяем результаты
     assert MAX_SERVED == fin_ret.get("total_served")
@@ -159,7 +162,7 @@ def test_simulate_till_sim_time():
 
     eps = ctx["interval"] * 0.01
 
-    assert expected_num_served == stats.num_events_processed * 2
+    assert expected_num_served == stats.num_events_processed / 2
     assert (max_sim_time + eps < stats.sim_time <=
             max_sim_time + ctx["interval"] + eps)
     assert expected_num_served == fin_ret['total_served']

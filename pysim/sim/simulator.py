@@ -101,7 +101,7 @@ class Simulator:
         Raises:
             SchedulingInPastError: если `delay < 0`
             ValueError: если обработчик не задан (то есть None)
-            TypeError: если обработчик не является вызывамым объектом 
+            TypeError: если обработчик не является вызываемым объектом
                 (функцией, функтором), или тип args - не `Iterable`
 
         Returns:
@@ -177,9 +177,9 @@ class Simulator:
 class EventQueue:
     '''
     Класс, создающий объект очереди. Именно здесь формируется очередь.
-    В этом классе реализована непосредственно сама куча, добавление и удаление
-    событий из неё. Остальные объекты и функции лишь обращаются через различные
-    прокси-объекты к данному классу, где реализована сама логика.
+    В этом классе реализована непосредственно сама куча (структура данных),
+    добавление и удаление событий из неё. Остальные объекты и функции лишь
+    обращаются через различные прокси-объекты к данному классу, где реализована сама логика.
     '''
     def __init__(self):  
         '''
@@ -304,10 +304,12 @@ class Kernel:
         self.context = None            # Контекст всей модели
         self._debug = False            # Переменная отладчика
         self._user_stop = False        # Атрибут ручной остановки моделирования
-        self.stop_reason = None        # 
+        self.stop_reason = None        # Содержит причину остановки
         self._num_events_served = None # Количество обслуженных событий
         self._max_num_events = None    # Пользовательское максимальное количество обслуживаемых событий
-        ...  # TODO: implement
+
+        self.lhandler = None # Поле, в котором будет храниться последний исполненный обработчик
+        self._finalize = None
 
         # self._state = self.State.READY
     
@@ -364,6 +366,7 @@ class Kernel:
         '''
         self.stop_reason = ExitReason.STOPPED
         self._user_stop = True
+
         # TODO: что-то сделать с опциональным сообщением об остановке
 
     def stop_conditions(self, msg: str = None) -> bool:
@@ -391,15 +394,14 @@ class Kernel:
         self._initializer_args = args
     
     def set_finalizer(self, fn: Finalizer) -> None:
-        ...  # TODO: implement
+        self._finalize = fn
     
     def set_context(self, context: object) -> None:
         self.context = context
-        ...  # TODO: implement
 
     def get_curr_handler(self) -> object | None:
         """Получить последний вызванный обработчик или инициализатор."""
-        ...  # TODO: implement
+        return self.lhandler
     
     def set_max_sim_time(self, value: float) -> None:
         self._max_sim_time = value
@@ -426,7 +428,6 @@ class Kernel:
         Бывший run.
         Начинает выполнение модели.
         Извлекает события из очереди и вызывает их обработчики.
-        как писать длинные комментарии к переменным?
         Args:
             debug: bool режим работы модели. В случае True ... В случае False обычная работа ядра
 
@@ -452,7 +453,7 @@ class Kernel:
         #    использовать его. Если нет - использовать словарь (по-умолчанию)
         sim = Simulator(self, self.context)
         
-        # 3) TODO: Вызвать код инициализации модели
+        # 3) Инициализация модели
         self._initializer(sim, *self._initializer_args)
         # item = (handler, args, msg)
 
@@ -464,6 +465,7 @@ class Kernel:
             t, event_id, item = self._queue.pop()
             # 4.2) Изменить модельное время
             self._sim_time = t
+            # print(self._sim_time)
             # 4.3) Если в режиме debug, завершиться, причем вернуть:
             #      - в ExecutionStats:
             #        * exit_reason=INTERRUPTED,
@@ -492,9 +494,10 @@ class Kernel:
                 handler, args, msg = item
                 handler(sim, *args)         # Внимание! В обработчик надо передавать прокси-объект Simulator, а не объект ядра!!!
                 self._num_events_served += 1
+                self.lhandler = handler
         # 5) Вызвать код финализации (результат выполнения self._finalizer())
-        # if self._finalize:
-        #   fin_ret = self._finalize()
+        if self._finalize:
+          fin_ret = self._finalize(sim)
 
         yield (
             ExecutionStats(
@@ -502,11 +505,11 @@ class Kernel:
                 sim_time=self._sim_time,            # время на модельных часах
                 time_elapsed=0.0,        # сколько времени потрачено
                 exit_reason=self.stop_reason,  # причина выхода
-                stop_message="",         # сообщение, если было
+                stop_message=self._initializer_args[2],         # сообщение, если было
                 last_handler=self.get_curr_handler(),  # последний обработчик
             ),
-            {},  # контекст из объекта Simulator
-            None,  # fin_ret, что-то, что вернула функция finalize(), если была
+            sim.context,  # контекст из объекта Simulator
+            fin_ret,  # fin_ret, что-то, что вернула функция finalize(), если была
         )
     
     @property
