@@ -503,7 +503,7 @@ class Kernel:
             ExecutionStats(
                 num_events_processed=self._num_events_served,  # сколько обработали событий
                 sim_time=self._sim_time,            # время на модельных часах
-                time_elapsed=0.0,        # сколько времени потрачено
+                time_elapsed = self.real_time_elapsed,        # сколько времени потрачено
                 exit_reason=self.stop_reason,  # причина выхода
                 stop_message=self._initializer_args[2],         # сообщение, если было
                 last_handler=self.get_curr_handler(),  # последний обработчик
