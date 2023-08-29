@@ -4,6 +4,9 @@ from typing import Any, Callable, Iterable, NewType, Tuple, Iterator
 
 from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
+import itertools    # Библиотека, с помощью которой создаётся бесконечный генератор порядковых номеров событий
+import heapq        # Библиотека, необходимая для работы неупорядоченной кучи событий
+import time         # Библиотека, позволяющая определять текущее реальное время
 
 EventId = NewType('EventId', int)
 
@@ -28,7 +31,7 @@ class ExitReason(Enum):
 
 
 @dataclass
-class ExecutionStats:
+class ExecutionStats:          # Статистика исполнения
     num_events_processed: int  # сколько было обработано событий
     sim_time: float            # сколько времени на модельных часах в конце
     time_elapsed: float        # сколько времени длилась симуляция, сек.
@@ -98,7 +101,7 @@ class Simulator:
         Raises:
             SchedulingInPastError: если `delay < 0`
             ValueError: если обработчик не задан (то есть None)
-            TypeError: если обработчик не является вызывамым объектом 
+            TypeError: если обработчик не является вызываемым объектом
                 (функцией, функтором), или тип args - не `Iterable`
 
         Returns:
@@ -171,6 +174,111 @@ class Simulator:
         """Получить логгер."""
         return self._kernel.logger
 
+class EventQueue:
+    '''
+    Класс, создающий объект очереди. Именно здесь формируется очередь.
+    В этом классе реализована непосредственно сама куча (структура данных),
+    добавление и удаление событий из неё. Остальные объекты и функции лишь
+    обращаются через различные прокси-объекты к данному классу, где реализована сама логика.
+    '''
+    def __init__(self):  
+        '''
+        Инициализируем атрибуты объекта очереди
+        ''' 
+        self._event_list  = []               # Лист событий, который будет упорядочен, как приоритетная минимальная куча
+        self._event_dict  = {}               # Словарь, сопоставляющий задачи с записями в листе
+        self._counter = itertools.count()    # Уникальный порядковый номер 
+        # self.removed = '<removed-task>'      # Заполнитель для удалённого события (можно взамен использовать None)
+
+    def push(self, time, task):
+        '''
+        Добавление нового события по правилам кучи
+
+        params:
+        self - объект класса
+        time - число (int, float), характеризующее время (приоритет) события
+        task - string, просто текстовое назвние события
+
+        Returns:
+        number - уникальный порядковый номер события
+
+        Куча - это просто list, но отсортированный, исходя из правил наименьшего
+        бинарного дерева. Здесь нет преобразования данных list по правилам кучи,
+        потому что list изначально пуст и события в него добавляются сразу же 
+        исходя из правил кучи
+        '''
+        number = next(self._counter)              # Генерируем уникольный номер события
+        event = [time, number, task]              # Формируем list события: (время (приоритет), уникальный порядковый номер, название события)
+        self._event_dict[number] = event          # Кладём в словарь. Ключ - название записи, значение - list события
+        heapq.heappush(self._event_list, event)   # Добавляем ("пушим") событие в кучу
+        return number
+        # print("Лист событий: ", self._event_list)
+        # print("Словарь событий: ", self._event_dict)
+
+
+    def pop(self):                         
+        '''
+        Удаление ближайшего по времени события.
+        Не требует передачи аргументов.
+
+        :raises:
+        - KeyError: если очередь пуста
+        '''
+        # print(self._event_dict)
+        if self.empty:
+            raise KeyError("Удаление из пустой очереди событий!")
+        (time, number, task) = heapq.heappop(self._event_list)
+        while task is None:
+            (time, number, task) = heapq.heappop(self._event_list)
+            # print('here')
+        self._event_dict.pop(number)
+        return (time, number, task)
+        raise KeyError('pop from an empty priority queue')
+
+    def __len__(self):     
+        '''
+        Возвращает количество событий в очереди
+        '''
+        return len(self._event_dict)
+
+    def cancel(self, number):
+        '''
+        Отмена запланированного события в будущем
+        params: number - уникальный порядковый номер события, по которому оно находится и удаляется
+        '''
+        if number in self._event_dict and number is not None:
+            # event is [time, number, task]
+            event = self._event_dict.pop(number)      # Удаляем запись о событии из словаря (но не из кучи)
+            event[-1] = None
+            return (event)
+            
+
+    def clear(self):
+        '''
+        Полная очистка очереди событий
+
+        Returns: None
+        '''
+        self._event_list.clear()
+        self._event_dict.clear()
+ 
+    @property
+    def empty(self):
+        '''
+        Метод, превращёный с помощью декоратора в поле
+        Returns: True - если очредь пуста, Falce, если в ней есть хоть одно событие
+        '''
+        return len(self._event_dict) == 0
+    
+    def to_list(self):
+        '''
+        Преобразование объекта класса EventQueue в list.
+        Позволяет просмотреть очередь за пределеми класса.
+
+        Returns: list, содержащий события очереди
+        '''
+        l = list(self._event_list)
+        return l
 
 class Kernel:
     def __init__(self, model_name: str):
@@ -183,10 +291,27 @@ class Kernel:
         self._initializer: Initializer | None = None
         self._initializer_args: Iterable[Any] = ()
 
-        # Переменные отладчика
-        self._debug = False
+        # Очередь событий
+        self._queue = EventQueue()
 
-        ...  # TODO: implement
+        # Время и часы
+        self._sim_time = 0.0        # Модельное время (в условных единицах)
+        self._t_start = None        # Реальное время начала симуляции
+        self._max_sim_time = None   # Пользовательское максимальное виртуальное время симуляции
+        self._max_real_time = None  # Пользовательское максимальное реальное время симуляции
+
+        # Прочее
+        self.context = None            # Контекст всей модели
+        self._debug = False            # Переменная отладчика
+        self._user_stop = False        # Атрибут ручной остановки моделирования
+        self.stop_reason = None        # Содержит причину остановки
+        self._num_events_served = None # Количество обслуженных событий
+        self._max_num_events = None    # Пользовательское максимальное количество обслуживаемых событий
+
+        self.lhandler = None # Поле, в котором будет храниться последний исполненный обработчик
+        self._finalize = None
+
+        # self._state = self.State.READY
     
     @property
     def model_name(self) -> str:
@@ -215,16 +340,50 @@ class Kernel:
         args: Iterable[Any] = (),
         msg: str = ""
     ) -> EventId:
-        return EventId(0)  # TODO: implement
+        '''
+        Планирование нового события.
+        Больше информации в описании Simulator
+        '''
+        if delay is not None:
+            return self._queue.push(self._sim_time + delay, (handler, args, msg))
+        else:
+            return None
     
     def cancel(self, event_id: EventId) -> int:
-        return 0  # TODO: implement
+        '''
+        Отменить событие с идентификатором `event_id`.
+        Больше информации в описании Simulator
+        '''
+        if event_id in self._queue._event_dict:
+            self._queue.cancel(event_id)
+            return 1
+        else:
+            return 0
     
     def stop(self, msg: str) -> None:
-        ...  # TODO: implement
+        '''
+        Прекратить выполнение модели.
+        '''
+        self.stop_reason = ExitReason.STOPPED
+        self._user_stop = True
+
+        # TODO: что-то сделать с опциональным сообщением об остановке
+
+    def stop_conditions(self, msg: str = None) -> bool:
+        '''
+        Возвращает True для остановки модели
+        '''
+        if self._max_sim_time is not None and self._sim_time > self._max_sim_time:
+            self.stop_reason = ExitReason.REACHED_SIM_TIME_LIMIT
+            return True
+        elif self._max_real_time is not None and self.real_time_elapsed > self._max_real_time:
+            self.stop_reason = ExitReason.REACHED_REAL_TIME_LIMIT
+            return True
+        elif self._user_stop:
+            return True
     
     def get_model_time(self) -> float:
-        return 0.0  # TODO: implement
+        return self._sim_time
     
     def set_initializer(
         self,
@@ -235,22 +394,23 @@ class Kernel:
         self._initializer_args = args
     
     def set_finalizer(self, fn: Finalizer) -> None:
-        ...  # TODO: implement
+        self._finalize = fn
     
     def set_context(self, context: object) -> None:
-        ...  # TODO: implement
+        self.context = context
 
     def get_curr_handler(self) -> object | None:
         """Получить последний вызванный обработчик или инициализатор."""
-        ...  # TODO: implement
+        return self.lhandler
     
     def set_max_sim_time(self, value: float) -> None:
-        ...  # TODO: implement
+        self._max_sim_time = value
     
     def set_max_real_time(self, value: float) -> None:
-        ...  # TODO: implement
-    
+        self._max_real_time = value
+
     def set_max_num_events(self, value: int) -> None:
+        self._max_num_events = value
         ...  # TODO: implement
 
     def future_events(self) -> list[tuple[EventId, float, Handler, tuple[Any]]]:
@@ -258,75 +418,105 @@ class Kernel:
         Получить список всех событий, которые сейчас находятся в очереди.
 
         Returns:
-
+        list, в котором содержитмя приоритетная куча событий
         """
+        return EventQueue.to_list()
         ...  # TODO: implement
     
     def build_runner(self, debug: bool = False) -> Iterator[ExecResult]:
         """
-        Начать выполнение
-
+        Бывший run.
+        Начинает выполнение модели.
+        Извлекает события из очереди и вызывает их обработчики.
         Args:
-            debug:
+            debug: bool режим работы модели. В случае True ... В случае False обычная работа ядра
 
         Returns:
-
+            Описано в конце метода в yield
         """
         self._logger.setup()
-        self._logger.debug("this is a debug message")
-        self._logger.info("this is an info message")
-        self._logger.warning("this is a warning message")
-        self._logger.error("this is an error message")
-        self._logger.critical("this is a critical message")
-        if self._initializer:
-            self._initializer(Simulator(self), *self._initializer_args)
+        # self._logger.debug("this is a debug message")
+        # self._logger.info("this is an info message")
+        # self._logger.warning("this is a warning message")
+        # self._logger.error("this is an error message")
+        # self._logger.critical("this is a critical message")
 
         self.set_debug(debug)
 
+        self._num_events_served = 0
         # TODO: implement
 
         # 1) Инициалзировать часы
+        self._t_start = time.time()         # Текущее реальное время (от 1.01.1970)
 
         # 2) Создать экземпляр Simulator. Если контекст есть,
         #    использовать его. Если нет - использовать словарь (по-умолчанию)
+        sim = Simulator(self, self.context)
+        
+        # 3) Инициализация модели
+        self._initializer(sim, *self._initializer_args)
+        # item = (handler, args, msg)
 
-        # 3) Вызвать код инициализации модели
-
+        if self._queue.empty:
+            self.stop_reason = ExitReason.NO_MORE_EVENTS
         # 4) Начать выполнение цикла до стоп-условий или опустошения очереди
-
-        # 4.1) Взять очередное неотмененное событие
-
-        # 4.2) Изменить модельное время
-
-        # 4.3) Если в режиме debug, завершиться, причем вернуть:
-        #      - в ExecutionStats:
-        #        * exit_reason=INTERRUPTED,
-        #        * time_elapsed можно не считать;
-        #        * next_handler - очередной хендлер, который надо выполнить
-        #          (который был извлечен из очереди на шаге 4.1)
-        #        * last_handler - предыдущий хендлер, если он был
-        #      - второй компонент - контекст, как и при нормальном выходе
-        #      - finalize() НЕ вызывать, последний компонент результата - None
-
-        # 4.4) Если не в режиме debug() или если опять вызвали run(),
-        #      выполнить обработчик
-
+        while not self._queue.empty and not self.stop_conditions():
+            # 4.1) Взять очередное неотмененное событие
+            t, event_id, item = self._queue.pop()
+            # 4.2) Изменить модельное время
+            self._sim_time = t
+            # print(self._sim_time)
+            # 4.3) Если в режиме debug, завершиться, причем вернуть:
+            #      - в ExecutionStats:
+            #        * exit_reason=INTERRUPTED,
+            #        * time_elapsed можно не считать;
+            #        * next_handler - очередной хендлер, который надо выполнить
+            #          (который был извлечен из очереди на шаге 4.1)
+            #        * last_handler - предыдущий хендлер, если он был
+            #      - второй компонент - контекст, как и при нормальном выходе
+            #      - finalize() НЕ вызывать, последний компонент результата - None
+            if self._debug == True:
+                self._user_stop = True      # Останавливаем модель?
+                return (
+                    ExecutionStats(
+                        exit_reason=ExitReason.INTERRUPTED,  # причина выхода
+                        time_elapsed=None,        # сколько времени потрачено
+                        next_handler = item[0],
+                        sim_time=0.0,            # время на модельных часах
+                        last_handler=self.get_curr_handler(),  # последний обработчик
+                    ),
+                    sim.context,  # контекст из объекта Simulator
+                    None,
+                )
+            # 4.4) Если не в режиме debug() или если опять вызвали run(),
+            #      выполнить обработчик
+            else:
+                handler, args, msg = item
+                handler(sim, *args)         # Внимание! В обработчик надо передавать прокси-объект Simulator, а не объект ядра!!!
+                self._num_events_served += 1
+                self.lhandler = handler
         # 5) Вызвать код финализации (результат выполнения self._finalizer())
-        # if self._finalize:
-        #   fin_ret = self._finalize()
+        if self._finalize:
+          fin_ret = self._finalize(sim)
 
         yield (
             ExecutionStats(
-                num_events_processed=0,  # сколько обработали событий
-                sim_time=0.0,            # время на модельных часах
-                time_elapsed=0.0,        # сколько времени потрачено
-                exit_reason=ExitReason.NO_MORE_EVENTS,  # причина выхода
-                stop_message="",         # сообщение, если было
+                num_events_processed=self._num_events_served,  # сколько обработали событий
+                sim_time=self._sim_time,            # время на модельных часах
+                time_elapsed = self.real_time_elapsed,        # сколько времени потрачено
+                exit_reason=self.stop_reason,  # причина выхода
+                stop_message=self._initializer_args[2],         # сообщение, если было
                 last_handler=self.get_curr_handler(),  # последний обработчик
             ),
-            {},  # контекст из объекта Simulator
-            None,  # fin_ret, что-то, что вернула функция finalize(), если была
+            sim.context,  # контекст из объекта Simulator
+            fin_ret,  # fin_ret, что-то, что вернула функция finalize(), если была
         )
+    
+    @property
+    def real_time_elapsed(self):
+        return time.time() - self._t_start
+    
+
 
 
 def build_simulation(
