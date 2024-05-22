@@ -8,7 +8,7 @@ setup(
     author_email="larioandr@gmail.com",
     platforms=["any"],
     license="MIT",
-    url="https://github.com/ipu64/pyrfidsim",
+    url="https://github.com/ipu69/pyrfidsim",
     packages=["pysim"],
     install_requires=[
         "click",

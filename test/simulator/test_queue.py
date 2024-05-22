@@ -1,4 +1,3 @@
-from ._paths import eventQueue_dir
 from pysim.sim import EventQueue
 import pytest
     
