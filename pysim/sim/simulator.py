@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from enum import Enum
+import heapq
+import itertools
+import time
 from typing import Any, Callable, Iterable, NewType, Tuple, Iterator
 
 from pysim.sim.logger import ModelLogger, ModelLoggerConfig
 
-import itertools  # Библиотека, с помощью которой создаётся бесконечный генератор порядковых номеров событий
-import heapq  # Библиотека, необходимая для работы неупорядоченной кучи событий
-import time  # Библиотека, позволяющая определять текущее реальное время
 
 EventId = NewType('EventId', int)
 
@@ -30,16 +30,24 @@ class ExitReason(Enum):
 
 
 @dataclass
-class ExecutionStats:  # Статистика исполнения
-    num_events_processed: int  # сколько было обработано событий
-    sim_time: float  # сколько времени на модельных часах в конце
-    time_elapsed: float  # сколько времени длилась симуляция, сек.
-    exit_reason: ExitReason  # причина завершения симуляции
-    stop_message: str = ""  # сообщение, переданное в вызов stop()
-    # последний выполненный обработчик и его аргументы
+class ExecutionStats:
+    '''
+    Структура дынных для хранения результатов
+    исполнения одного "прогона" симулятора
+    Some args:
+        sim_time - временя на модельных часах (после выполнения)
+        time_elapsed - длительность симуляции в секундах
+        last_handler - последний выполненный обработчик и его аргументы
+        last_sim_time - для режима отладки: предыдущий момент времени
+    '''
+    num_events_processed: int
+    sim_time: float
+    time_elapsed: float
+    exit_reason: ExitReason
+    stop_message: str = ""
     last_handler: tuple[Handler, tuple[...]] | None = None
     next_handler: tuple[Handler, tuple[...]] | None = None
-    last_sim_time: float = 0  # для режима отладки: предыдущий момент времени
+    last_sim_time: float = 0
 
 
 ExecResult = Tuple[ExecutionStats, object | dict, object | dict | None]
@@ -50,11 +58,11 @@ class Simulator:
     Прокси-объект для доступа к контексту и API ядра симуляции из модели.
 
     Этот объект передается во все обработчики при их вызове ядром.
-    Он не содержит функций ядра, которые не нужны обработчикам 
+    Он не содержит функций ядра, которые не нужны обработчикам
     (например, `run()`), зато может предоставлять более удобные
     сигнатуры (например, `call()`).
 
-    Также симуляция предоставляет общий контекст (поле `context`), 
+    Также симуляция предоставляет общий контекст (поле `context`),
     доступ к которому есть у всех обработчиков. В качестве контекста
     можно использовать произвольный объект или словарь.
     """
@@ -83,12 +91,12 @@ class Simulator:
         """Запланировать событие в будущем и вернуть идентификатор события.
 
         При планировании события нужно указать:
-        
+
         - через какое время оно наступит (`delay`);
         - какую функцию нужно вызвать при наступлении события (`handler`);
         - какие аргументы надо передать функции (`args`).
 
-        Можно также указать строку, которую можно выводить в лог в режиме 
+        Можно также указать строку, которую можно выводить в лог в режиме
         отладки при наступлении события.
 
         Args:
@@ -96,7 +104,7 @@ class Simulator:
             handler (Handler): обработчик события
             args (tuple[Any, ...], optional): аргументы для обработчика
             msg (str, optional): комментарий, можно использовать для отладки
-        
+
         Raises:
             SchedulingInPastError: если `delay < 0`
             ValueError: если обработчик не задан (то есть None)
@@ -123,10 +131,10 @@ class Simulator:
             handler (Handler): обработчик события
             args (tuple[Any, ...], optional): аргументы для обработчика
             msg (str, optional): комментарий, можно использовать для отладки
-        
+
         Raises:
             ValueError: если обработчик не задан (то есть None)
-            TypeError: если обработчик не является вызывамым объектом 
+            TypeError: если обработчик не является вызывамым объектом
                 (функцией, функтором), или тип args - не `Iterable`
 
         Returns:
@@ -148,7 +156,7 @@ class Simulator:
 
         Args:
             event_id (EventId): идентификатор события
-        
+
         Retruns:
             int: число отмененных событий
         """
@@ -205,10 +213,10 @@ class EventQueue:
 
         Куча - это просто list, но отсортированный, исходя из правил наименьшего
         бинарного дерева. Здесь нет преобразования данных list по правилам кучи,
-        потому что list изначально пуст и события в него добавляются сразу же 
+        потому что list изначально пуст и события в него добавляются сразу же
         исходя из правил кучи
         '''
-        number = next(self._counter)  # Генерируем уникольный номер события
+        number = next(self._counter)  # Генерируем уникальный номер события
         event = [time, number,
                  task]  # Формируем list события: (время (приоритет), уникальный порядковый номер, название события)
         self._event_dict[number] = event  # Кладём в словарь. Ключ - название записи, значение - list события
@@ -231,7 +239,6 @@ class EventQueue:
         (time, number, task) = heapq.heappop(self._event_list)
         while task is None:
             (time, number, task) = heapq.heappop(self._event_list)
-            # print('here')
         self._event_dict.pop(number)
         return (time, number, task)
         raise KeyError('pop from an empty priority queue')
@@ -395,6 +402,7 @@ class Kernel:
         self._initializer_args = args
 
     def set_finalizer(self, fn: Finalizer) -> None:
+        print('Запись функции финализации')
         self._finalize = fn
 
     def set_context(self, context: object) -> None:
@@ -412,7 +420,6 @@ class Kernel:
 
     def set_max_num_events(self, value: int) -> None:
         self._max_num_events = value
-        ...  # TODO: implement
 
     def future_events(self) -> list[tuple[EventId, float, Handler, tuple[Any]]]:
         """
@@ -445,7 +452,6 @@ class Kernel:
         self.set_debug(debug)
 
         self._num_events_served = 0
-        # TODO: implement
 
         # 1) Инициалзировать часы
         self._t_start = time.time()  # Текущее реальное время (от 1.01.1970)
@@ -499,6 +505,7 @@ class Kernel:
                 self.lhandler = handler
         # 5) Вызвать код финализации (результат выполнения self._finalizer())
         if self._finalize:
+            print('Финализация!')
             fin_ret = self._finalize(sim)
 
         yield (
@@ -507,7 +514,7 @@ class Kernel:
                 sim_time=self._sim_time,  # время на модельных часах
                 time_elapsed=self.real_time_elapsed,  # сколько времени потрачено
                 exit_reason=self.stop_reason,  # причина выхода
-                stop_message=self._initializer_args[2],  # сообщение, если было
+                # stop_message=self._initializer_args[2],  # сообщение, если было
                 last_handler=self.get_curr_handler(),  # последний обработчик
             ),
             sim.context,  # контекст из объекта Simulator
@@ -535,7 +542,7 @@ def build_simulation(
     Запустить симуляцию модели.
 
     Можно задать несколько условий остановки:
-    
+
     - по реальному времени (сколько секунд до остановки)
     - по модельному времени
     - по числу событий
@@ -549,8 +556,8 @@ def build_simulation(
     симуляции, ее результат будет возвращен в третьем элементе
     кортежа-результата.
 
-    Контекст можно передать явно, в виде словаря или объекта (например, 
-    некоторого dataclass-а). Если контекст не передать, то он будет 
+    Контекст можно передать явно, в виде словаря или объекта (например,
+    некоторого dataclass-а). Если контекст не передать, то он будет
     инициализирован в пустой словарь. Контекст возвращается во втором
     элементе кортежа-результата.
 

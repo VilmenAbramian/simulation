@@ -67,7 +67,7 @@ class ModelLoggerConfig:
     fmt: str = MODEL_LOGGER_FORMAT       # формат-строка логгера
     style: Literal['%', '{', '$'] = '{'  # стиль формат-строки логгера
     
-    level: int = logging.INFO     # уровень логгирования по-умолчанию
+    level: int = logging.DEBUG     # уровень логгирования по-умолчанию
     
     use_console: bool = True      # логгировать ли в консоль
     colored_console: bool = True  # использовать ли цветной вывод в консоль
@@ -158,7 +158,8 @@ class ModelLogger:
         config: ModelLoggerConfig | None = None, 
         force_run: bool = False
     ) -> None:
-        """Настроить логгер.
+        """
+        Настроить логгер.
 
         По-умолчанию, повторные вызовы метода setup() игнорируются. Причина:
         в коде запуска ядра есть вызов `setup()` с параметрами по-умолчанию. 

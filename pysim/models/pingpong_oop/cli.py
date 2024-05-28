@@ -1,9 +1,9 @@
 import click
 
-from pysim.sim import build_simulation, run_simulation, ModelLoggerConfig
-from .config import Config
-from .result import Result
-from .handlers import initialize, finalize
+from pysim.sim.simulator import build_simulation, run_simulation, ModelLoggerConfig
+from config import Config
+from result import Result
+from pysim.models.pingpong_oop.handlers import initialize, finalize
 
 MODEL_NAME = "PingPongOOP"
 
@@ -40,3 +40,6 @@ def run_model(
         ))
     # assert isinstance(result, Result)
     return result
+
+if __name__ == '__main__':
+    cli_run()
