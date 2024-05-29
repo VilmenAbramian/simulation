@@ -132,6 +132,7 @@ class Client(Node):
         else:
             sim.logger.debug("client received wrong pong")
             self.num_bad_pongs += 1
+        sim.call(self.handle_timeout, )
     
     def __str__(self):
         return "client"
