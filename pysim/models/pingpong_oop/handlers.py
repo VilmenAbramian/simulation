@@ -21,5 +21,7 @@ def finalize(sim: Simulator) -> Result:
     return Result(
         avg_interval=statistics.mean(model.client.intervals_list),
         avg_delay=statistics.mean(model.channel.delays_list),
-        miss_rate=(model.client.num_acknowledged / model.client.num_pings_sent),
+        miss_rate=(
+            model.client.num_acknowledged / model.client.num_pings_sent
+        ),
     )

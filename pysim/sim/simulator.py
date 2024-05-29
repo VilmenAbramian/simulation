@@ -542,7 +542,7 @@ def run_simulation(sim: Iterator[ExecResult]) -> ExecResult:
     try:
         while True:
             ret = next(sim)
-            print('ret: ', ret[0])
+            print('ret: ', ret[2])
     except StopIteration:
         pass
     if ret is None:
