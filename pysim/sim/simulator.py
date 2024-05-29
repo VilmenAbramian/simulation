@@ -429,7 +429,6 @@ class Kernel:
         if self._queue.empty:
             self.stop_reason = ExitReason.NO_MORE_EVENTS
 
-        print('Начало выполнения событий!')
         while not self._queue.empty and not self.stop_conditions():
             # print('Количество событий в очереди:', self._queue.__len__())
             # print('Список событий в очереди: ', self._queue.to_list())
@@ -440,7 +439,6 @@ class Kernel:
             self._num_events_served += 1
             self.lhandler = handler
         if self._finalize:
-            print('Финализация!')
             fin_ret = self._finalize(sim)
 
         yield (
@@ -544,6 +542,7 @@ def run_simulation(sim: Iterator[ExecResult]) -> ExecResult:
     try:
         while True:
             ret = next(sim)
+            print('ret: ', ret[0])
     except StopIteration:
         pass
     if ret is None:

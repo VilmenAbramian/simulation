@@ -132,7 +132,8 @@ class Client(Node):
         else:
             sim.logger.debug("client received wrong pong")
             self.num_bad_pongs += 1
-        sim.call(self.handle_timeout, )
+        sim.schedule(self.interval, self.handle_timeout, )
+        self.intervals_list.append(self.interval)
     
     def __str__(self):
         return "client"
@@ -165,10 +166,12 @@ class Server(Node):
         """
         if random.random() > self.loss_prob:
             # Пакет не потерян (1 >= X > Pl <=> 0 <= X < 1 - Pl)
+            sim.logger.debug("ping successfully reached the server")
             sim.schedule(self.delay, self.handle_service_end, (ping,))
         else:
             # Если тут - пакет потерян
-            ... 
+            sim.logger.debug("ping lost on channel")
+            sim.schedule(sim.context.client.interval, sim.context.client.handle_timeout,) 
     
     def handle_service_end(self, sim: Simulator, ping: Packet) -> None:
         """
@@ -186,6 +189,7 @@ class Server(Node):
             receiver=ping.sender,
             number=ping.number
         )
+        sim.logger.debug("server sent pong")
         sim.call(self.channel.send, (pong,), msg=f"sending Pong#{pong.number}")
     
     def __str__(self):
@@ -198,12 +202,13 @@ class Channel:
         self.delays_list = []
     
     def send(self, sim: Simulator, packet: Packet):
+        sim.logger.debug("packet travel through the channel")
         sim.schedule(
             self.delay, 
             packet.receiver.handle_receive, 
             (packet,),
             msg=f"{packet.sender} --({packet.number})--> {packet.receiver}"
         )
-    
+        self.delays_list.append(self.delay)
     def __str__(self):
         return "Channel"
