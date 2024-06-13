@@ -58,14 +58,14 @@ def run_multiple_simulation(variadic, **kwargs):
         'loss_prob': kwargs['loss_prob'],
         'max_pings': kwargs['max_pings'],
     } for _ in enumerate(variadic_values)]
-    
+
     # Теперь заменим значения варьируемого аргумента, чтобы в каждом
     # элементе args хранилось только одно значение вместо всего набора.
     for i, value in enumerate(variadic_values):
         args_list[i][variadic] = value
 
     pool = Pool(kwargs.get('jobs', multiprocessing.cpu_count()))
-    ret = pool.map(create_config, args_list)
+    pool.map(create_config, args_list)
 
 
 @click.command()
@@ -109,13 +109,16 @@ def cli_run(**kwargs):
 
 def create_config(*args):
     kwargs = args[0]
-    run_model(Config(
+    result = run_model(Config(
         interval=kwargs['interval'],
         channel_delay=kwargs['channel_delay'],
         service_delay=kwargs['service_delay'],
         loss_prob=kwargs['loss_prob'],
         max_pings=kwargs['max_pings']
     ), ModelLoggerConfig())
+
+    return result
+
 
 def run_model(
     config: Config,
