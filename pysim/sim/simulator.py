@@ -300,6 +300,7 @@ class Kernel:
         self._debug = False
         self._user_stop = False
         self.stop_reason = None
+        self.stop_msg = ''
         self._num_events_served = None
         self._max_num_events = None
 
@@ -350,6 +351,7 @@ class Kernel:
     def stop(self, msg: str) -> None:
         self.stop_reason = ExitReason.STOPPED
         self._user_stop = True
+        self.stop_msg = msg
         self.logger.debug(f'Симуляция остановлена с сообщением {msg}')
 
     def stop_conditions(self, msg: str = None) -> bool:
@@ -430,8 +432,6 @@ class Kernel:
             self.stop_reason = ExitReason.NO_MORE_EVENTS
 
         while not self._queue.empty and not self.stop_conditions():
-            # print('Количество событий в очереди:', self._queue.__len__())
-            # print('Список событий в очереди: ', self._queue.to_list())
             t, event_id, item = self._queue.pop()
             self._sim_time = t
             handler, args, msg = item
@@ -447,7 +447,7 @@ class Kernel:
                 sim_time=self._sim_time,
                 time_elapsed=self.real_time_elapsed,
                 exit_reason=self.stop_reason,
-                # stop_message=self._initializer_args[2],  # сообщение, если было
+                stop_message=self.stop_msg,  # сообщение, если было
                 last_handler=self.get_curr_handler(),
             ),
             sim.context,
@@ -542,7 +542,7 @@ def run_simulation(sim: Iterator[ExecResult]) -> ExecResult:
     try:
         while True:
             ret = next(sim)
-            print('ret: ', ret[2])
+            print('ret: ', ret)
     except StopIteration:
         pass
     if ret is None:

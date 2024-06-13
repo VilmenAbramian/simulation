@@ -66,9 +66,6 @@ def finalize(sim: Simulator) -> dict:
 
     return {
         'total_served': num_served,
-        # Было
-        # 'rest': max_served - num_served if max_served > 0 else None
-        # Стало
         'rest': max_served - num_served if (max_served != None and max_served > 0) else None
     }
 
@@ -95,6 +92,7 @@ def test_simulate_till_max():
     """
     MAX_SERVED: int = 1000
     INTERVAL: float = 1.3
+    stop_message = "foobar"
 
     t_start = datetime.now()
 
@@ -103,7 +101,7 @@ def test_simulate_till_max():
     sim = build_simulation(
         "Echo1",
         init=initialize,
-        init_args=(INTERVAL, MAX_SERVED, "foobar"),
+        init_args=(INTERVAL, MAX_SERVED, stop_message),
         fin=finalize,
         max_real_time=10.0,  # 10 секунд - это очень много
     )
@@ -116,17 +114,11 @@ def test_simulate_till_max():
 
     # Проверяем статистику
     assert elapsed.seconds < 2.0  # не более 2 секунд, реально должно быть еще меньше
-    # Было
-    # assert pytest.approx(elapsed.microseconds, rel=0.1) == stats.time_elapsed
-    # Стало
     assert pytest.approx(elapsed.microseconds, rel=1) == int(stats.time_elapsed * 10 ** 6)
     assert MAX_SERVED * 2 == stats.num_events_processed
     assert pytest.approx(INTERVAL * MAX_SERVED, rel=0.01) == stats.sim_time
     assert ExitReason.STOPPED == stats.exit_reason
-    assert "foobar" == stats.stop_message
-    # Было:
-    # assert (handle_service, (1 + MAX_SERVED,)) == stats.last_handler
-    # Стало:
+    assert stop_message == stats.stop_message
     assert handle_service == stats.last_handler
 
     # Проверяем результаты
@@ -163,23 +155,19 @@ def test_simulate_till_sim_time():
             init=initialize,
             init_args=(interval, max_served, stop_message),
             fin=finalize,
-            max_real_time=10.0,  # 0 секунд
+            max_real_time=10.0,
             max_sim_time=max_sim_time,
         ))
 
     eps = ctx["interval"] * 0.01
     # Погрешность, обусловленная возможностью заявки заскочить в "последний" вагон (до неё время - 499, после неё - 501)
     eps_event = 2
-    # Было
-    # assert expected_num_served == stats.num_events_processed / 2
-    # Стало
     assert stats.num_events_processed / 2 - eps_event <= expected_num_served <= stats.num_events_processed / 2 + eps_event
     assert (max_sim_time + eps < stats.sim_time <=
             max_sim_time + ctx["interval"] + eps)
     assert expected_num_served == fin_ret['total_served']
     assert max_served - expected_num_served == fin_ret['rest']
     assert ExitReason.REACHED_SIM_TIME_LIMIT == stats.exit_reason
-    assert stop_message == stats.stop_message
 
 
 def test_simulate_till_real_time():
