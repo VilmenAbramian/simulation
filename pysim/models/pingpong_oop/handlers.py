@@ -1,7 +1,6 @@
 import statistics
 from pysim.sim import Simulator
-from .config import Config
-from .result import Result
+from .objects import Config, Result
 from .model import Model
 
 
@@ -18,13 +17,10 @@ def finalize(sim: Simulator) -> Result:
     # noinspection PyTypeChecker
     model: Model = sim.context
 
-    # print('Лист интервалов: ', model.client.intervals_list)
-    # print('Лист задержек обслуживания: ', model.channel.delays_list)
-    # print('Количество обслуженных заявок: ', model.client.num_acknowledged)
-    # print('Количество отправленных заявок: ', model.client.num_pings_sent)
-    return 0
-    # return Result(
-    #     avg_interval=statistics.mean(model.client.intervals_list),
-    #     avg_delay=statistics.mean(model.channel.delays_list),
-    #     miss_rate=(model.client.num_acknowledged / model.client.num_pings_sent),
-    # )
+    return Result(
+        avg_interval=statistics.mean(model.client.intervals_list),
+        avg_delay=statistics.mean(model.channel.delays_list),
+        miss_rate=(
+            model.client.num_acknowledged / model.client.num_pings_sent
+        ),
+    )
