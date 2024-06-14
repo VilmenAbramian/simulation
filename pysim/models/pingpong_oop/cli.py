@@ -8,6 +8,7 @@ from pysim.sim.simulator import (
     ModelLoggerConfig
 )
 from objects import Config, Result
+from processing import result_processing
 from pysim.models.pingpong_oop.handlers import initialize, finalize
 
 MODEL_NAME = 'PingPongOOP'
@@ -31,9 +32,8 @@ def check_vars_for_multiprocessing(**kwargs):
     for arg_name in var_arg_names:
         if len(kwargs[arg_name]) > 1:
             if variadic is not None:
-                print("Error: only one argument can have multiple values, "
+                raise ValueError("Only one argument can have multiple values, "
                       f"not both \"{variadic}\" and \"{arg_name}\"")
-                return -1
             variadic = arg_name
         else:
             kwargs[arg_name] = kwargs[arg_name][0]
@@ -102,10 +102,9 @@ def cli_run(**kwargs):
     print(f'Running {MODEL_NAME} model')
     if variadic is None:
         result = create_config(kwargs)
-        print(result)
     else:
         result = run_multiple_simulation(variadic, **kwargs)
-        print(result[0].avg_delay)
+    result_processing(kwargs, result)
 
 
 def create_config(*args):

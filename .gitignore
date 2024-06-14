@@ -135,3 +135,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Folders
+/rfidsim/pysim/models/pingpong_oop/results
