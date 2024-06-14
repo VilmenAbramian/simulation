@@ -104,7 +104,7 @@ def cli_run(**kwargs):
         result = create_config(kwargs)
     else:
         result = run_multiple_simulation(variadic, **kwargs)
-    result_processing(kwargs, result)
+    result_processing(kwargs, result, variadic)
 
 
 def create_config(*args):

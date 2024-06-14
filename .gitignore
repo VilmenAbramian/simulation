@@ -137,4 +137,4 @@ dmypy.json
 .pyre/
 
 # Folders
-/rfidsim/pysim/models/pingpong_oop/results
+/pysim/models/pingpong_oop/results
