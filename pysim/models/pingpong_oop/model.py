@@ -3,7 +3,7 @@ import random
 from typing import Optional
 
 from pysim.sim.logger import ModelLogger
-from .config import Config
+from .objects import Config
 from pysim.sim import Simulator
 
 

@@ -7,8 +7,7 @@ from pysim.sim.simulator import (
     run_simulation,
     ModelLoggerConfig
 )
-from config import Config
-from result import Result
+from objects import Config, Result
 from pysim.models.pingpong_oop.handlers import initialize, finalize
 
 MODEL_NAME = 'PingPongOOP'
@@ -65,7 +64,7 @@ def run_multiple_simulation(variadic, **kwargs):
         args_list[i][variadic] = value
 
     pool = Pool(kwargs.get('jobs', multiprocessing.cpu_count()))
-    pool.map(create_config, args_list)
+    return pool.map(create_config, args_list)
 
 
 @click.command()
@@ -102,22 +101,22 @@ def cli_run(**kwargs):
     kwargs, variadic = check_vars_for_multiprocessing(**kwargs)
     print(f'Running {MODEL_NAME} model')
     if variadic is None:
-        create_config(kwargs)
+        result = create_config(kwargs)
+        print(result)
     else:
-        run_multiple_simulation(variadic, **kwargs)
+        result = run_multiple_simulation(variadic, **kwargs)
+        print(result[0].avg_delay)
 
 
 def create_config(*args):
     kwargs = args[0]
-    result = run_model(Config(
+    return run_model(Config(
         interval=kwargs['interval'],
         channel_delay=kwargs['channel_delay'],
         service_delay=kwargs['service_delay'],
         loss_prob=kwargs['loss_prob'],
         max_pings=kwargs['max_pings']
     ), ModelLoggerConfig())
-
-    return result
 
 
 def run_model(

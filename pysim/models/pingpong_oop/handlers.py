@@ -1,7 +1,6 @@
 import statistics
 from pysim.sim import Simulator
-from .config import Config
-from .result import Result
+from .objects import Config, Result
 from .model import Model
 
 
