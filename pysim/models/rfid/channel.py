@@ -163,11 +163,8 @@ def two_ray_pathloss(*, time, ground_reflection, wavelen,
     velocity_pr_1 = np.dot(d1_vector_tx_n, relative_velocity)
 
     # Attenuation caused by radiation pattern
-    g0 = (tx_rp(azimuth=tx_azimuth_0, wavelen=wavelen, **kwargs) *
-          rx_rp(azimuth=rx_azimuth_0, wavelen=wavelen, **kwargs))
-
-    g1 = (tx_rp(azimuth=tx_azimuth_1, wavelen=wavelen, **kwargs) *
-          rx_rp(azimuth=rx_azimuth_1, wavelen=wavelen, **kwargs))
+    g0 = (tx_rp(azimuth=tx_azimuth_0) * rx_rp(azimuth=rx_azimuth_0))
+    g1 = (tx_rp(azimuth=tx_azimuth_1) * rx_rp(azimuth=rx_azimuth_1))
 
     # Attenuation due to reflections (reflection coefficient) computation
     r1 = ground_reflection(cosine=grazing_angle, wavelen=wavelen, **kwargs)

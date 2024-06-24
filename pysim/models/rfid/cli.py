@@ -7,12 +7,12 @@ from tabulate import tabulate
 import pysim.sim.simulator as sim
 import epcstd as std
 
-import configurator as models
+import configurator
 from configurator import KMPH_TO_MPS_MUL
 
 
 DEFAULT_SPEED = 10             # kmph
-DEFAULT_ENCODING = '2'        # FM0, M2, M4, M8
+DEFAULT_ENCODING = '2'         # FM0, M2, M4, M8
 DEFAULT_TARI = "12.5"          # 6.25, 12.5, 18.75, 25
 DEFAULT_USE_TREXT = False      # don't use extended preamble
 DEFAULT_USE_DOPPLER = True     # simulate Doppler shift
@@ -167,8 +167,13 @@ def start_single(verbose: bool = False, **kwargs):
 
         # Подготовим таблицу результатов.
         # Какие ключи нужны из словарей в списке ret (который вернул pool.map):
-        ret_cols = (variadic, "read_tid_prob", "inventory_prob",
+        # FIXME: ошибка в добавлении столбца с изменяющимся параметром
+        # ret_cols = (variadic, "read_tid_prob", "inventory_prob",
+        #             "rounds_per_tag")
+        ret_cols = ("read_tid_prob", "inventory_prob",
                     "rounds_per_tag")
+        print('ret_cols :', ret_cols)
+        print('ret: ', ret)
         # Строки таблицы результатов:
         results_table = [[item[column] for column in ret_cols] for item in ret]
         print("\n# RESULTS:\n")
@@ -190,6 +195,7 @@ def parse_tag_encoding(s):
         raise ValueError('illegal encoding = {}'.format(s))
 
 
+# Переименование! stimate_rates -> collect_changeable_parameters
 def estimate_rates(
         speed,
         tari,
@@ -212,11 +218,11 @@ def estimate_rates(
         encoding = parse_tag_encoding(encoding)
     except ValueError:
         pass
-    result = models.simulate_tags(
+    result = configurator.simulate_tags(
         speed=(speed * KMPH_TO_MPS_MUL),
         encoding=encoding,
         tari=tari,
-        # log_level=sim.ModelLogger.Level.WARNING,
+        # log_level=sim.ModelLoggerConfig.Level.WARNING,
         tid_word_size=tid_word_size,
         reader_offset=reader_offset,
         tag_offset=tag_offset,
@@ -225,19 +231,21 @@ def estimate_rates(
         num_tags=num_tags,
         verbose=verbose,
     )
-    result['encoding'] = encoding.name
-    result['tari'] = f"{tari * 1e6:.2f}"
-    result['speed'] = speed
-    result['tid_word_size'] = tid_word_size
-    result['reader_offset'] = reader_offset
-    result['tag_offset'] = tag_offset
-    result['altitude'] = altitude
-    result['power'] = power
+    print('Результат: ', result)
+    # result['encoding'] = encoding.name
+    # result['tari'] = f"{tari * 1e6:.2f}"
+    # result['speed'] = speed
+    # result['tid_word_size'] = tid_word_size
+    # result['reader_offset'] = reader_offset
+    # result['tag_offset'] = tag_offset
+    # result['altitude'] = altitude
+    # result['power'] = power
     return result
 
 
 def call_estimate_rates(d):
     return estimate_rates(**d)
+
 
 
 if __name__ == '__main__':

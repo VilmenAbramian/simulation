@@ -440,6 +440,8 @@ class Kernel:
             self.lhandler = handler
         if self._finalize:
             fin_ret = self._finalize(sim)
+        else:
+            fin_ret = None
 
         yield (
             ExecutionStats(

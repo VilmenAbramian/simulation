@@ -9,6 +9,7 @@ import epcstd as std
 import pysim.sim.simulator as sim
 
 
+MODEL_NAME = 'RFID'
 KMPH_TO_MPS_MUL = 1.0 / 3.6
 
 
@@ -17,7 +18,7 @@ class Settings:
     """
     Настройки модели.
 
-    При вызове модели simulate_tags() можно передать готовый объект
+    При вызове simulate_tags() можно передать готовый объект
     Settings() (например, заполненный в результате чтения JSON или строки
     из CSV-файла). По-умолчанию, используются значения параметров, которые
     настроены тут.
@@ -301,18 +302,20 @@ def simulate_tags(settings=None, verbose=False, **kwargs):
         *settings.generation_interval[1:])
 
     # 5) Launching simulation
-    kernel = sim.Kernel('test_model_name')
 
-    kernel.max_simulation_time = kwargs.get('sim_time_limit', None)
-    kernel.max_real_time = kwargs.get('real_time_limit', None)
-    kernel.context = model
+    run_model(model, sim.ModelLoggerConfig())
+    # kernel = sim.Kernel('test_model_name')
+
+    # kernel.max_simulation_time = kwargs.get('sim_time_limit', None)
+    # kernel.max_real_time = kwargs.get('real_time_limit', None)
+    # kernel.context = model
     # kernel.logger.level = kwargs.get('log_level', sim.Logger.Level.WARNING)
 
-    if verbose:
-        print("# MODEL SETTINGS:")
-        print_model_settings(model, kernel)
+    # if verbose:
+    #     print("# MODEL SETTINGS:")
+    #     print_model_settings(model, kernel)
 
-    kernel.build_runner(handlers.start_simulation)
+    # kernel.build_runner(handlers.start_simulation)
 
     return {
         'rounds_per_tag': model.statistics.average_rounds_per_tag(),
@@ -320,6 +323,26 @@ def simulate_tags(settings=None, verbose=False, **kwargs):
         'read_tid_prob': model.statistics.read_tid_probability()
     }
 
+
+def run_model(
+    model,
+    logger_config,
+    max_real_time: float | None = None,
+    max_sim_time: float | None = None,
+    max_num_events: int | None = None,
+):
+    sim_time, _, result = sim.run_simulation(
+        sim.build_simulation(
+            MODEL_NAME,
+            init=handlers.start_simulation,
+            fin=None,
+            context = model,
+            max_real_time=max_real_time,
+            max_sim_time=max_sim_time,
+            max_num_events=max_num_events,
+            logger_config=logger_config
+        ))
+    return result
 
 def print_model_settings(model: Model, kernel: sim.Kernel):
     """Вспомогательный метод для вывода на печать параметров настроенной
