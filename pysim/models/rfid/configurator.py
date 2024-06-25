@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from typing import Callable
 import numpy as np
 from tabulate import tabulate
+from typing import Callable
 
+import epcstd as std
 import handlers
 from objects import Reader, Model, Antenna, Generator, Medium
-import epcstd as std
 import pysim.sim.simulator as sim
 
 
@@ -18,13 +18,13 @@ class Settings:
     """
     Настройки модели.
 
-    При вызове simulate_tags() можно передать готовый объект
+    При вызове create_model() можно передать готовый объект
     Settings() (например, заполненный в результате чтения JSON или строки
     из CSV-файла). По-умолчанию, используются значения параметров, которые
     настроены тут.
 
-    Также при вызове simulate_tags() можно переопределить некоторые параметры.
-    В этом случае у аргументов simulate_tags() приоритет над значениями,
+    Также при вызове create_model() можно переопределить некоторые параметры.
+    В этом случае у аргументов create_model() приоритет над значениями,
     которые хранятся в объекте класса Settings.
     """
     # --- Настройки кодировки команд считывателя (PIE) ---
@@ -190,7 +190,7 @@ class Settings:
             Reader.PowerControlMode.ALWAYS_ON
 
 
-def simulate_tags(settings=None, verbose=False, **kwargs):
+def create_model(settings=None, verbose=False, **kwargs):
     """Run simulation.
 
     Possible kwargs (if value not given, use from settings):
@@ -304,19 +304,6 @@ def simulate_tags(settings=None, verbose=False, **kwargs):
     # 5) Launching simulation
 
     run_model(model, sim.ModelLoggerConfig())
-    # kernel = sim.Kernel('test_model_name')
-
-    # kernel.max_simulation_time = kwargs.get('sim_time_limit', None)
-    # kernel.max_real_time = kwargs.get('real_time_limit', None)
-    # kernel.context = model
-    # kernel.logger.level = kwargs.get('log_level', sim.Logger.Level.WARNING)
-
-    # if verbose:
-    #     print("# MODEL SETTINGS:")
-    #     print_model_settings(model, kernel)
-
-    # kernel.build_runner(handlers.start_simulation)
-
     return {
         'rounds_per_tag': model.statistics.average_rounds_per_tag(),
         'inventory_prob': model.statistics.inventory_probability(),
@@ -335,7 +322,6 @@ def run_model(
         sim.build_simulation(
             MODEL_NAME,
             init=handlers.start_simulation,
-            fin=None,
             context = model,
             max_real_time=max_real_time,
             max_sim_time=max_sim_time,
@@ -345,9 +331,7 @@ def run_model(
     return result
 
 def print_model_settings(model: Model, kernel: sim.Kernel):
-    """Вспомогательный метод для вывода на печать параметров настроенной
-       модели.
-    """
+    """Вывод на печать параметров настроенной модели"""
     reader = model.reader
     medium = model.medium
     generator = model.generators[0]

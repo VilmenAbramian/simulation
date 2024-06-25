@@ -1,14 +1,9 @@
-from multiprocessing import Pool
-import multiprocessing
 import click
+import multiprocessing
 from time import time_ns
-from tabulate import tabulate
-
-import pysim.sim.simulator as sim
-import epcstd as std
 
 import configurator
-from configurator import KMPH_TO_MPS_MUL
+import epcstd as std
 
 
 DEFAULT_SPEED = 10             # kmph
@@ -33,59 +28,75 @@ def cli():
     pass
 
 
-@cli.command("start")
+@cli.command('start')
 @click.option(
-    "-s", "--speed", default=(DEFAULT_SPEED,), multiple=True,
-    help="Vehicle speed, kmph. You can provide multiple values, e.g. "
-         "`-s 10 -s 20 -s 80` for parallel computation.",
+    '-s', '--speed', default=(DEFAULT_SPEED,), multiple=True,
+    help='Vehicle speed, kmph. You can provide multiple values, e.g. '
+         '`-s 10 -s 20 -s 80` for parallel computation.',
     show_default=True,)
 @click.option(
-    "-m", "--encoding", type=click.Choice(["1", "2", "4", "8"]),
-    default=DEFAULT_ENCODING, help="Tag encoding", show_default=True)
+    '-m', '--encoding', type=click.Choice(['1', '2', '4', '8']),
+    default=DEFAULT_ENCODING, help='Tag encoding', show_default=True)
 @click.option(
-    "-t", "--tari", default=DEFAULT_TARI, show_default=True,
-    type=click.Choice(["6.25", "12.5", "18.75", "25"]), help="Tari value")
+    '-t', '--tari', default=DEFAULT_TARI, show_default=True,
+    type=click.Choice(['6.25', '12.5', '18.75', '25']), help='Tari value')
 @click.option(
-    "-ws", "--tid-word-size", default=(DEFAULT_TID_WORD_SIZE,), multiple=True,
-    help="Size of TID bank in words (x16 bits). This is both TID bank "
-         "size and the number of words the reader requests from the tag. "
-         "You can provide multiple values for this parameter for parallel "
-         "computation.",
+    '-ws', '--tid-word-size', default=(DEFAULT_TID_WORD_SIZE,), multiple=True,
+    help='Size of TID bank in words (x16 bits). This is both TID bank '
+         'size and the number of words the reader requests from the tag. '
+         'You can provide multiple values for this parameter for parallel '
+         'computation.',
     show_default=True,)
 @click.option(
-    "-a", "--altitude", multiple=True, default=(DEFAULT_ALTITUDE,),
-    help="Drone with RFID-reader altitude. You can pass multiple values of "
-         "this parameter for parallel computation.",
+    '-a', '--altitude', multiple=True, default=(DEFAULT_ALTITUDE,),
+    help='Drone with RFID-reader altitude. You can pass multiple values of '
+         'this parameter for parallel computation.',
     show_default=True)
 @click.option(
-    "-ro", "--reader-offset", default=(DEFAULT_READER_OFFSET,), multiple=True,
-    help="Reader offset from the wall. You can pass multiple values of this "
-         "parameter for parallel computation.",
+    '-ro', '--reader-offset', default=(DEFAULT_READER_OFFSET,), multiple=True,
+    help='Reader offset from the wall. You can pass multiple values of this '
+         'parameter for parallel computation.',
     show_default=True,)
 @click.option(
-    "-to", "--tag-offset", default=(DEFAULT_TAG_OFFSET,), multiple=True,
-    help="Tag offset from the wall. You can pass multiple values of this "
-         "parameter for parallel computation.",
+    '-to', '--tag-offset', default=(DEFAULT_TAG_OFFSET,), multiple=True,
+    help='Tag offset from the wall. You can pass multiple values of this '
+         'parameter for parallel computation.',
     show_default=True)
 @click.option(
-    "-p", "--power", default=(DEFAULT_POWER,), multiple=True,
-    help="Reader transmitter power. You can pass multiple values of this "
-         "parameter for parallel computation",
+    '-p', '--power', default=(DEFAULT_POWER,), multiple=True,
+    help='Reader transmitter power. You can pass multiple values of this '
+         'parameter for parallel computation.',
     show_default=True)
 @click.option(
-    "-n", "--num-tags", default=DEFAULT_NUM_TAGS, show_default=True,
-    help="Number of tags to simulate")
+    '-n', '--num-tags', default=DEFAULT_NUM_TAGS, show_default=True,
+    help='Number of tags to simulate.')
 @click.option(
-    "-j", "--jobs", default=multiprocessing.cpu_count(), show_default=True,
-    help="Number of parallel jobs to run when multiple arguments are given.")
+    '-j', '--jobs', default=multiprocessing.cpu_count(), show_default=True,
+    help='Number of parallel jobs to run when multiple arguments are given.')
 @click.option(
-    "-v", "--verbose", is_flag=True, default=False, show_default=True,
-    help="Print additional data, e.g. detailed model configuration")
-def start_single(verbose: bool = False, **kwargs):
-    # Сначала проверим, указан ли какой-то параметр несколько раз.
-    # Если такой есть и он один, то выполним несколько симуляций параллельно.
-    # Если все параметры даны в одном экземпляре, то выполним одну симуляцию.
-    # Если несколько параметров заданы со множеством значений, это ошибка.
+    '-v', '--verbose', is_flag=True, default=False, show_default=True,
+    help='Print additional data, e.g. detailed model configuration.')
+def cli_run(**kwargs):
+    '''
+    Точка входа модели RFID.
+    Задать параметры работы.
+    '''
+    kwargs, variadic = check_vars_for_multiprocessing(**kwargs)
+    print(f'Running {configurator.MODEL_NAME} model')
+
+    if variadic is None:
+        result = prepare_simulation(kwargs)
+    else:
+        result = prepare_multiple_simulation(variadic, **kwargs)
+
+
+def check_vars_for_multiprocessing(**kwargs):
+    '''
+    Проверка, указан ли какой-то параметр несколько раз.
+    Если такой есть и он один, то выполним несколько симуляций параллельно.
+    Если все параметры даны в одном экземпляре, то выполним одну симуляцию.
+    Если несколько параметров заданы со множеством значений, это ошибка.
+    '''
     var_arg_names = (
         'speed', 'tid_word_size', 'altitude', 'reader_offset',
         'tag_offset', 'power')
@@ -93,94 +104,73 @@ def start_single(verbose: bool = False, **kwargs):
     for arg_name in var_arg_names:
         if len(kwargs[arg_name]) > 1:
             if variadic is not None:
-                print("Error: only one argument can have multiple values, "
+                raise ValueError("Only one argument can have multiple values, "
                       f"not both \"{variadic}\" and \"{arg_name}\"")
-                return -1
             variadic = arg_name
         else:
             kwargs[arg_name] = kwargs[arg_name][0]
-
-    if variadic is None:
-        t_start_ns = time_ns()
-        ret = estimate_rates(
-            speed=kwargs['speed'],
-            tari=float(kwargs['tari']) * 1e-6,
-            encoding=kwargs['encoding'],
-            tid_word_size=kwargs['tid_word_size'],
-            reader_offset=kwargs['reader_offset'],
-            tag_offset=kwargs['tag_offset'],
-            altitude=kwargs['altitude'],
-            power=kwargs['power'],
-            num_tags=kwargs['num_tags'],
-            verbose=verbose,
-        )
-        t_end_ns = time_ns()
-        print(tabulate([(key, value) for key, value in ret.items()],
-                       tablefmt='pretty'))
-        print(f"elapsed: {(t_end_ns - t_start_ns) / 1_000_000_000} sec.")
-
-    else:
-        # Какой-то параметр варьируется. Запускаем параллельно расчеты через
-        # пул рабочих.
-
-        # Убираем дубликаты и сортируем по возрастанию значения аргумента,
-        # по которому варьируемся. Для того, чтобы убрать дубликаты,
-        # строим множество из списка (в нем все значения будут уникальны),
-        # затем строим сортированный список из множества.
-        variadic_values = sorted(set(kwargs[variadic]))
-
-        # Сначала построим массив из копий параметров. У каждого элемента
-        # args список ключей в точности совпадает с тем, что мы передаем в
-        # функцию estimate_rates (см. вызов выше).
-        args_list = [{
-            'speed': kwargs['speed'],
-            'tari': float(kwargs['tari']) * 1e-6,
-            'encoding': kwargs['encoding'],
-            'tid_word_size': kwargs['tid_word_size'],
-            'reader_offset': kwargs['reader_offset'],
-            'tag_offset': kwargs['tag_offset'],
-            'altitude': kwargs['altitude'],
-            'power': kwargs['power'],
-            'num_tags': kwargs['num_tags'],
-            'verbose': False,
-        } for _ in enumerate(variadic_values)]
-
-        # Теперь заменим значения варьируемого аргумента, чтобы в каждом
-        # элементе args хранилось только одно значение вместо всего набора.
-        for i, value in enumerate(variadic_values):
-            args_list[i][variadic] = value
-
-        # Создаем пул рабочих (процессов), которые будут параллельно
-        # выполняться.
-        pool = Pool(kwargs.get('jobs', multiprocessing.cpu_count()))
-        ret = pool.map(call_estimate_rates, args_list)
-
-        # Результаты выводим в двух таблицах: таблице параметров и
-        # таблице результатов. В последней - значение изменяющегося аргумента
-        # и результаты, которые ему соответсвуют.
-        params_names = list(var_arg_names) + ["encoding", "tari", "num_tags"]
-        params_names.remove(variadic)
-
-        print("\n# PARAMETERS:\n")
-        print(tabulate([(name, kwargs[name]) for name in params_names],
-                       tablefmt='pretty'))
-
-        # Подготовим таблицу результатов.
-        # Какие ключи нужны из словарей в списке ret (который вернул pool.map):
-        # FIXME: ошибка в добавлении столбца с изменяющимся параметром
-        # ret_cols = (variadic, "read_tid_prob", "inventory_prob",
-        #             "rounds_per_tag")
-        ret_cols = ("read_tid_prob", "inventory_prob",
-                    "rounds_per_tag")
-        print('ret_cols :', ret_cols)
-        print('ret: ', ret)
-        # Строки таблицы результатов:
-        results_table = [[item[column] for column in ret_cols] for item in ret]
-        print("\n# RESULTS:\n")
-        print(tabulate(results_table, headers=ret_cols, tablefmt='pretty'))
+    return kwargs, variadic
 
 
-# ----------------------------------------------------------------------------
+def prepare_multiple_simulation(variadic, **kwargs):
+    '''
+    Какой-то параметр варьируется. Запускаем параллельно расчеты через
+    пул рабочих.
+    Убираем дубликаты и сортируем по возрастанию значения аргумента,
+    по которому варьируемся.
+    '''
+    variadic_values = sorted(set(kwargs[variadic]))
+
+    # Построим массив из копий параметров
+    args_list = [{
+        'speed': kwargs['speed'],
+        'tari': kwargs['tari'],
+        'encoding': kwargs['encoding'],
+        'tid_word_size': kwargs['tid_word_size'],
+        'reader_offset': kwargs['reader_offset'],
+        'tag_offset': kwargs['tag_offset'],
+        'altitude': kwargs['altitude'],
+        'power': kwargs['power'],
+        'num_tags': kwargs['num_tags'],
+        'verbose': False,
+    } for _ in enumerate(variadic_values)]
+
+    # Теперь заменим значения варьируемого аргумента, чтобы в каждом
+    # элементе args хранилось только одно значение вместо всего набора.
+    for i, value in enumerate(variadic_values):
+        args_list[i][variadic] = value
+
+    pool = multiprocessing.Pool(
+        kwargs.get('jobs', multiprocessing.cpu_count())
+    )
+    pool.map(prepare_simulation, args_list)
+
+
+def prepare_simulation(kwargs):
+    t_start_ns = time_ns()
+    try:
+        encoding = parse_tag_encoding(kwargs['encoding'])
+    except ValueError:
+        pass
+    result = configurator.create_model(
+        speed=(kwargs['speed'] * configurator.KMPH_TO_MPS_MUL),
+        encoding=encoding,
+        tari=float(kwargs['tari']) * 1e-6,
+        tid_word_size=kwargs['tid_word_size'],
+        reader_offset=kwargs['reader_offset'],
+        tag_offset=kwargs['tag_offset'],
+        altitude=kwargs['altitude'],
+        power=kwargs['power'],
+        num_tags=kwargs['num_tags'],
+        verbose=kwargs['verbose'],
+    )
+    t_end_ns = time_ns()
+    print('Результат: ', result)
+    print(f'Симуляция заняла: {(t_end_ns - t_start_ns) / 1_000_000_000} с')
+
+    return result
+
+
 def parse_tag_encoding(s):
     s = s.upper()
     if s in {'1', "FM0"}:
@@ -193,59 +183,6 @@ def parse_tag_encoding(s):
         return std.TagEncoding.M8
     else:
         raise ValueError('illegal encoding = {}'.format(s))
-
-
-# Переименование! stimate_rates -> collect_changeable_parameters
-def estimate_rates(
-        speed,
-        tari,
-        encoding,
-        tid_word_size=None,
-        reader_offset=None,
-        tag_offset=None,
-        altitude=None,
-        power=None,
-        num_tags=DEFAULT_NUM_TAGS,
-        verbose=False,
-):
-    print(f"[+] Estimating speed = {speed} kmph, Tari = {tari*1e6:.2f} us, "
-          f"M = {encoding}, tid_size = {tid_word_size} words, "
-          f"reader_offset = {reader_offset} m, tag_offset = {tag_offset} m, "
-          f"altitude = {altitude} m, power = {power} dBm, "
-          f"num_tags = {num_tags}")
-
-    try:
-        encoding = parse_tag_encoding(encoding)
-    except ValueError:
-        pass
-    result = configurator.simulate_tags(
-        speed=(speed * KMPH_TO_MPS_MUL),
-        encoding=encoding,
-        tari=tari,
-        # log_level=sim.ModelLoggerConfig.Level.WARNING,
-        tid_word_size=tid_word_size,
-        reader_offset=reader_offset,
-        tag_offset=tag_offset,
-        altitude=altitude,
-        power=power,
-        num_tags=num_tags,
-        verbose=verbose,
-    )
-    print('Результат: ', result)
-    # result['encoding'] = encoding.name
-    # result['tari'] = f"{tari * 1e6:.2f}"
-    # result['speed'] = speed
-    # result['tid_word_size'] = tid_word_size
-    # result['reader_offset'] = reader_offset
-    # result['tag_offset'] = tag_offset
-    # result['altitude'] = altitude
-    # result['power'] = power
-    return result
-
-
-def call_estimate_rates(d):
-    return estimate_rates(**d)
-
 
 
 if __name__ == '__main__':
