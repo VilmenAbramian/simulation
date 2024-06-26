@@ -4,6 +4,7 @@ from time import time_ns
 
 import configurator
 import epcstd as std
+from processing import result_processing
 
 
 DEFAULT_SPEED = 10             # kmph
@@ -88,6 +89,7 @@ def cli_run(**kwargs):
         result = prepare_simulation(kwargs)
     else:
         result = prepare_multiple_simulation(variadic, **kwargs)
+    result_processing(kwargs, result, variadic)
 
 
 def check_vars_for_multiprocessing(**kwargs):
@@ -143,10 +145,18 @@ def prepare_multiple_simulation(variadic, **kwargs):
     pool = multiprocessing.Pool(
         kwargs.get('jobs', multiprocessing.cpu_count())
     )
-    pool.map(prepare_simulation, args_list)
+    return pool.map(prepare_simulation, args_list)
 
 
 def prepare_simulation(kwargs):
+    print(f'[+] Estimating speed = {kwargs["speed"]} kmph, '
+          f'Tari = {kwargs["tari"]} us, '
+          f'M = {kwargs["encoding"]}, '
+          f'tid_size = {kwargs["tid_word_size"]} words, '
+          f'reader_offset = {kwargs["reader_offset"]} m, '
+          f'tag_offset = {kwargs["tag_offset"]} m, '
+          f'altitude = {kwargs["altitude"]} m, power = {kwargs["power"]} dBm, '
+          f'num_tags = {kwargs["num_tags"]}')
     t_start_ns = time_ns()
     try:
         encoding = parse_tag_encoding(kwargs['encoding'])
@@ -165,10 +175,7 @@ def prepare_simulation(kwargs):
         verbose=kwargs['verbose'],
     )
     t_end_ns = time_ns()
-    print('Результат: ', result)
-    print(f'Симуляция заняла: {(t_end_ns - t_start_ns) / 1_000_000_000} с')
-
-    return result
+    return (result, ((t_end_ns - t_start_ns) / 1_000_000_000))
 
 
 def parse_tag_encoding(s):
