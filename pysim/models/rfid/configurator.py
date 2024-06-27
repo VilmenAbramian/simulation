@@ -1,13 +1,15 @@
 from dataclasses import dataclass
-from typing import Callable
 import numpy as np
 from tabulate import tabulate
+from typing import Callable
 
-import handlers as handlers
-from objects import Reader, Model, Antenna, Generator, Medium
 import epcstd as std
+import handlers
+from objects import Reader, Model, Antenna, Generator, Medium
 import pysim.sim.simulator as sim
 
+
+MODEL_NAME = 'RFID'
 KMPH_TO_MPS_MUL = 1.0 / 3.6
 
 
@@ -16,13 +18,13 @@ class Settings:
     """
     Настройки модели.
 
-    При вызове модели simulate_tags() можно передать готовый объект
+    При вызове create_model() можно передать готовый объект
     Settings() (например, заполненный в результате чтения JSON или строки
     из CSV-файла). По-умолчанию, используются значения параметров, которые
     настроены тут.
 
-    Также при вызове simulate_tags() можно переопределить некоторые параметры.
-    В этом случае у аргументов simulate_tags() приоритет над значениями,
+    Также при вызове create_model() можно переопределить некоторые параметры.
+    В этом случае у аргументов create_model() приоритет над значениями,
     которые хранятся в объекте класса Settings.
     """
     # --- Настройки кодировки команд считывателя (PIE) ---
@@ -46,15 +48,16 @@ class Settings:
     def get_trcal(self, rtcal):
         return rtcal * self.trcal_rtcal_mul
 
+
     # --- Геометрия и траектория движения ---
-    speed: float = 10 * KMPH_TO_MPS_MUL  # скорость метки, м/с
+    speed: float = 10 * KMPH_TO_MPS_MUL       # скорость метки, м/с
     initial_distance_to_reader: float = 10.0  # как далеко метка от ридера, м
     travel_distance: float = 20.0  # как далеко метка летит до уничтожения, м
 
     reader_antenna_x: float = 5.0  # расстояние от ридера до стены по оси OX, м
     reader_antenna_z: float = 5.0  # высота дрона (ридера) по оси OZ, м
-    tag_antenna_x: float = 5.0  # расстояние от метки до стены по оси OX, м
-    tag_antenna_z: float = 0.0  # высота антенны метки по оси OZ, м
+    tag_antenna_x: float = 5.0     # расстояние от метки до стены по оси OX, м
+    tag_antenna_z: float = 0.0     # высота антенны метки по оси OZ, м
 
     # Направление, куда смотрит антенна ридера:
     reader_antenna_direction: np.ndarray = np.asarray([0, 0, -1])
@@ -68,8 +71,8 @@ class Settings:
     # --- Энергетические параметры ---
     reader_power: float = 31.5  # мощность трансмиттера считывателя, дБм
     reader_antenna_gain: float = 6.0  # усиление антенны считывателя, дБ
-    reader_cable_loss: float = -2.0  # потери в антенном кабеле ридера, дБ
-    tag_antenna_gain: float = 3.0  # усиление антенны метки, дБ
+    reader_cable_loss: float = -2.0   # потери в антенном кабеле ридера, дБ
+    tag_antenna_gain: float = 3.0     # усиление антенны метки, дБ
     tag_modulation_loss: float = -12.0  # потери на модуляции на метке, дБ
     tag_sensitivity: float = -18.0  # чувствительность (чтения) метки, дБ
 
@@ -79,7 +82,7 @@ class Settings:
 
     # --- Настройки модели распространения сигнала ---
     ber_distribution: str = 'rayleigh'  # модель BER: 'rayleigh' or 'awgn'
-    frequency: float = 860 * 1e6  # несущая частота ридера, МГц
+    frequency: float = 860 * 1e6   # несущая частота ридера, МГц
     permittivity: float = 15.0  # диэлектрическая проницаемость стены
     conductivity: float = 0.03  # проводимость материала стены
     polarization_loss: float = -3.0  # дБ
@@ -172,7 +175,7 @@ class Settings:
     # быть указаны в 1, 2, ..., N элементах кортежа.
     # Например, если в качестве функции используется `numpy.random.exponential`,
     # то в качестве аргумента можно передать среднее: (exponential, 42.0).
-    generation_interval: tuple = (lambda: 1.0,)
+    generation_interval: tuple = (lambda: 1.0, )
 
     num_tags: int = 10  # сколько меток нужно сгенерировать
 
@@ -187,7 +190,7 @@ class Settings:
             Reader.PowerControlMode.ALWAYS_ON
 
 
-def simulate_tags(settings=None, verbose=False, **kwargs):
+def create_model(settings=None, verbose=False, **kwargs):
     """Run simulation.
 
     Possible kwargs (if value not given, use from settings):
@@ -299,24 +302,100 @@ def simulate_tags(settings=None, verbose=False, **kwargs):
         *settings.generation_interval[1:])
 
     # 5) Launching simulation
-    kernel = sim.Kernel(model_name = 'test')
 
-    kernel.max_simulation_time = kwargs.get('sim_time_limit', None)
-    kernel.max_real_time = kwargs.get('real_time_limit', None)
-    kernel.context = model
-    # Логгер в новом ядре подключается иначе, поэтому пока отключу
-    # kernel.logger.level = kwargs.get('log_level', sim.Logger.Level.WARNING)
-
-    if verbose:
-        print("# MODEL SETTINGS:")
-        # FIXME: Пока отключаю, так как хочу проверить работоспобоность
-        # модели без лишних вспомогательных функций.
-        # print_model_settings(model, kernel)
-
-    kernel.run(handlers.start_simulation)
-
+    run_model(model, sim.ModelLoggerConfig())
     return {
         'rounds_per_tag': model.statistics.average_rounds_per_tag(),
         'inventory_prob': model.statistics.inventory_probability(),
         'read_tid_prob': model.statistics.read_tid_probability()
     }
+
+
+def run_model(
+    model,
+    logger_config,
+    max_real_time: float | None = None,
+    max_sim_time: float | None = None,
+    max_num_events: int | None = None,
+):
+    sim_time, _, result = sim.run_simulation(
+        sim.build_simulation(
+            MODEL_NAME,
+            init=handlers.start_simulation,
+            context = model,
+            max_real_time=max_real_time,
+            max_sim_time=max_sim_time,
+            max_num_events=max_num_events,
+            logger_config=logger_config
+        ))
+    return result
+
+def print_model_settings(model: Model, kernel: sim.Kernel):
+    """Вывод на печать параметров настроенной модели"""
+    reader = model.reader
+    medium = model.medium
+    generator = model.generators[0]
+
+    us = lambda sec: f"{sec * 1e6:.2f} us"
+
+    rows = [
+        # --- Model ----
+        ("model", "max_tags_num", model.max_tags_num),
+        ("model", "update_interval", model.update_interval),
+        ("model", "statistics.use_power_statistics",
+         model.statistics.use_power_statistics),
+        # --- Reader ---
+        ("reader", "tari", us(reader.tari)),
+        ("reader", "tag_encoding", reader.tag_encoding),
+        ("reader", "q", reader.q),
+        ("reader", "rtcal", us(reader.rtcal)),
+        ("reader", "trcal", us(reader.trcal)),
+        ("reader", "delim", us(reader.delim)),
+        ("reader", "temp", reader.temp),
+        ("reader", "session", reader.session),
+        ("reader", "target", reader.target),
+        ("reader", "sel", reader.sel),
+        ("reader", "dr", reader.dr),
+        ("reader", "trext", reader.trext),
+        ("reader", "target_strategy", reader.target_strategy),
+        ("reader", "rounds_per_target", reader.rounds_per_target),
+        ("reader", "power_control_mode", reader.power_control_mode),
+        ("reader", "max_power", reader.max_power),
+        ("reader", "power_on_duration", reader.power_on_duration),
+        ("reader", "power_off_duration", reader.power_off_duration),
+        ("reader", "noise", reader.noise),
+        ("reader", "read_tid_words_num", reader.read_tid_words_num),
+        ("reader", "read_tid_bank", reader.read_tid_bank),
+        ("reader", "always_start_with_first_antenna",
+         reader.always_start_with_first_antenna),
+        ("reader", "antenna_switch_interval", reader.antenna_switch_interval),
+        ("reader antenna", "pos", reader.antenna.pos),
+        ("reader antenna", "direction_theta", reader.antenna.direction_theta),
+        ("reader antenna", "gain", reader.antenna.gain),
+        ("reader antenna", "cable_loss", reader.antenna.cable_loss),
+        # --- Medium ---
+        ("medium", "ber_distribution", medium.ber_distribution),
+        ("medium", "ground_reflection_type", medium.ground_reflection_type),
+        ("medium", "frequency", medium.frequency),
+        ("medium", "permittivity", medium.permittivity),
+        ("medium", "conductivity", medium.conductivity),
+        ("medium", "polarization_loss", medium.polarization_loss),
+        ("medium", "use_doppler", medium.use_doppler),
+        # --- Generator and tag ---
+        ("tag", "pos0", generator.pos0),
+        ("tag", "velocity", generator.velocity),
+        ("tag", "direction", generator.direction),
+        ("tag", "antenna_direction", generator.tag_antenna_direction),
+        ("tag", "travel_distance", generator.travel_distance),
+        ("tag", "epc_bitlen", generator.epc_bitlen),
+        ("tag", "tid_bitlen", generator.tid_bitlen),
+        ("tag", "antenna_gain", generator.antenna_gain),
+        ("tag", "modulation_loss", generator.modulation_loss),
+        ("tag", "sensitivity", generator.sensitivity),
+        ("generator", "num_tags", generator.max_tags_generated),
+        # --- Kernel ---
+        ("kernel", "max_simulation_time", kernel.max_simulation_time),
+        ("kernel", "max_real_time", kernel.max_real_time),
+        ("kernel", "logger_level", kernel.logger.level),
+    ]
+    print(tabulate(rows))

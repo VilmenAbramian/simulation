@@ -1114,7 +1114,7 @@ class Tag:
 
     def _set_state(self, new_state):
         if self._state != new_state:
-            self.kernel.logger.trace(
+            self.kernel.logger.debug(
                 f"tag {self.tag_id} state changed: {self.state.name} --> {new_state.name}, {self.describe()}")
         self._state = new_state
 

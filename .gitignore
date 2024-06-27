@@ -138,3 +138,4 @@ dmypy.json
 
 # Folders
 /pysim/models/pingpong_oop/results
+/pysim/models/rfid/results

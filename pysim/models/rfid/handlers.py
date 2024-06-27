@@ -9,10 +9,10 @@ def start_simulation(kernel):
     ctx = kernel.context
     ctx.reader.kernel = kernel
     for generator in ctx.generators:
-        kernel.schedule(generator.interval, generate_tag, generator)   # FIXME: uncomment!
+        kernel.schedule(generator.interval, generate_tag, (generator, ))   # FIXME: uncomment!
         # kernel.schedule(0.001, generate_tag, generator)
     kernel.schedule(ctx.update_interval, update_positions)
-    kernel.call(turn_reader_on, ctx.reader)
+    kernel.call(turn_reader_on, (ctx.reader,))
 
 
 def _update_power(time, reader, tags, transaction, medium, statistics):
@@ -67,7 +67,7 @@ def turn_reader_on(kernel, reader):
     # Managing antennas
     if reader.num_antennas > 1:
         reader.antenna_switch_event_id = kernel.schedule(
-            reader.antenna_switch_interval, switch_reader_antenna, reader)
+            reader.antenna_switch_interval, switch_reader_antenna, (reader, ))
     kernel.logger.debug(f"switched antenna #{reader.antenna_index}")
 
     # Updating tags and transaction power
@@ -79,15 +79,15 @@ def turn_reader_on(kernel, reader):
     transaction = _build_transaction(kernel, reader, cmd_frame)
     ctx.transaction = transaction
     ctx.transaction.timeout_event_id = kernel.schedule(
-        transaction.duration, finish_transaction, transaction)
+        transaction.duration, finish_transaction, (transaction, ))
     if transaction.reply_start_time is not None:
         dt = transaction.reply_start_time - kernel.time
-        kernel.schedule(dt, update_power_at_response_start, transaction)
+        kernel.schedule(dt, update_power_at_response_start, (transaction, ))
 
     # Scheduling turning off
     power_mode = reader.power_control_mode
     turned_on_duration = power_mode.min_powered_on_interval(reader)
-    kernel.schedule(turned_on_duration, turn_reader_off, reader)
+    kernel.schedule(turned_on_duration, turn_reader_off, (reader, ))
 
 
 def turn_reader_off(kernel, reader):
@@ -108,7 +108,7 @@ def turn_reader_off(kernel, reader):
     # Scheduling turning ON
     power_mode = reader.power_control_mode
     turned_off_duration = power_mode.powered_off_interval(reader)
-    kernel.schedule(turned_off_duration, turn_reader_on, reader)
+    kernel.schedule(turned_off_duration, turn_reader_on, (reader, ))
 
 
 def generate_tag(kernel, generator):
@@ -130,8 +130,8 @@ def generate_tag(kernel, generator):
     ctx.statistics.create_tag_record(tag)
 
     # Scheduling tag death (remove_tag) and next tag generation (this function)
-    kernel.schedule(generator.lifetime, remove_tag, tag)
-    kernel.schedule(generator.interval, generate_tag, generator)
+    kernel.schedule(generator.lifetime, remove_tag, (tag, ))
+    kernel.schedule(generator.interval, generate_tag, (generator, ))
 
     _update_power(kernel.time, ctx.reader, [tag], None, ctx.medium,
                   ctx.statistics)
@@ -159,7 +159,7 @@ def update_positions(kernel):
 
 
 def finish_transaction(kernel, transaction):
-    kernel.logger.trace(f"finished transaction: {str(transaction)}")
+    kernel.logger.debug(f"finished transaction: {str(transaction)}")
     ctx = kernel.context
     reader = ctx.reader
     assert transaction is ctx.transaction
@@ -211,17 +211,17 @@ def finish_transaction(kernel, transaction):
     # Processing new command (reader frame)
     ctx.transaction = _build_transaction(kernel, ctx.reader, cmd_frame)
     ctx.transaction.timeout_event_id = kernel.schedule(
-        transaction.duration, finish_transaction, ctx.transaction)
+        transaction.duration, finish_transaction, (ctx.transaction, ))
     if transaction.reply_start_time is not None:
         dt = transaction.reply_start_time - kernel.time
-        kernel.schedule(dt, update_power_at_response_start, transaction)
+        kernel.schedule(dt, update_power_at_response_start, (transaction, ))
 
 
 def switch_reader_antenna(kernel, reader):
     antenna = reader.select_next_antenna()
     kernel.logger.debug(f"switched antenna #{antenna.index}")
     reader.antenna_switch_event_id = kernel.schedule(
-        reader.antenna_switch_interval, switch_reader_antenna, reader)
+        reader.antenna_switch_interval, switch_reader_antenna, (reader, ))
 
 
 def update_power_at_response_start(kernel, transaction):
