@@ -2,12 +2,12 @@ import click
 from multiprocessing import Pool
 import multiprocessing
 
+from objects import Config, Result
 from pysim.sim.simulator import (
     build_simulation,
     run_simulation,
     ModelLoggerConfig
 )
-from objects import Config, Result
 from processing import result_processing
 from pysim.models.pingpong_oop.handlers import initialize, finalize
 
