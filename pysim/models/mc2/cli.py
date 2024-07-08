@@ -5,31 +5,35 @@ from pysim.sim.simulator import (
     run_simulation,
     ModelLoggerConfig
 )
-from pysim.models.mc2.objects import Config, Result
+from pysim.models.mc2.objects import Config
 from pysim.models.mc2.handlers import initialize, finalize
 
 
 MODEL_NAME = 'Monte-Carlo-2-scenario'
 DEFAULT_PROBABILITY = (0.9, 0.91, 0.92, 0.93)
 DEFAULT_PROCESSING_TIME = (0.01, 0.011, 0.012, 0.013)
-MAX_TRANSMISSIONS = 10
+DEFAULT_MAX_TRANSMISSIONS = 10
 
 
 @click.command()
 @click.option(
-    '-p', '--probability', nargs=4, type=click.Tuple([float, float, float, float]),
+    '-p', '--probability', nargs=4, type=click.Tuple(
+        [float, float, float, float]
+    ),
     default=DEFAULT_PROBABILITY,
     help='Массив вероятностей перехода из одного состояния в другое',
     show_default=True
 )
 @click.option(
-    '-t', '--processing_time', nargs=4, type=click.Tuple([float, float, float, float]),
+    '-t', '--processing_time', nargs=4, type=click.Tuple(
+        [float, float, float, float]
+    ),
     default=DEFAULT_PROCESSING_TIME,
     help='Массив длительностей обработки пакета в каждом из состояний',
     show_default=True
 )
 @click.option(
-    '-m', '--max_transmisions', default=MAX_TRANSMISSIONS,
+    '-m', '--max_transmisions', default=DEFAULT_MAX_TRANSMISSIONS,
     help='Количество отправляемых пакетов',
     show_default=True
 )
@@ -45,8 +49,8 @@ def cli_run(**kwargs):
         processing_time=kwargs['processing_time'],
         max_transmisions=kwargs['max_transmisions'],
     ), ModelLoggerConfig())
-    # result = create_config(kwargs)
-    print('Результат от симулятора: ', result)
+    print('Суммарное время: ', result.sim_time)
+    print('Среднее время до поглощения: ', result.sim_time/kwargs['max_transmisions'])
 
 
 def run_model(

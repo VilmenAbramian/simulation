@@ -1,6 +1,5 @@
-import statistics
 from pysim.sim import Simulator
-from .objects import Config, Result
+from .objects import Config
 from .model import Model
 
 
@@ -12,8 +11,6 @@ def initialize(sim: Simulator, config: Config):
     sim.call(model.arbitrate.handle_timeout)
 
 
-def finalize(sim: Simulator) -> Result:
+def finalize(sim: Simulator):
     assert isinstance(sim.context, Model)
-    # noinspection PyTypeChecker
-    model: Model = sim.context
     print('Симуляция завершена')
