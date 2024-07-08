@@ -17,11 +17,3 @@ def finalize(sim: Simulator) -> Result:
     # noinspection PyTypeChecker
     model: Model = sim.context
     print('Симуляция завершена')
-
-    # return Result(
-    #     avg_interval=statistics.mean(model.client.intervals_list),
-    #     avg_delay=statistics.mean(model.channel.delays_list),
-    #     miss_rate=(
-    #         model.client.num_acknowledged / model.client.num_pings_sent
-    #     ),
-    # )
