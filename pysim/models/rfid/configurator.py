@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 from tabulate import tabulate
 from typing import Callable
@@ -60,10 +60,10 @@ class Settings:
     tag_antenna_z: float = 0.0     # высота антенны метки по оси OZ, м
 
     # Направление, куда смотрит антенна ридера:
-    reader_antenna_direction: np.ndarray = np.asarray([0, 0, -1])
+    reader_antenna_direction: np.ndarray = field(default_factory=lambda: np.asarray([0, 0, -1]))
 
     # Направление, куда смотрит антенна метки:
-    tag_antenna_direction: np.ndarray = np.asarray([0, 0, 1])
+    tag_antenna_direction: np.ndarray = field(default_factory=lambda: np.asarray([0, 0, 1]))
 
     # Как часто обновлять координаты (модельные часы):
     update_interval: float = 0.01
@@ -207,7 +207,7 @@ def create_model(settings=None, verbose=False, **kwargs):
     - real_time_limit: float
     - log_level: sim.Logger.Level
     """
-    if settings is None:
+    if settings is None:     
         settings = Settings()
 
     # 0) Building the model
