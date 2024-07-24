@@ -1261,6 +1261,3 @@ def prettify_elementary_timings(timings):
             s += str(timings[k])
         ret.append(s)
     return "\n".join(ret)
-
-
-

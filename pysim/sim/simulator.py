@@ -120,9 +120,9 @@ class Simulator:
             self,
             handler: Handler,
             args: Iterable[Any] = (),
-            msg: str = ""
+            msg: str = ''
     ) -> EventId:
-        """
+        '''
         Запланировать событие на текущий момент времени.
 
         Вариант вызова `schedule()` с `delay = 0`.
@@ -139,7 +139,7 @@ class Simulator:
 
         Returns:
             EventId: идентификатор события, число больше 0
-        """
+        '''
         return self._kernel.schedule(0, handler, args, msg)
 
     def cancel(self, event_id: EventId) -> int:
@@ -207,7 +207,7 @@ class EventQueue:
 
         Args:
         time - число (int, float), характеризующее время (приоритет) события
-        task - string, текстовое название события
+        task - запланированное событие
 
         Returns:
         event_id - уникальный порядковый номер события
@@ -334,7 +334,7 @@ class Kernel:
             delay: float,
             handler: Handler,
             args: Iterable[Any] = (),
-            msg: str = ""
+            msg: str = ''
     ) -> EventId:
         '''Планирование нового события'''
         if delay is not None:
@@ -401,7 +401,8 @@ class Kernel:
         Returns:
             list, в котором содержится приоритетная куча событий
         """
-        return EventQueue.to_list()
+
+        return EventQueue.to_list(self._queue)
 
     def build_runner(self, debug: bool = False) -> Iterator[ExecResult]:
         """

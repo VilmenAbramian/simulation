@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 import numpy as np
 from tabulate import tabulate
-from typing import Callable
 
 import epcstd as std
 import handlers
@@ -28,8 +27,9 @@ class Settings:
     которые хранятся в объекте класса Settings.
     """
     # --- Настройки кодировки команд считывателя (PIE) ---
-    delim: float = 12.5e-6  # длительность символа-разделителя (константа), сек.
-    tari: float = 6.25e-6  # длительность Tari, сек. (6.25, 12.5, 18.75, 25 мкс)
+    delim: float = 12.5e-6  # длительность символа-разделителя (константа), сек
+    # длительность Tari, сек. (6.25, 12.5, 18.75, 25 мкс)
+    tari: float = 6.25e-6
     rtcal_tari_mul: float = 3.0  # множитель RTcal, см. get_rtcal()
     trcal_rtcal_mul: float = 2.5  # множитель TRcal, см. get_trcal()
     temp: std.TempRange = std.TempRange.NOMINAL  # температурный диапазон
@@ -48,7 +48,6 @@ class Settings:
     def get_trcal(self, rtcal):
         return rtcal * self.trcal_rtcal_mul
 
-
     # --- Геометрия и траектория движения ---
     speed: float = 10 * KMPH_TO_MPS_MUL       # скорость метки, м/с
     initial_distance_to_reader: float = 10.0  # как далеко метка от ридера, м
@@ -60,10 +59,14 @@ class Settings:
     tag_antenna_z: float = 0.0     # высота антенны метки по оси OZ, м
 
     # Направление, куда смотрит антенна ридера:
-    reader_antenna_direction: np.ndarray = field(default_factory=lambda: np.asarray([0, 0, -1]))
+    reader_antenna_direction: np.ndarray = field(
+        default_factory=lambda: np.asarray([0, 0, -1])
+    )
 
     # Направление, куда смотрит антенна метки:
-    tag_antenna_direction: np.ndarray = field(default_factory=lambda: np.asarray([0, 0, 1]))
+    tag_antenna_direction: np.ndarray = field(
+        default_factory=lambda: np.asarray([0, 0, 1])
+    )
 
     # Как часто обновлять координаты (модельные часы):
     update_interval: float = 0.01
@@ -96,9 +99,10 @@ class Settings:
     use_doppler: bool = True  # учитывать ли эффект Доплера
 
     # --- Управление питанием считывателя ---
-    reader_switch_power: bool = True  # должен ли ридер периодически отключаться
-    reader_power_on_duration: float = 2.0  # сколько считыватель включен, сек.
-    reader_power_off_duration: float = 0.1  # сколько считыватель выключен, сек.
+    # должен ли ридер периодически отключаться
+    reader_switch_power: bool = True
+    reader_power_on_duration: float = 2.0  # сколько считыватель включен, сек
+    reader_power_off_duration: float = 0.1  # сколько считыватель выключен, сек
 
     # Интервал переключения антенн считывателя.
     # В текущей модели не используется, так как у ридера только одна антенна.
@@ -117,7 +121,7 @@ class Settings:
     tid_word_size: int = 8
 
     q: int = 2  # значение параметра Q
-    encoding: std.TagEncoding = std.TagEncoding.M4  # способ кодирования ответов
+    encoding: std.TagEncoding = std.TagEncoding.M4  # метод кодирования ответов
     dr: std.DivideRatio = std.DivideRatio.DR_8  # коэффициент DR (8 или 64/3)
     sel: std.SelFlag = std.SelFlag.ALL  # флаг Sel (не используется в модели)
     session: std.Session = std.Session.S0  # номер сессии, в которой идет опрос
@@ -128,7 +132,8 @@ class Settings:
     # флаг сессии, совпадающий с target. После каждого ответа на команду ACK
     # метка инвертирует свой флаг сессии с A на B и наоборот.
     # Если метка передала свой EPCID в ответ на ACK, и в следующем раунде
-    # ридер запрашивает тот же флаг Target, метка не будет участвовать в раунде.
+    # ридер запрашивает тот же флаг Target, метка не будет
+    # участвовать в раунде.
     #
     # Параметр target используется, если target_strategy = "const".
     # Если target_strategy = "switch", ридер будет чередовать значения Target
@@ -173,8 +178,9 @@ class Settings:
     # элементом - функцией без аргументов.
     # Если у функции есть N обязательных параметров, то их значения должны
     # быть указаны в 1, 2, ..., N элементах кортежа.
-    # Например, если в качестве функции используется `numpy.random.exponential`,
-    # то в качестве аргумента можно передать среднее: (exponential, 42.0).
+    # Например, если в качестве функции используется
+    # `numpy.random.exponential`, то в качестве аргумента
+    # можно передать среднее: (exponential, 42.0).
     generation_interval: tuple = (lambda: 1.0, )
 
     num_tags: int = 10  # сколько меток нужно сгенерировать
@@ -207,7 +213,7 @@ def create_model(settings=None, verbose=False, **kwargs):
     - real_time_limit: float
     - log_level: sim.Logger.Level
     """
-    if settings is None:     
+    if settings is None:
         settings = Settings()
 
     # 0) Building the model
@@ -322,7 +328,7 @@ def run_model(
         sim.build_simulation(
             MODEL_NAME,
             init=handlers.start_simulation,
-            context = model,
+            context=model,
             max_real_time=max_real_time,
             max_sim_time=max_sim_time,
             max_num_events=max_num_events,
@@ -330,13 +336,15 @@ def run_model(
         ))
     return result
 
+
 def print_model_settings(model: Model, kernel: sim.Kernel):
     """Вывод на печать параметров настроенной модели"""
     reader = model.reader
     medium = model.medium
     generator = model.generators[0]
 
-    us = lambda sec: f"{sec * 1e6:.2f} us"
+    def us(sec):
+        return f'{sec * 1e6:.2f} us'
 
     rows = [
         # --- Model ----

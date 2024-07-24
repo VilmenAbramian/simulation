@@ -93,7 +93,7 @@ def run_multiple_simulation(variadic, **kwargs):
     help='Количество отправляемых клиентом Ping-ов',
     show_default=True
 )
-def cli_run(**kwargs):
+def run(**kwargs):
     '''
     Точка входа модели Ping-Pong.
     Задать параметры работы.
@@ -140,4 +140,4 @@ def run_model(
 
 
 if __name__ == '__main__':
-    cli_run()
+    run()

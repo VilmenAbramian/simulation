@@ -1,18 +1,32 @@
 import numpy as np
+from pprint import pprint
 
-from objects import Transaction, Model, Tag
 import epcstd as std
+from objects import Model, Tag, Transaction
 
 
 def start_simulation(kernel):
+    '''
+    Используется в качестве init для старта симуляции.
+    При старте планирует 3 события (сортировка по времени):
+      1) Запуск считывателя
+      2) Генерация новой метки
+      3) Обновить местоположения объектов
+    '''
     assert isinstance(kernel.context, Model)
     ctx = kernel.context
     ctx.reader.kernel = kernel
     for generator in ctx.generators:
-        kernel.schedule(generator.interval, generate_tag, (generator, ))   # FIXME: uncomment!
-        # kernel.schedule(0.001, generate_tag, generator)
-    kernel.schedule(ctx.update_interval, update_positions)
-    kernel.call(turn_reader_on, (ctx.reader,))
+        kernel.schedule(
+            generator.interval,
+            generate_tag, (generator, ),
+            msg='Генерация новой метки'
+        )
+    kernel.schedule(
+        ctx.update_interval, update_positions, msg='Обновить расположение'
+    )
+    kernel.call(turn_reader_on, (ctx.reader,), msg='Запуск считывателя')
+    # pprint(f'Список запланированных событий: {kernel._kernel.future_events()}')
 
 
 def _update_power(time, reader, tags, transaction, medium, statistics):
@@ -59,10 +73,14 @@ def _build_transaction(kernel, reader, reader_frame):
 
 
 def turn_reader_on(kernel, reader):
+    '''
+    Включение считывателя
+    '''
     ctx = kernel.context
 
     # Turning ON and getting the first command
     cmd_frame = reader.turn_on()
+    print('Команда: ', cmd_frame)
 
     # Managing antennas
     if reader.num_antennas > 1:

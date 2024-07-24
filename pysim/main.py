@@ -1,7 +1,8 @@
+import click
 import importlib
 import logging
 import pkgutil
-import click
+
 from pysim.sim import simulator
 from pysim.sim.logger import ModelLoggerConfig
 
@@ -20,26 +21,26 @@ def cli():
 
 
 # Вывести список моделей
-@cli.command("list")
+@cli.command('list')
 def list_models():
     for model_name in models_list:
         print(f"* {model_name}")
 
 
 # Запустить модель. Команды в группу добавляются в коде инициализации ниже.
-@cli.group("run")
+@cli.group('run')
 def run():
     pass
 
 
-@cli.command("sim")
+@cli.command('sim')
 def run_simulate():
     def initialize(sim: simulator.Simulator):
-        sim.logger.info("запускаем инициализацию")
+        sim.logger.info('Запускаем инициализацию')
 
-    logging.warning("calling simulate()")    
+    logging.warning('Сalling simulate()')    
     simulator.simulate(
-        model_name="dummy", 
+        model_name='dummy', 
         init=initialize, 
         max_num_events=1,
         logger_config=ModelLoggerConfig(
@@ -85,9 +86,12 @@ def __initialize__():
     from pysim import models  # type: ignore
     for submodule in pkgutil.iter_modules(models.__path__):
         name = submodule.name
+        print('Имя: ', name)
         try:
-            module = importlib.import_module(".cli", f'pysim.models.{name}')            
+            module = importlib.import_module('.cli', f'pysim.models.{name}')
+            print('Модуль: ', module)        
             try:
+                print('Я здесь!')
                 cmd: click.Command = getattr(module, "cli_run")
             except AttributeError:
                 print(f"WARNING: no function 'cli_run(...)' found in {name}")
@@ -95,6 +99,7 @@ def __initialize__():
             if isinstance(cmd, click.Command):
                 run.add_command(cmd, name)
                 models_list.append(name)
+                print('Список моделей: ', models_list)
             else:
                 print("WARNING: cli_run() must be a Click command or group")
         except ModuleNotFoundError:
