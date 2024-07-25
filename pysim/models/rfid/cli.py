@@ -5,6 +5,7 @@ from time import time_ns
 import configurator
 import epcstd as std
 from processing import result_processing
+import pysim.sim.simulator as sim
 
 
 DEFAULT_SPEED = 30             # kmph
@@ -77,7 +78,7 @@ def cli():
 def cli_run(**kwargs):
     '''
     Точка входа модели RFID.
-    Задать параметры работы.
+    Задать параметры модели.
     '''
     kwargs, variadic = check_vars_for_multiprocessing(**kwargs)
     print(f'Running {configurator.MODEL_NAME} model')
@@ -159,7 +160,7 @@ def prepare_simulation(kwargs):
         encoding = parse_tag_encoding(kwargs['encoding'])
     except ValueError:
         pass
-    result = configurator.create_model(
+    model = configurator.create_model(
         speed=(kwargs['speed'] * configurator.KMPH_TO_MPS_MUL),
         encoding=encoding,
         tari=float(kwargs['tari']) * 1e-6,
@@ -171,7 +172,13 @@ def prepare_simulation(kwargs):
         num_tags=kwargs['num_tags'],
         verbose=kwargs['verbose'],
     )
+    configurator.run_model(model, sim.ModelLoggerConfig())
     t_end_ns = time_ns()
+    result = {
+        'rounds_per_tag': model.statistics.average_rounds_per_tag(),
+        'inventory_prob': model.statistics.inventory_probability(),
+        'read_tid_prob': model.statistics.read_tid_probability()
+    }
     return (result, ((t_end_ns - t_start_ns) / 1_000_000_000))
 
 

@@ -80,13 +80,14 @@ def turn_reader_on(kernel, reader):
 
     # Turning ON and getting the first command
     cmd_frame = reader.turn_on()
-    print('Команда: ', cmd_frame)
+    # print('Команда: ', cmd_frame)
 
     # Managing antennas
+    # В модели БПЛА у считывателя всегда одна антенна
     if reader.num_antennas > 1:
         reader.antenna_switch_event_id = kernel.schedule(
             reader.antenna_switch_interval, switch_reader_antenna, (reader, ))
-    kernel.logger.debug(f"switched antenna #{reader.antenna_index}")
+        kernel.logger.debug(f"switched antenna #{reader.antenna_index}")
 
     # Updating tags and transaction power
     assert ctx.transaction is None
@@ -153,13 +154,13 @@ def generate_tag(kernel, generator):
 
     _update_power(kernel.time, ctx.reader, [tag], None, ctx.medium,
                   ctx.statistics)
-    kernel.logger.info(f"(+) tag {tag.tag_id} created for {generator.lifetime}s: {str(tag)}")
+    kernel.logger.error(f"(+) tag {tag.tag_id} created for {generator.lifetime}s: {str(tag)}")
 
 
 def remove_tag(kernel, tag):
     ctx = kernel.context
     ctx.tags.remove(tag)
-    kernel.logger.info(f"(x) tag {tag.tag_id} died")
+    kernel.logger.error(f"(x) tag {tag.tag_id} died")
     ctx.num_tags_simulated += 1
     if (ctx.max_tags_num is not None and
             ctx.num_tags_simulated >= ctx.max_tags_num):
@@ -206,7 +207,7 @@ def finish_transaction(kernel, transaction):
                     on_slot_end, reader=reader, tag=tag,
                     statistics=ctx.statistics)
 
-            kernel.logger.info(
+            kernel.logger.warning(
                 "---> Received tag data: EPC={}, received power={} from tag {}"
                 "".format(
                     "".join("{:02X}".format(b) for b in frame.reply.epc),
@@ -216,7 +217,7 @@ def finish_transaction(kernel, transaction):
             tag_read_record = ctx.statistics.get_tag_record(tag).tag_read_record
             tag_read_record.read_tid = True
 
-            kernel.logger.info(
+            kernel.logger.warning(
                 "---> Received TID: memory={}, received power={} from tag {}"
                 "".format(
                     "".join("{:02X}".format(b) for b in frame.reply.memory),

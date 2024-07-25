@@ -14,7 +14,7 @@ KMPH_TO_MPS_MUL = 1.0 / 3.6
 
 @dataclass
 class Settings:
-    """
+    '''
     Настройки модели.
 
     При вызове create_model() можно передать готовый объект
@@ -25,7 +25,7 @@ class Settings:
     Также при вызове create_model() можно переопределить некоторые параметры.
     В этом случае у аргументов create_model() приоритет над значениями,
     которые хранятся в объекте класса Settings.
-    """
+    '''
     # --- Настройки кодировки команд считывателя (PIE) ---
     delim: float = 12.5e-6  # длительность символа-разделителя (константа), сек
     # длительность Tari, сек. (6.25, 12.5, 18.75, 25 мкс)
@@ -135,8 +135,8 @@ class Settings:
     # ридер запрашивает тот же флаг Target, метка не будет
     # участвовать в раунде.
     #
-    # Параметр target используется, если target_strategy = "const".
-    # Если target_strategy = "switch", ридер будет чередовать значения Target
+    # Параметр target используется, если target_strategy = 'const'.
+    # Если target_strategy = 'switch', ридер будет чередовать значения Target
     # и менять его с A на B и обратно каждые rounds_per_target раундов.
     target: std.InventoryFlag = std.InventoryFlag.A
 
@@ -144,9 +144,9 @@ class Settings:
     # - 'const': опрос всегда ведется по значению параметра target
     # - 'switch': ридер чередует опрос по флагу A и B, и меняет значение
     #   каждые rounds_per_target раундов.
-    target_strategy: str = "switch"  # Опрашиваем поочередно по Target=A,B
+    target_strategy: str = 'switch'  # Опрашиваем поочередно по Target=A,B
 
-    # Если target_strategy = "swtich", то это поле показывает, как часто
+    # Если target_strategy = 'swtich', то это поле показывает, как часто
     # ридер меняет флаг опроса (Target).
     rounds_per_target: int = 1
 
@@ -190,14 +190,14 @@ class Settings:
     collect_power_statistics: bool = False
 
     def get_power_control_mode(self, reader_switch_power=None):
-        x = reader_switch_power if reader_switch_power is not None \
-            else self.reader_switch_power
-        return Reader.PowerControlMode.PERIODIC if x else \
-            Reader.PowerControlMode.ALWAYS_ON
+        x = (reader_switch_power if reader_switch_power is not None
+             else self.reader_switch_power)
+        return (Reader.PowerControlMode.PERIODIC if x else
+                Reader.PowerControlMode.ALWAYS_ON)
 
 
-def create_model(settings=None, verbose=False, **kwargs):
-    """Run simulation.
+def create_model(settings=None, verbose=False, **kwargs) -> Model:
+    '''Run simulation.
 
     Possible kwargs (if value not given, use from settings):
     - speed: float
@@ -212,7 +212,8 @@ def create_model(settings=None, verbose=False, **kwargs):
     - sim_time_limit: float
     - real_time_limit: float
     - log_level: sim.Logger.Level
-    """
+    '''
+
     if settings is None:
         settings = Settings()
 
@@ -247,12 +248,15 @@ def create_model(settings=None, verbose=False, **kwargs):
     reader.power_on_duration = settings.reader_power_on_duration
     reader.power_off_duration = settings.reader_power_off_duration
     reader.noise = settings.reader_noise
-    reader.read_tid_words_num = \
+    reader.read_tid_words_num = (
         kwargs.get('tid_word_size', settings.tid_word_size)
-    reader.read_tid_bank = \
+    )
+    reader.read_tid_bank = (
         settings.read_tid_bank if reader.read_tid_words_num > 0 else False
-    reader.always_start_with_first_antenna = \
+    )
+    reader.always_start_with_first_antenna = (
         settings.reader_always_start_with_first_antenna
+    )
     reader.antenna_switch_interval = settings.reader_antenna_switching_interval
 
     reader_antenna_x = kwargs.get('reader_offset', settings.reader_antenna_x)
@@ -307,14 +311,7 @@ def create_model(settings=None, verbose=False, **kwargs):
         settings.generation_interval[0],
         *settings.generation_interval[1:])
 
-    # 5) Launching simulation
-
-    run_model(model, sim.ModelLoggerConfig())
-    return {
-        'rounds_per_tag': model.statistics.average_rounds_per_tag(),
-        'inventory_prob': model.statistics.inventory_probability(),
-        'read_tid_prob': model.statistics.read_tid_probability()
-    }
+    return model
 
 
 def run_model(
@@ -338,7 +335,7 @@ def run_model(
 
 
 def print_model_settings(model: Model, kernel: sim.Kernel):
-    """Вывод на печать параметров настроенной модели"""
+    '''Вывод на печать параметров настроенной модели'''
     reader = model.reader
     medium = model.medium
     generator = model.generators[0]
@@ -348,62 +345,62 @@ def print_model_settings(model: Model, kernel: sim.Kernel):
 
     rows = [
         # --- Model ----
-        ("model", "max_tags_num", model.max_tags_num),
-        ("model", "update_interval", model.update_interval),
-        ("model", "statistics.use_power_statistics",
+        ('model', 'max_tags_num', model.max_tags_num),
+        ('model', 'update_interval', model.update_interval),
+        ('model', 'statistics.use_power_statistics',
          model.statistics.use_power_statistics),
         # --- Reader ---
-        ("reader", "tari", us(reader.tari)),
-        ("reader", "tag_encoding", reader.tag_encoding),
-        ("reader", "q", reader.q),
-        ("reader", "rtcal", us(reader.rtcal)),
-        ("reader", "trcal", us(reader.trcal)),
-        ("reader", "delim", us(reader.delim)),
-        ("reader", "temp", reader.temp),
-        ("reader", "session", reader.session),
-        ("reader", "target", reader.target),
-        ("reader", "sel", reader.sel),
-        ("reader", "dr", reader.dr),
-        ("reader", "trext", reader.trext),
-        ("reader", "target_strategy", reader.target_strategy),
-        ("reader", "rounds_per_target", reader.rounds_per_target),
-        ("reader", "power_control_mode", reader.power_control_mode),
-        ("reader", "max_power", reader.max_power),
-        ("reader", "power_on_duration", reader.power_on_duration),
-        ("reader", "power_off_duration", reader.power_off_duration),
-        ("reader", "noise", reader.noise),
-        ("reader", "read_tid_words_num", reader.read_tid_words_num),
-        ("reader", "read_tid_bank", reader.read_tid_bank),
-        ("reader", "always_start_with_first_antenna",
+        ('reader', 'tari', us(reader.tari)),
+        ('reader', 'tag_encoding', reader.tag_encoding),
+        ('reader', 'q', reader.q),
+        ('reader', 'rtcal', us(reader.rtcal)),
+        ('reader', 'trcal', us(reader.trcal)),
+        ('reader', 'delim', us(reader.delim)),
+        ('reader', 'temp', reader.temp),
+        ('reader', 'session', reader.session),
+        ('reader', 'target', reader.target),
+        ('reader', 'sel', reader.sel),
+        ('reader', 'dr', reader.dr),
+        ('reader', 'trext', reader.trext),
+        ('reader', 'target_strategy', reader.target_strategy),
+        ('reader', 'rounds_per_target', reader.rounds_per_target),
+        ('reader', 'power_control_mode', reader.power_control_mode),
+        ('reader', 'max_power', reader.max_power),
+        ('reader', 'power_on_duration', reader.power_on_duration),
+        ('reader', 'power_off_duration', reader.power_off_duration),
+        ('reader', 'noise', reader.noise),
+        ('reader', 'read_tid_words_num', reader.read_tid_words_num),
+        ('reader', 'read_tid_bank', reader.read_tid_bank),
+        ('reader', 'always_start_with_first_antenna',
          reader.always_start_with_first_antenna),
-        ("reader", "antenna_switch_interval", reader.antenna_switch_interval),
-        ("reader antenna", "pos", reader.antenna.pos),
-        ("reader antenna", "direction_theta", reader.antenna.direction_theta),
-        ("reader antenna", "gain", reader.antenna.gain),
-        ("reader antenna", "cable_loss", reader.antenna.cable_loss),
+        ('reader', 'antenna_switch_interval', reader.antenna_switch_interval),
+        ('reader antenna', 'pos', reader.antenna.pos),
+        ('reader antenna', 'direction_theta', reader.antenna.direction_theta),
+        ('reader antenna', 'gain', reader.antenna.gain),
+        ('reader antenna', 'cable_loss', reader.antenna.cable_loss),
         # --- Medium ---
-        ("medium", "ber_distribution", medium.ber_distribution),
-        ("medium", "ground_reflection_type", medium.ground_reflection_type),
-        ("medium", "frequency", medium.frequency),
-        ("medium", "permittivity", medium.permittivity),
-        ("medium", "conductivity", medium.conductivity),
-        ("medium", "polarization_loss", medium.polarization_loss),
-        ("medium", "use_doppler", medium.use_doppler),
+        ('medium', 'ber_distribution', medium.ber_distribution),
+        ('medium', 'ground_reflection_type', medium.ground_reflection_type),
+        ('medium', 'frequency', medium.frequency),
+        ('medium', 'permittivity', medium.permittivity),
+        ('medium', 'conductivity', medium.conductivity),
+        ('medium', 'polarization_loss', medium.polarization_loss),
+        ('medium', 'use_doppler', medium.use_doppler),
         # --- Generator and tag ---
-        ("tag", "pos0", generator.pos0),
-        ("tag", "velocity", generator.velocity),
-        ("tag", "direction", generator.direction),
-        ("tag", "antenna_direction", generator.tag_antenna_direction),
-        ("tag", "travel_distance", generator.travel_distance),
-        ("tag", "epc_bitlen", generator.epc_bitlen),
-        ("tag", "tid_bitlen", generator.tid_bitlen),
-        ("tag", "antenna_gain", generator.antenna_gain),
-        ("tag", "modulation_loss", generator.modulation_loss),
-        ("tag", "sensitivity", generator.sensitivity),
-        ("generator", "num_tags", generator.max_tags_generated),
+        ('tag', 'pos0', generator.pos0),
+        ('tag', 'velocity', generator.velocity),
+        ('tag', 'direction', generator.direction),
+        ('tag', 'antenna_direction', generator.tag_antenna_direction),
+        ('tag', 'travel_distance', generator.travel_distance),
+        ('tag', 'epc_bitlen', generator.epc_bitlen),
+        ('tag', 'tid_bitlen', generator.tid_bitlen),
+        ('tag', 'antenna_gain', generator.antenna_gain),
+        ('tag', 'modulation_loss', generator.modulation_loss),
+        ('tag', 'sensitivity', generator.sensitivity),
+        ('generator', 'num_tags', generator.max_tags_generated),
         # --- Kernel ---
-        ("kernel", "max_simulation_time", kernel.max_simulation_time),
-        ("kernel", "max_real_time", kernel.max_real_time),
-        ("kernel", "logger_level", kernel.logger.level),
+        ('kernel', 'max_simulation_time', kernel.max_simulation_time),
+        ('kernel', 'max_real_time', kernel.max_real_time),
+        ('kernel', 'logger_level', kernel.logger.level),
     ]
     print(tabulate(rows))

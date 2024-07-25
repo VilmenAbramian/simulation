@@ -67,7 +67,7 @@ class ModelLoggerConfig:
     fmt: str = MODEL_LOGGER_FORMAT       # формат-строка логгера
     style: Literal['%', '{', '$'] = '{'  # стиль формат-строки логгера
     
-    level: int = logging.WARN     # уровень логгирования по-умолчанию
+    level: int = logging.INFO     # уровень логгирования по-умолчанию
     
     use_console: bool = True      # логгировать ли в консоль
     colored_console: bool = True  # использовать ли цветной вывод в консоль
@@ -80,7 +80,7 @@ class ModelLoggerConfig:
     console_level: int = 0
 
     # Имя лог-файла (без runId). Если не задан, логгирования в файл не будет.
-    file_name: str | None = None
+    file_name: str | None = 'results/logs/RFIDlog.txt'
     
     # Уровень логгирования в файл, если не задан - использовать level
     file_level: int = 0
@@ -130,7 +130,7 @@ class ModelLogger:
     """
     def __init__(
         self, 
-        model_name: str = "", 
+        model_name: str = '', 
         time_getter: Callable[[], float] | None = None,
         run_id: int | None = None
     ):

@@ -622,7 +622,7 @@ class _ReaderRound:
         return self._slot
 
     def on_start(self, reader):
-        reader.kernel.logger.debug(f"ROUND #{self.index} STARTED")
+        reader.kernel.logger.info(f"ROUND #{self.index} STARTED")
         reader.round_start_listeners.call(self.index)
 
     def on_finish(self, reader):
@@ -1086,7 +1086,7 @@ class Tag:
             self._powered_off_time = None
             self._power_update_time = time
             self._power = power
-            self.logger.debug(f"tag {self._tag_id} powered on: {self.describe()}")
+            self.logger.info(f"tag {self._tag_id} powered on: {self.describe()}")
             self._set_state(Tag.State.READY)
 
     def _power_off(self, time):
@@ -1097,7 +1097,7 @@ class Tag:
             self._power = None
             self._active_session = None
             self._preamble = None
-            self.logger.debug(f"tag {self._tag_id} powered off: {self.describe()}")
+            self.logger.info(f"tag {self._tag_id} powered off: {self.describe()}")
             self._set_state(Tag.State.OFF)
 
     def set_power(self, time, power):
@@ -1114,7 +1114,7 @@ class Tag:
 
     def _set_state(self, new_state):
         if self._state != new_state:
-            self.kernel.logger.debug(
+            self.kernel.logger.warning(
                 f"tag {self.tag_id} state changed: {self.state.name} --> {new_state.name}, {self.describe()}")
         self._state = new_state
 
@@ -1485,11 +1485,13 @@ class _TagPowerMinMap():
 
 
 class Transaction():
-    """
-    Этот класс вызывается только в модуле handlers. Там создаётся объект через
-    функцию _build_transaction.
-    Расчитывает временные задержки?
-    """
+    '''
+    Объект транзакции.
+    Включает в себя команду конкретного считывателя
+    и все ответы всех меток на неё.
+    Здесь учитываются временнЫе отрезки, определённые
+    протоколом RFID между командой и ответами.
+    '''
     timeout_event_id = None
     response_start_event_id = None
 
