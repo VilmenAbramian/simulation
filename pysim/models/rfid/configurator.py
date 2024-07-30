@@ -50,7 +50,7 @@ class Settings:
 
     # --- Геометрия и траектория движения ---
     speed: float = 10 * KMPH_TO_MPS_MUL       # скорость метки, м/с
-    initial_distance_to_reader: float = 10.0  # как далеко метка от ридера, м
+    initial_distance_to_reader: float = 0.0  # как далеко метка от ридера, м
     travel_distance: float = 20.0  # как далеко метка летит до уничтожения, м
 
     reader_antenna_x: float = 5.0  # расстояние от ридера до стены по оси OX, м
@@ -120,12 +120,17 @@ class Settings:
     # запрашиваемых слов.
     tid_word_size: int = 8
 
-    q: int = 2  # значение параметра Q
     encoding: std.TagEncoding = std.TagEncoding.M4  # метод кодирования ответов
     dr: std.DivideRatio = std.DivideRatio.DR_8  # коэффициент DR (8 или 64/3)
     sel: std.SelFlag = std.SelFlag.ALL  # флаг Sel (не используется в модели)
     session: std.Session = std.Session.S0  # номер сессии, в которой идет опрос
     trext: bool = True  # использовать ли в ответах расширенную преамбулу
+
+    # --- Настройки QueryAdjust ---
+    q: int = 5  # значение параметра Q в начале
+    use_query_adjust: bool = True
+    adjust_delta: float = 0.1 # коэффициент, на который изменяется значение q
+    q_fp: float = q
 
     # Значение поля Target команды Query, то есть флаг сессии, по которому
     # идет опрос меток. Ответ будут передавать только те метки, которые хранят
@@ -183,7 +188,7 @@ class Settings:
     # можно передать среднее: (exponential, 42.0).
     generation_interval: tuple = (lambda: 1.0, )
 
-    num_tags: int = 10  # сколько меток нужно сгенерировать
+    num_tags: int = 1  # сколько меток нужно сгенерировать (настройка не работает)
 
     # --- Настройки статистики ---
     # Сохранять ли данные о мощностях сигналов
@@ -231,7 +236,6 @@ def create_model(settings=None, verbose=False, **kwargs) -> Model:
 
     reader.tari = kwargs.get('tari', settings.tari)
     reader.tag_encoding = kwargs.get('encoding', settings.encoding)
-    reader.q = settings.q
     reader.rtcal = settings.get_rtcal(reader.tari)
     reader.trcal = settings.get_trcal(reader.rtcal)
     reader.delim = settings.delim
@@ -263,6 +267,13 @@ def create_model(settings=None, verbose=False, **kwargs) -> Model:
     reader_antenna_z = kwargs.get('altitude', settings.reader_antenna_z)
     tag_antenna_x = kwargs.get('tag_offset', settings.tag_antenna_x)
     tag_antenna_z = settings.tag_antenna_z
+
+    # --- Reader QueryAdjust settings ---
+    reader.q = settings.q
+    reader.use_query_adjust = settings.use_query_adjust
+    reader.adjust_delta = settings.adjust_delta
+    reader.q_fp = settings.q_fp
+
 
     # 2) Attaching antennas to reader
     ant = Antenna()

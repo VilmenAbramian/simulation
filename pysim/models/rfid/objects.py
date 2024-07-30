@@ -7,6 +7,7 @@ import itertools
 import epcstd as std
 import channel as chan
 
+
 #############################################################################
 # HELPERS
 #############################################################################
@@ -40,10 +41,6 @@ class Listeners:
 
 
 def cached_method(key, cache_attr_name='__cache__'):
-    """
-    Явно какой-то декоратор. Пока не ясно, зачем
-    """
-
     def decorator(fn):
         @functools.wraps(fn)
         def wrapper(self, *args, **kwargs):
@@ -58,9 +55,6 @@ def cached_method(key, cache_attr_name='__cache__'):
 
 
 def inc_hex_string(s):
-    """
-    Вообще не понял, что это и зачем
-    """
     pos = len(s) - 1
     while pos >= 0:
         x = int(s[pos], 16)
@@ -75,19 +69,6 @@ def inc_hex_string(s):
 # Model
 #############################################################################
 class Model:
-    """
-    Класс, который аккумулирует в себе все объекты, созданные в данном модуле,
-    необходимые для работы имитационки.
-    Он хранит (можно видеть в полях):
-        Объект считывателя
-        List с объектами меток
-        Объект, хранящий статистику? TODO
-        List с объектами генераторов? TODO
-        Объект беспроводного канала передачи данных
-        Транзакция (кадр, frame) - сообщение С-М/М-С. Пакет данных, переданный по беспроводному каналу
-        Количество меток, находящихся в данный момент в симуляции
-
-    """
     reader = None
     tags = None
     generators = None
@@ -111,12 +92,12 @@ class Model:
 # ANTENNAS
 #############################################################################
 class Antenna:
-    """
+    '''
     Создаёт объект антенны, определённой в модуле channel
     В модуле channel определён всего один тип антенны - дипольная.
     В теории, можно определить более сложную и реальную
     антенну и провести численные эксперименты для неё.
-    """
+    '''
     index = None
     pos = None  # 3D np.ndarray
     direction_theta = None  # 3D np.ndarray
@@ -144,11 +125,11 @@ class Antenna:
 # Reader states
 # ===========================================================================
 class _ReaderState:
-    """
+    '''
     "Заголовочный" класс, в котором объявлены все возможные методы для любого
     состояния считывателя. Программа не должна обращаться в этот класс непосредственно,
     но должна работать с его наследниками
-    """
+    '''
 
     def __init__(self, name):
         self._name = name
@@ -161,57 +142,39 @@ class _ReaderState:
         return self._name
 
     def get_timeout(self, reader):
-        """
-        Сколько модельного времени (относительного) займёт передача соответствующего frame
-        """
+        '''
+        Время ожидания ответа от метки
+        '''
         raise NotImplementedError
 
     def enter(self, reader):
-        """
-        Код (метод), который выполняется первым при входе в новое состояние
-        """
+        '''
+        Выполняется первым при входе в новое состояние
+        '''
         raise NotImplementedError
 
     def handle_turn_on(self, reader):
-        """
-        Обработчик. Включить считыватель
-        """
         raise NotImplementedError
 
     def handle_turn_off(self, reader):
-        """
-        Обработчик. Выключить считыватель
-        """
         raise NotImplementedError
 
     def handle_timeout(self, reader):
-        """
-        Обработчик. Что происходит, если время вышло, а ответ от метки не получен
-        """
+        '''
+        Время вышло, а ответ от метки не получен
+        '''
         raise NotImplementedError
 
     def handle_query_reply(self, reader, frame):
-        """
-        Обработчик. Что делает считыватель, получив ответ от метки в состоянии Query
-        """
         raise NotImplementedError
 
     def handle_ack_reply(self, reader, frame):
-        """
-        Обработчик. Что делает считыватель, получив ответ от метки в состоянии ACK
-        """
         raise NotImplementedError
 
     def handle_reqrn_reply(self, reader, frame):
-        """
-        Обработчик. Что делает считыватель, получив ответ от метки в состоянии Req_RN
-        """
         raise NotImplementedError
 
     def handle_read_reply(self, reader, frame):
-        """
-        Обработчик. Что делает считыватель, получив ответ от метки в состоянии Read
-        """
         raise NotImplementedError
 
 
@@ -219,10 +182,6 @@ class _ReaderState:
 # Reader state: OFF
 # ----------------------------------------------------------------------------
 class _ReaderOFF(_ReaderState):
-    '''
-    Состояние отключенного считывателя
-    '''
-
     def __init__(self):
         super().__init__('OFF')
 
@@ -270,11 +229,6 @@ class _ReaderOFF(_ReaderState):
 # Reader state: QUERY
 # ----------------------------------------------------------------------------
 class _ReaderQUERY(_ReaderState):
-    """
-    Состояние считывателя - Query.
-    Считыватель начинает новый раунд и выбирает число Q.
-    """
-
     def __init__(self):
         super().__init__('QUERY')
 
@@ -330,10 +284,6 @@ class _ReaderQUERY(_ReaderState):
 # Reader state: QREP
 # ----------------------------------------------------------------------------
 class _ReaderQREP(_ReaderState):
-    """
-    Состояние считывателя - QRep.
-    """
-
     def __init__(self): super().__init__('QREP')
 
     def get_timeout(self, reader):
@@ -373,13 +323,54 @@ class _ReaderQREP(_ReaderState):
 
 
 # ----------------------------------------------------------------------------
+# Reader state: QADJUST
+# ----------------------------------------------------------------------------
+class _ReaderAdjust(_ReaderState):
+    def __init__(self):
+        super().__init__('QADJUST')
+
+    def get_timeout(self, reader):
+        t_cmd = std.query_adjust_duration(reader.delim, reader.tari, reader.rtcal,
+                                  reader.session, reader.updn)
+        t1 = std.link_t1_max(reader.rtcal, reader.trcal, reader.dr,
+                             reader.temp)
+        t3 = std.link_t3()
+        return t_cmd + t1 + t3
+    
+    def enter(self, reader):
+        reader.last_rn = None
+        cmd = std.QueryAdjust(reader.session, reader.updn)
+        return std.ReaderFrame(reader.preamble, cmd)
+    
+    def handle_turn_on(self, reader):
+        return None  # Reader is already ON
+    
+    def handle_turn_off(self, reader):
+        # All actions are performed in OFF.enter(), just move there
+        return reader.set_state(Reader.State.OFF)
+    
+    def handle_timeout(self, reader):
+        slot = reader.next_slot()
+        return reader.set_state(slot.first_state)
+    
+    def handle_query_reply(self, reader, frame):
+        reader.last_rn = frame.reply.rn
+        return reader.set_state(Reader.State.ACK)
+
+    def handle_ack_reply(self, reader, frame):
+        raise RuntimeError("unexpected AckReply in ADJUST state")
+
+    def handle_reqrn_reply(self, reader, frame):
+        raise RuntimeError("unexpected ReqRNReply in ADJUST state")
+
+    def handle_read_reply(self, reader, frame):
+        raise RuntimeError("unexpected ReadReply in ADJUST state")
+
+
+# ----------------------------------------------------------------------------
 # Reader state: ACK
 # ----------------------------------------------------------------------------
 class _ReaderACK(_ReaderState):
-    """
-    Состояние считывателя - ACK.
-    """
-
     def __init__(self):
         super().__init__('ACK')
 
@@ -426,10 +417,6 @@ class _ReaderACK(_ReaderState):
 # Reader state: ReqRN
 # ----------------------------------------------------------------------------
 class _ReaderREQRN(_ReaderState):
-    """
-    Состояние считывателя - Req_RN.
-    """
-
     def __init__(self):
         super().__init__('REQRN')
 
@@ -472,10 +459,6 @@ class _ReaderREQRN(_ReaderState):
 # Reader state: Read
 # ----------------------------------------------------------------------------
 class _ReaderREAD(_ReaderState):
-    """
-    Состояние считывателя - Read.
-    """
-
     def __init__(self):
         super().__init__('READ')
 
@@ -566,9 +549,9 @@ class _PeriodicPowerOn(_PowerControlMode):
 # Rounds and slots
 # ===========================================================================
 class _ReaderSlot:
-    """
-    Класс, генерирующий новые слоты внутри раунда (объект раунда хранится в переменной owner).
-    """
+    '''
+    слоты внутри раунда (объект раунда хранится в переменной owner).
+    '''
 
     def __init__(self, owner, index, first_state):
         self._owner, self._index, self._first_state = owner, index, first_state
@@ -587,10 +570,10 @@ class _ReaderSlot:
 
     def on_start(self, reader):
         reader.kernel.logger.debug(f".. SLOT #{self.index} STARTED")
-        reader.slot_start_listeners.call(self.owner.index, self.index)  # TODO Что это????
+        reader.slot_start_listeners.call(self.owner.index, self.index)
 
     def on_finish(self, reader):
-        reader.slot_finish_listeners.call(self.owner.index, self.index)  # TODO Что это????
+        reader.slot_finish_listeners.call(self.owner.index, self.index)
 
 
 class _ReaderRound:
@@ -637,6 +620,7 @@ class Reader:
         OFF = _ReaderOFF()
         QUERY = _ReaderQUERY()
         QREP = _ReaderQREP()
+        QAdjust = _ReaderAdjust()
         ACK = _ReaderACK()
         REQRN = _ReaderREQRN()
         READ = _ReaderREAD()
@@ -714,6 +698,7 @@ class Reader:
         self.kernel = kernel
         self._state = Reader.State.OFF
         self._slot_index = 0
+        self.updn = 0 # Слагаемое для корректировки Q
 
         # Antennas
         self._antennas = []
@@ -726,11 +711,16 @@ class Reader:
         self._round = None
         self._round_index = itertools.count()
 
+        # QueryAdjust settings
+        self.use_query_adjust: bool = None
+        self.adjust_delta: float = None
+        self.q_fp: float = None
+
         # Power-related fields
         self._power = None
         self._time_last_turned_on = None
 
-        # Listeners   TODO вот это вообще порнография какая-то
+        # Listeners
         self._state_change_listeners = Listeners()
         self._round_start_listeners = Listeners()  # (round_index,)
         self._round_finish_listeners = Listeners()  # (round_finish,)
@@ -784,10 +774,10 @@ class Reader:
         return std.ReaderSync(self.tari, self.rtcal, self.delim)
 
     def receive(self, tag_frame):
-        """
+        '''
         Метод, отвечающий на сообщения метки в зависимости от состояния,
         в котором находится считыватель
-        """
+        '''
         assert isinstance(tag_frame, std.TagFrame)
         reply = tag_frame.reply
         if isinstance(reply, std.QueryReply):
@@ -898,12 +888,11 @@ class Reader:
 # TAG
 #############################################################################
 class Tag:
-    """
-    Класс, генерирующий объект метки.
+    '''
     В отличие от класса Reader, в котором state-машина вынесена в отдельные структуры,
     здесь state-машина и все её методы и переходы находятся прямо внутри класса Tag,
     что несколько облегчает процесс написания кода, но усложняет его понимание.
-    """
+    '''
 
     class State(enum.Enum):
         OFF = 0
@@ -919,7 +908,7 @@ class Tag:
     last_pos_update = None  # sec.
 
     # EPC Std. settings
-    epc = ""  # should be a hex-string
+    epc = ''  # should be a hex-string
     tid = None  # should be either None or hex-string
     user_mem = None  # should be either None or hex-string
     s1_persistence = 2.0  # sec.
@@ -932,6 +921,7 @@ class Tag:
     def __init__(self, tag_id, kernel=None):
         self.kernel = kernel
         self._tag_id = tag_id
+        self.q = None
 
         # Antennas and geometry
         self.antenna = Antenna()
@@ -1086,7 +1076,7 @@ class Tag:
             self._powered_off_time = None
             self._power_update_time = time
             self._power = power
-            self.logger.info(f"tag {self._tag_id} powered on: {self.describe()}")
+            self.logger.info(f'tag {self._tag_id} powered on: {self.describe()}')
             self._set_state(Tag.State.READY)
 
     def _power_off(self, time):
@@ -1127,6 +1117,8 @@ class Tag:
         assert isinstance(query, std.ReaderFrame)
         assert isinstance(query.command, std.Query)
         assert isinstance(query.preamble, std.ReaderPreamble)
+        # if self.q != 0:
+        #     print(f'q метки: {self.q}')
         command, preamble = query.command, query.preamble
         if self.state is Tag.State.OFF:
             return None
@@ -1148,7 +1140,8 @@ class Tag:
         self._trext = command.trext
         self._encoding = command.m
         self._blf = std.get_blf(command.dr, preamble.trcal)
-        self._slot_counter = np.random.randint(0, pow(2, command.q))
+        self.q = command.q
+        self._slot_counter = np.random.randint(0, pow(2, self.q))
         self._preamble = std.create_tag_preamble(self.encoding, self.trext)
         if self._slot_counter == 0:
             self._set_state(Tag.State.REPLY)
@@ -1181,6 +1174,37 @@ class Tag:
                 self.sessions[self._active_session] = flag.invert()
                 self._set_state(Tag.State.READY)
 
+            return None
+    
+    def process_query_adjust(self, frame):
+        assert isinstance(frame, std.ReaderFrame)
+        assert isinstance(frame.command, std.QueryAdjust)
+        print(f'Изменение q метки. Старое значение: {self.q}')
+        qadjust = frame.command
+        if self.state is Tag.State.OFF:
+            return None
+
+        if qadjust.session is not self._active_session:
+            return None
+        
+        if self.state in {Tag.State.ARBITRATE, Tag.State.REPLY}:
+            # Переход в arbitrate с новым Q и новым номером слота
+            self._set_state(Tag.State.ARBITRATE)
+            updn = qadjust.updn
+            if self.q + updn >= 0 or self.q + updn <= 15:
+                self.q = self.q + updn
+            self._slot_counter = np.random.randint(0, pow(2, self.q))
+            if self._slot_counter == 0:
+                self._set_state(Tag.State.REPLY)
+                self._rn = np.random.randint(0, 0x10000)
+                return std.TagFrame(self._preamble, std.QueryReply(self._rn))
+            return None
+        
+        elif self.state in {Tag.State.ACKNOWLEDGED, Tag.State.SECURED} and self.state is not Tag.State.READY:
+            flag = self.sessions[self._active_session]
+            self.sessions[self._active_session] = flag.invert()
+            self._set_state(Tag.State.READY)
+            print(f'Изменение q метки. Новое значение: {self.q}')
             return None
 
     def process_ack(self, frame):
@@ -1235,6 +1259,8 @@ class Tag:
             return self.process_query(frame)
         elif isinstance(cmd, std.QueryRep):
             return self.process_query_rep(frame)
+        elif isinstance (cmd, std.QueryAdjust):
+            return self.process_query_adjust(frame)
         elif isinstance(cmd, std.Ack):
             return self.process_ack(frame)
         elif isinstance(cmd, std.ReqRN):
@@ -1280,11 +1306,10 @@ class Tag:
 # Generators
 #############################################################################
 class Generator:
-    """
-    Генератор новых меток.
+    '''
     Все объекты меток создаются с помощью
     объектов Generator.
-    """
+    '''
     pos0 = None  # should be a 3-dim np.ndarray
     velocity = 10.0 / 3.6  # meters per second
     direction = np.asarray([0, 1, 0])  # should be a 3-dim np.array
@@ -1320,7 +1345,7 @@ class Generator:
         return self.travel_distance / self.velocity
 
     def create_tag(self, model):
-        # print("GENERATOR: create new tag")
+        print("GENERATOR: create new tag")
         def hex_string_bitlen(s):
             return len(s.strip()) * 4
 

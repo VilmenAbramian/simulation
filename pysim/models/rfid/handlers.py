@@ -2,7 +2,7 @@ import numpy as np
 from pprint import pprint
 
 import epcstd as std
-from objects import Model, Tag, Transaction
+from objects import Model, Reader, Tag, Transaction
 
 
 def start_simulation(kernel):
@@ -26,6 +26,7 @@ def start_simulation(kernel):
         ctx.update_interval, update_positions, msg='Обновить расположение'
     )
     kernel.call(turn_reader_on, (ctx.reader,), msg='Запуск считывателя')
+    kernel.call(generate_tag, (generator, ))
     # pprint(f'Список запланированных событий: {kernel._kernel.future_events()}')
 
 
@@ -177,6 +178,14 @@ def update_positions(kernel):
                   ctx.medium, ctx.statistics)
 
 
+# def query_adjust_algorithm(kernel):
+#     '''
+#     Описание алгоритма находится на странице 137
+#     протокола EPC class Gen2 от Nov-2013, Version 2.0
+#     '''
+#     ctx = kernel.context
+#     qfp = ctx.reader.q
+
 def finish_transaction(kernel, transaction):
     kernel.logger.debug(f"finished transaction: {str(transaction)}")
     ctx = kernel.context
@@ -186,6 +195,7 @@ def finish_transaction(kernel, transaction):
     tag, frame, snr, ber = transaction.received_tag_frame(
         ctx.medium, kernel.time)
     if frame is not None:
+        # Если есть ответ от метки
         if isinstance(frame.reply, std.AckReply):
             tag_read_record = (
                 ctx.statistics.get_tag_record(tag)
@@ -225,7 +235,26 @@ def finish_transaction(kernel, transaction):
 
         cmd_frame = ctx.reader.receive(frame)
     else:
-        cmd_frame = ctx.reader.timeout()
+        # Если нет ответа от метки
+        cmd_frame = None
+        if reader.use_query_adjust and (
+            reader.state == Reader.State.QUERY or
+            reader.state == Reader.State.QREP
+        ):
+            # Если используется команда QueryAdjust И 
+            # считыватель в состоянии Query или QueryRep
+            if reader.q > 0 and reader.q <= 15:
+                reader.q_fp = max(0, reader.q_fp-reader.adjust_delta)
+                new_q = round(reader.q_fp)
+                if reader.q - new_q == 1:
+                    reader.q = new_q # обновляем q в считывателе
+                    # Отправить команду QueryAdjust!
+                    reader.updn = -1
+                    cmd_frame = reader.set_state(Reader.State.QAdjust)
+                    reader.updn = 0
+        if cmd_frame == None:
+            cmd_frame = ctx.reader.timeout()
+
 
     # Processing new command (reader frame)
     ctx.transaction = _build_transaction(kernel, ctx.reader, cmd_frame)
