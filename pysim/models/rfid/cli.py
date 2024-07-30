@@ -20,7 +20,7 @@ DEFAULT_TID_WORD_SIZE = 64     # number of words to read from TID (=1024 bits)
 DEFAULT_READER_OFFSET = 3.0    # meters from the wall
 DEFAULT_TAG_OFFSET = 2.0       # meters from the wall
 DEFAULT_ALTITUDE = 5.0
-DEFAULT_NUM_TAGS = 100
+DEFAULT_NUM_TAGS = 1
 DEFAULT_POWER = 29
 
 

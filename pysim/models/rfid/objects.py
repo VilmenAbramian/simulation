@@ -1087,7 +1087,7 @@ class Tag:
             self._power = None
             self._active_session = None
             self._preamble = None
-            self.logger.info(f"tag {self._tag_id} powered off: {self.describe()}")
+            self.logger.info(f'tag {self._tag_id} powered off: {self.describe()}')
             self._set_state(Tag.State.OFF)
 
     def set_power(self, time, power):
@@ -1105,7 +1105,7 @@ class Tag:
     def _set_state(self, new_state):
         if self._state != new_state:
             self.kernel.logger.warning(
-                f"tag {self.tag_id} state changed: {self.state.name} --> {new_state.name}, {self.describe()}")
+                f'tag {self.tag_id} state changed: {self.state.name} --> {new_state.name}, {self.describe()}')
         self._state = new_state
 
     # -----------------------------------------------------------------
@@ -1117,8 +1117,6 @@ class Tag:
         assert isinstance(query, std.ReaderFrame)
         assert isinstance(query.command, std.Query)
         assert isinstance(query.preamble, std.ReaderPreamble)
-        # if self.q != 0:
-        #     print(f'q метки: {self.q}')
         command, preamble = query.command, query.preamble
         if self.state is Tag.State.OFF:
             return None
@@ -1142,6 +1140,7 @@ class Tag:
         self._blf = std.get_blf(command.dr, preamble.trcal)
         self.q = command.q
         self._slot_counter = np.random.randint(0, pow(2, self.q))
+        self.logger.warning(f'Внимание! Метка выбрала номер слота: {self._slot_counter}')
         self._preamble = std.create_tag_preamble(self.encoding, self.trext)
         if self._slot_counter == 0:
             self._set_state(Tag.State.REPLY)
@@ -1179,7 +1178,6 @@ class Tag:
     def process_query_adjust(self, frame):
         assert isinstance(frame, std.ReaderFrame)
         assert isinstance(frame.command, std.QueryAdjust)
-        print(f'Изменение q метки. Старое значение: {self.q}')
         qadjust = frame.command
         if self.state is Tag.State.OFF:
             return None
@@ -1188,6 +1186,9 @@ class Tag:
             return None
         
         if self.state in {Tag.State.ARBITRATE, Tag.State.REPLY}:
+            print(f'Изменение q метки. Старое значение: {self.q}')
+            self.logger.critical(f'ИЗМЕНЕНИЕ Q!!!')
+            self.logger.critical(f'Состояние метки ДО: {self.describe()}')
             # Переход в arbitrate с новым Q и новым номером слота
             self._set_state(Tag.State.ARBITRATE)
             updn = qadjust.updn
@@ -1198,13 +1199,13 @@ class Tag:
                 self._set_state(Tag.State.REPLY)
                 self._rn = np.random.randint(0, 0x10000)
                 return std.TagFrame(self._preamble, std.QueryReply(self._rn))
+            self.logger.critical(f'Состояние метки ПОСЛЕ: {self.describe()}')
             return None
         
         elif self.state in {Tag.State.ACKNOWLEDGED, Tag.State.SECURED} and self.state is not Tag.State.READY:
             flag = self.sessions[self._active_session]
             self.sessions[self._active_session] = flag.invert()
             self._set_state(Tag.State.READY)
-            print(f'Изменение q метки. Новое значение: {self.q}')
             return None
 
     def process_ack(self, frame):
@@ -1271,22 +1272,23 @@ class Tag:
             raise TypeError(f"unexpected command '{frame}'")
 
     def describe(self):
-        return (f"tag {{ id={self.tag_id}, state={self.state.name},"
-                f"pos={self.pos}, power={self.power}, "
-                f"S0={self.s0}, S1={self.s1}, S2={self.s2}, S3={self.s3},"
-                f"SL={self.sl}, M={self.encoding}, CNT={self._slot_counter}, RN={self.rn}")
+        return (f'tag id={self.tag_id}, state={self.state.name},'
+                f'q = {self.q}, current_slot = {self._slot_counter}, '
+                f'pos={self.pos}, power={self.power}, '
+                f'S0={self.s0}, S1={self.s1}, S2={self.s2}, S3={self.s3}, '
+                f'SL={self.sl}, M={self.encoding}, CNT={self._slot_counter}, RN={self.rn}')
 
     def __str__(self):
-        return ("Tag {{ id={self.tag_id}, pos={self.pos}, "
-                "velocity={self.velocity:.3f}, direction={self.direction}, "
-                "state={self.state.name}, power={self.power}, "
-                "S0={s0}, S1={s1}, "
-                "S2={s2}, S3={s3}, SL={self.sl}, M={self.encoding}, "
-                "TRext={self.trext}, EPC={self.epc}, TID={self.tid} }}".format(
-            self=self, s0=self.sessions[std.Session.S0],
-            s1=self.sessions[std.Session.S1],
-            s2=self.sessions[std.Session.S2],
-            s3=self.sessions[std.Session.S3]))
+        return (f'Tag id={self.tag_id}, pos={self.pos}, '
+                f'velocity={self.velocity:.3f}, direction={self.direction}, '
+                f'state={self.state.name}, power={self.power}, '
+                f'S0={self.sessions[std.Session.S0]}, '
+                f'S1={self.sessions[std.Session.S1]}, '
+                f'S2={self.sessions[std.Session.S2]}, '
+                f'S3={self.sessions[std.Session.S3]}, '
+                f'SL={self.sl}, M={self.encoding}, '
+                f'TRext={self.trext}, EPC={self.epc}, TID={self.tid}'
+        )
 
     @staticmethod
     def get_new_slot_state(new_slot_counter, curr_state, match_flags=True):
@@ -1375,11 +1377,11 @@ class Generator:
 # Medium
 #############################################################################
 class Medium:
-    """
-    Класс, создающий объект беспроводного канала.
-    По сути, вся функциональность описана в модуле channel,
+    '''
+    Беспроводной канал связи
+    Вся функциональность описана в модуле channel,
     а этот класс создаёт прокси-объект для последующей работы.
-    """
+    '''
     SPEED_OF_LIGHT = 2.99792458 * 1e8
 
     bandwidth = 1.2e6  # or 0.6, MHz
@@ -1511,7 +1513,6 @@ class _TagPowerMinMap():
 
 class Transaction():
     '''
-    Объект транзакции.
     Включает в себя команду конкретного считывателя
     и все ответы всех меток на неё.
     Здесь учитываются временнЫе отрезки, определённые
