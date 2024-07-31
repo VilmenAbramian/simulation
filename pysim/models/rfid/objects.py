@@ -125,12 +125,6 @@ class Antenna:
 # Reader states
 # ===========================================================================
 class _ReaderState:
-    '''
-    "Заголовочный" класс, в котором объявлены все возможные методы для любого
-    состояния считывателя. Программа не должна обращаться в этот класс непосредственно,
-    но должна работать с его наследниками
-    '''
-
     def __init__(self, name):
         self._name = name
 
@@ -233,11 +227,15 @@ class _ReaderQUERY(_ReaderState):
         super().__init__('QUERY')
 
     def get_timeout(self, reader):
-        t_cmd = std.query_duration(reader.tari, reader.rtcal, reader.trcal,
-                                   reader.delim, reader.dr, reader.tag_encoding,
-                                   reader.trext, reader.sel, reader.session,
-                                   reader.target, reader.q)
-        t1 = std.link_t1_max(reader.rtcal, reader.trcal, reader.dr, reader.temp)
+        t_cmd = std.query_duration(
+            reader.tari, reader.rtcal, reader.trcal,
+            reader.delim, reader.dr, reader.tag_encoding,
+            reader.trext, reader.sel, reader.session,
+            reader.target, reader.q
+        )
+        t1 = std.link_t1_max(
+            reader.rtcal, reader.trcal, reader.dr, reader.temp
+        )
         t3 = std.link_t3()
         return t_cmd + t1 + t3
 
@@ -330,29 +328,31 @@ class _ReaderAdjust(_ReaderState):
         super().__init__('QADJUST')
 
     def get_timeout(self, reader):
-        t_cmd = std.query_adjust_duration(reader.delim, reader.tari, reader.rtcal,
-                                  reader.session, reader.updn)
+        t_cmd = std.query_adjust_duration(
+            reader.delim, reader.tari, reader.rtcal,
+            reader.session, reader.updn
+        )
         t1 = std.link_t1_max(reader.rtcal, reader.trcal, reader.dr,
                              reader.temp)
         t3 = std.link_t3()
         return t_cmd + t1 + t3
-    
+
     def enter(self, reader):
         reader.last_rn = None
         cmd = std.QueryAdjust(reader.session, reader.updn)
         return std.ReaderFrame(reader.preamble, cmd)
-    
+
     def handle_turn_on(self, reader):
         return None  # Reader is already ON
-    
+
     def handle_turn_off(self, reader):
         # All actions are performed in OFF.enter(), just move there
         return reader.set_state(Reader.State.OFF)
-    
+
     def handle_timeout(self, reader):
         slot = reader.next_slot()
         return reader.set_state(slot.first_state)
-    
+
     def handle_query_reply(self, reader, frame):
         reader.last_rn = frame.reply.rn
         return reader.set_state(Reader.State.ACK)
@@ -506,10 +506,6 @@ class _ReaderREAD(_ReaderState):
 # Reader power control modes
 # ===========================================================================
 class _PowerControlMode:
-    """
-    "Заголовочный" класс, в котором объявлены все возможные методы для его наследников
-    """
-
     def __init__(self, name):
         self._name = name
 
@@ -698,7 +694,7 @@ class Reader:
         self.kernel = kernel
         self._state = Reader.State.OFF
         self._slot_index = 0
-        self.updn = 0 # Слагаемое для корректировки Q
+        self.updn = 0  # Слагаемое для корректировки Q
 
         # Antennas
         self._antennas = []
@@ -737,7 +733,9 @@ class Reader:
         return self._state
 
     def set_state(self, new_state):
-        self.kernel.logger.debug(f"reader state changed: {self.state} --> {new_state}")
+        self.kernel.logger.debug(
+            f'reader state changed: {self.state} --> {new_state}'
+        )
         self._state_change_listeners.call(self.state, new_state)
         self._state = new_state
         return new_state.enter(self)
@@ -767,7 +765,9 @@ class Reader:
 
     @property
     def preamble(self):
-        return std.ReaderPreamble(self.tari, self.rtcal, self.trcal, self.delim)
+        return std.ReaderPreamble(
+            self.tari, self.rtcal, self.trcal, self.delim
+        )
 
     @property
     def sync(self):
@@ -833,7 +833,7 @@ class Reader:
     def num_antennas(self):
         return len(self._antennas)
 
-    def select_next_antenna(self):  # TODO не совсем пока понятно, зачем это нужно
+    def select_next_antenna(self):
         if self.num_antennas > 0:
             self._antenna_index = (self._antenna_index + 1) % self.num_antennas
             return self._antennas[self._antenna_index]
@@ -889,9 +889,10 @@ class Reader:
 #############################################################################
 class Tag:
     '''
-    В отличие от класса Reader, в котором state-машина вынесена в отдельные структуры,
-    здесь state-машина и все её методы и переходы находятся прямо внутри класса Tag,
-    что несколько облегчает процесс написания кода, но усложняет его понимание.
+    В отличие от класса Reader, в котором state-машина
+    вынесена в отдельные структуры, здесь state-машина
+    и все её методы и переходы находятся прямо внутри класса Tag,
+    что облегчает процесс написания кода, но усложняет его понимание.
     '''
 
     class State(enum.Enum):
@@ -1076,7 +1077,9 @@ class Tag:
             self._powered_off_time = None
             self._power_update_time = time
             self._power = power
-            self.logger.info(f'tag {self._tag_id} powered on: {self.describe()}')
+            self.logger.info(
+                f'tag {self._tag_id} powered on: {self.describe()}'
+            )
             self._set_state(Tag.State.READY)
 
     def _power_off(self, time):
@@ -1087,7 +1090,9 @@ class Tag:
             self._power = None
             self._active_session = None
             self._preamble = None
-            self.logger.info(f'tag {self._tag_id} powered off: {self.describe()}')
+            self.logger.info(
+                f'tag {self._tag_id} powered off: {self.describe()}'
+            )
             self._set_state(Tag.State.OFF)
 
     def set_power(self, time, power):
@@ -1105,12 +1110,16 @@ class Tag:
     def _set_state(self, new_state):
         if self._state != new_state:
             self.kernel.logger.warning(
-                f'tag {self.tag_id} state changed: {self.state.name} --> {new_state.name}, {self.describe()}')
+                f'tag {self.tag_id} state changed: {self.state.name} --> '
+                f'{new_state.name}, {self.describe()}'
+            )
         self._state = new_state
 
     # -----------------------------------------------------------------
-    # Методы process_... - описывают state-машину метки, отвечают за переключения её состояний
-    # В зависимости от состояния, в котором находится метка и флагов select и inventoried
+    # Методы process_... - описывают state-машину
+    # метки и отвечают за переключения её состояний.
+    # В зависимости от состояния, в котором находится
+    # метка и флагов select и inventoried
     # метод возвращает либо None (метка ничего не ответила), либо tagframe.
     # -----------------------------------------------------------------
     def process_query(self, query):
@@ -1140,7 +1149,9 @@ class Tag:
         self._blf = std.get_blf(command.dr, preamble.trcal)
         self.q = command.q
         self._slot_counter = np.random.randint(0, pow(2, self.q))
-        self.logger.warning(f'Внимание! Метка выбрала номер слота: {self._slot_counter}')
+        self.logger.warning(
+            f'Внимание! Метка выбрала номер слота: {self._slot_counter}'
+        )
         self._preamble = std.create_tag_preamble(self.encoding, self.trext)
         if self._slot_counter == 0:
             self._set_state(Tag.State.REPLY)
@@ -1174,7 +1185,7 @@ class Tag:
                 self._set_state(Tag.State.READY)
 
             return None
-    
+
     def process_query_adjust(self, frame):
         assert isinstance(frame, std.ReaderFrame)
         assert isinstance(frame.command, std.QueryAdjust)
@@ -1184,10 +1195,10 @@ class Tag:
 
         if qadjust.session is not self._active_session:
             return None
-        
+
         if self.state in {Tag.State.ARBITRATE, Tag.State.REPLY}:
             print(f'Изменение q метки. Старое значение: {self.q}')
-            self.logger.critical(f'ИЗМЕНЕНИЕ Q!!!')
+            self.logger.critical('ИЗМЕНЕНИЕ Q!!!')
             self.logger.critical(f'Состояние метки ДО: {self.describe()}')
             # Переход в arbitrate с новым Q и новым номером слота
             self._set_state(Tag.State.ARBITRATE)
@@ -1201,8 +1212,11 @@ class Tag:
                 return std.TagFrame(self._preamble, std.QueryReply(self._rn))
             self.logger.critical(f'Состояние метки ПОСЛЕ: {self.describe()}')
             return None
-        
-        elif self.state in {Tag.State.ACKNOWLEDGED, Tag.State.SECURED} and self.state is not Tag.State.READY:
+
+        elif (
+            self.state in {Tag.State.ACKNOWLEDGED, Tag.State.SECURED} and
+            self.state is not Tag.State.READY
+        ):
             flag = self.sessions[self._active_session]
             self.sessions[self._active_session] = flag.invert()
             self._set_state(Tag.State.READY)
@@ -1260,7 +1274,7 @@ class Tag:
             return self.process_query(frame)
         elif isinstance(cmd, std.QueryRep):
             return self.process_query_rep(frame)
-        elif isinstance (cmd, std.QueryAdjust):
+        elif isinstance(cmd, std.QueryAdjust):
             return self.process_query_adjust(frame)
         elif isinstance(cmd, std.Ack):
             return self.process_ack(frame)
@@ -1276,18 +1290,20 @@ class Tag:
                 f'q = {self.q}, current_slot = {self._slot_counter}, '
                 f'pos={self.pos}, power={self.power}, '
                 f'S0={self.s0}, S1={self.s1}, S2={self.s2}, S3={self.s3}, '
-                f'SL={self.sl}, M={self.encoding}, CNT={self._slot_counter}, RN={self.rn}')
+                f'SL={self.sl}, M={self.encoding}, CNT={self._slot_counter}, '
+                f'RN={self.rn}')
 
     def __str__(self):
-        return (f'Tag id={self.tag_id}, pos={self.pos}, '
-                f'velocity={self.velocity:.3f}, direction={self.direction}, '
-                f'state={self.state.name}, power={self.power}, '
-                f'S0={self.sessions[std.Session.S0]}, '
-                f'S1={self.sessions[std.Session.S1]}, '
-                f'S2={self.sessions[std.Session.S2]}, '
-                f'S3={self.sessions[std.Session.S3]}, '
-                f'SL={self.sl}, M={self.encoding}, '
-                f'TRext={self.trext}, EPC={self.epc}, TID={self.tid}'
+        return (
+            f'Tag id={self.tag_id}, pos={self.pos}, '
+            f'velocity={self.velocity:.3f}, direction={self.direction}, '
+            f'state={self.state.name}, power={self.power}, '
+            f'S0={self.sessions[std.Session.S0]}, '
+            f'S1={self.sessions[std.Session.S1]}, '
+            f'S2={self.sessions[std.Session.S2]}, '
+            f'S3={self.sessions[std.Session.S3]}, '
+            f'SL={self.sl}, M={self.encoding}, '
+            f'TRext={self.trext}, EPC={self.epc}, TID={self.tid}'
         )
 
     @staticmethod
@@ -1347,12 +1363,16 @@ class Generator:
         return self.travel_distance / self.velocity
 
     def create_tag(self, model):
-        print("GENERATOR: create new tag")
+        # print('GENERATOR: create new tag')
         def hex_string_bitlen(s):
             return len(s.strip()) * 4
 
-        epc_suffix_bitlen = self.epc_bitlen - hex_string_bitlen(self.epc_prefix)
-        tid_suffix_bitlen = self.tid_bitlen - hex_string_bitlen(self.tid_prefix)
+        epc_suffix_bitlen = (
+            self.epc_bitlen - hex_string_bitlen(self.epc_prefix)
+        )
+        tid_suffix_bitlen = (
+            self.tid_bitlen - hex_string_bitlen(self.tid_prefix)
+        )
         self._epc_suffix = '0' * int(np.ceil(epc_suffix_bitlen / 4))
         self._tid_suffix = '0' * int(np.ceil(tid_suffix_bitlen / 4))
 
@@ -1366,7 +1386,9 @@ class Generator:
         tag.velocity = self.velocity
         tag.direction = np.array(self.direction, copy=True)
         tag.antenna.gain = self.antenna_gain
-        tag.antenna.direction_theta = np.array(self.tag_antenna_direction, copy=True)
+        tag.antenna.direction_theta = np.array(
+            self.tag_antenna_direction, copy=True
+        )
         tag.antenna.cable_loss = self.cable_loss
         tag.sensitivity = self.sensitivity
         tag.modulation_loss = self.modulation_loss
@@ -1403,7 +1425,10 @@ class Medium:
         elif self.ground_reflection_type == 'const':
             return chan.reflection_constant
         else:
-            raise ValueError(f"unsupported reflection type = '{self.ground_reflection_type}'")
+            raise ValueError(
+                'unsupported reflection type = '
+                f'"{self.ground_reflection_type}"'
+            )
 
     @property
     def wavelen(self):
@@ -1429,10 +1454,12 @@ class Medium:
             polarization=polarization, conductivity=self.conductivity,
             permittivity=self.permittivity) + self.polarization_loss
 
-        # TODO: uncomment three lines blow for PL debug:
-        # print(f"PL = {pl}")
-        # print(f"- tx_ant: pos={tx_ant.pos}, theta={tx_ant.direction_theta}, phi={tx_ant.direction_phi}, vel={tx_vel}")
-        # print(f"- rx_ant: pos={rx_ant.pos}, theta={rx_ant.direction_theta}, phi={rx_ant.direction_phi}, vel={rx_vel}")
+        # uncomment 5 lines blow for PL debug:
+        # print(f'PL = {pl}')
+        # print(f'- tx_ant: pos={tx_ant.pos}, theta={tx_ant.direction_theta}, '
+        #       f'phi={tx_ant.direction_phi}, vel={tx_vel}')
+        # print(f'- rx_ant: pos={rx_ant.pos}, theta={rx_ant.direction_theta}, '
+        #       f'phi={rx_ant.direction_phi}, vel={rx_vel}')
 
         return pl
 
@@ -1545,8 +1572,12 @@ class Transaction():
             exchange_duration = (self._command_duration + t1 +
                                  self._reply_duration + t2)
             self._reply_start_time = time + t1
-            self._reply_end_time = self._reply_start_time + self._reply_duration
-            self._duration = max(exchange_duration, self._command_duration + t4)
+            self._reply_end_time = (
+                self._reply_start_time + self._reply_duration
+            )
+            self._duration = max(
+                exchange_duration, self._command_duration + t4
+            )
         else:
             self._reply_start_time = None
             self._reply_end_time = None
@@ -1715,12 +1746,18 @@ class _TagPowerRecord:
         self._reader_tx_power = value
 
     def __str__(self):
-        return f"time={self.time:.9f}, t_on={self.field_lifetime:12.9f}, tag_pos={str(self.tag_pos):14s}, " \
-               f"antenna_index={self.reader_antenna_index}, " \
-               f"antenna_pos={str(self.reader_antenna_pos):8s}, tag_rx_power={self.tag_rx_power:.2f}, " \
-               f"tag_tx_power={self.tag_tx_power:.2f}, reader_rx_power={self.reader_rx_power:.2f}, " \
-               f"reader_tx_power={self.reader_tx_power:.2f}, SNR={self.snr:.4f}, BER={self.ber:.6f}, " \
-               f"PLrt={self.reader_tag_pl:.2f}, PLtr={self.tag_reader_pl:.2f}"
+        return (
+            f'time={self.time:.9f}, t_on={self.field_lifetime:12.9f}, '
+            f'tag_pos={str(self.tag_pos):14s}, '
+            f'antenna_index={self.reader_antenna_index}, '
+            f'antenna_pos={str(self.reader_antenna_pos):8s}, '
+            f'tag_rx_power={self.tag_rx_power:.2f}, '
+            f'tag_tx_power={self.tag_tx_power:.2f}, '
+            f'reader_rx_power={self.reader_rx_power:.2f}, '
+            f'reader_tx_power={self.reader_tx_power:.2f}, '
+            f'SNR={self.snr:.4f}, BER={self.ber:.6f}, '
+            f'PLrt={self.reader_tag_pl:.2f}, PLtr={self.tag_reader_pl:.2f}'
+        )
 
 
 class _TagRecord:

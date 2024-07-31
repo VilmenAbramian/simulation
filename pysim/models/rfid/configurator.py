@@ -129,7 +129,7 @@ class Settings:
     # --- Настройки QueryAdjust ---
     q: int = 5  # значение параметра Q в начале
     use_query_adjust: bool = True
-    adjust_delta: float = 0.02 # коэффициент, на который изменяется значение q
+    adjust_delta: float = 0.02  # коэффициент, на который изменяется значение q
     q_fp: float = q
 
     # Значение поля Target команды Query, то есть флаг сессии, по которому
@@ -274,7 +274,6 @@ def create_model(settings=None, verbose=False, **kwargs) -> Model:
     reader.adjust_delta = settings.adjust_delta
     reader.q_fp = settings.q_fp
 
-
     # 2) Attaching antennas to reader
     ant = Antenna()
     ant.pos = np.asarray([reader_antenna_x, 0, reader_antenna_z])
@@ -346,7 +345,6 @@ def run_model(
 
 
 def print_model_settings(model: Model, kernel: sim.Kernel):
-    '''Вывод на печать параметров настроенной модели'''
     reader = model.reader
     medium = model.medium
     generator = model.generators[0]

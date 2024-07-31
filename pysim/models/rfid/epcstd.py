@@ -378,7 +378,7 @@ def encode_updn(value):
     elif value == -1:
         return '011'
     else:
-        raise NotImplemented(f'Несуществующее значение updn: {value}!')
+        raise ValueError(f'Несуществующее значение updn: {value}!')
 
 
 #
@@ -442,14 +442,14 @@ class QueryRep(Command):
 
 
 class QueryAdjust(Command):
-    def __init__(self, session=None, updn = 0):
+    def __init__(self, session=None, updn=0):
         super().__init__(CommandCode.QUERY_ADJUST)
         self.session = session if session is not None else stdParams.session
         self.updn = updn
-    
+
     def encode(self):
         return self.code.code + self.session.code + encode_updn(self.updn)
-    
+
     def __str__(self):
         return f'{self.code}{self.session}{encode_updn(self.updn)}'
 
@@ -869,9 +869,12 @@ def query_rep_duration(tari=None, rtcal=None, trcal=None, delim=None,
                                  delim)
 
 
-def query_adjust_duration(delim=None, tari=None, rtcal=None, session=None, updn=None):
+def query_adjust_duration(
+    delim=None, tari=None, rtcal=None, session=None, updn=None
+):
     return reader_frame_duration(QueryAdjust(session, updn), tari, rtcal,
                                  delim)
+
 
 # noinspection PyTypeChecker
 def ack_duration(tari=None, rtcal=None, trcal=None, delim=None, rn=None):
