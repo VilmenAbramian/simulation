@@ -194,7 +194,7 @@ def _no_tag_response(ctx, reader):
         if reader.q > 0 and reader.q <= 15:
             reader.q_fp = max(0, reader.q_fp-reader.adjust_delta)
             new_q = round(reader.q_fp)
-            if reader.q - new_q == 1:
+            if abs(reader.q - new_q) == 1:
                 reader.q = new_q  # обновляем q в считывателе
                 # Отправить команду QueryAdjust
                 reader.updn = -1
@@ -253,20 +253,49 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
     return ctx.reader.receive(frame)
 
 
+def _multiple_tag_response(ctx, reader, transaction):
+    '''
+    Обработка коллизии
+    '''
+    cmd_frame = None
+    if reader.use_query_adjust and (
+        reader.state == Reader.State.QUERY or
+        reader.state == Reader.State.QREP
+    ):
+        if reader.q >= 0 and reader.q < 15:
+            reader.q_fp = min(15, reader.q_fp+reader.adjust_delta)
+            new_q = round(reader.q_fp)
+            if abs(reader.q - new_q) == 1:
+                reader.q = new_q  # обновляем q в считывателе
+                # Отправить команду QueryAdjust
+                reader.updn = 1
+                cmd_frame = reader.set_state(Reader.State.QAdjust)
+                reader.updn = 0
+    if cmd_frame is None:
+        cmd_frame = ctx.reader.timeout()
+    print('Q СЧИТЫВАТЕЛЯ: ', reader.q)
+    return cmd_frame
+
 def finish_transaction(kernel, transaction):
     kernel.logger.debug(f'finished transaction: {str(transaction)}')
     ctx = kernel.context
     reader = ctx.reader
     assert transaction is ctx.transaction
+    cmd_frame = None
+
+    # Коллизия
+    if len(transaction.replies) > 1:
+        cmd_frame = _multiple_tag_response(ctx, reader, transaction)
 
     tag, frame, snr, ber = transaction.received_tag_frame(
         ctx.medium, kernel.time)
+
     if frame is not None:
-        # Если есть один или несколько ответов от меток
+        # Если есть один ответ от метки
         cmd_frame = _one_tag_response(
             kernel, transaction, ctx, reader, tag, frame, snr, ber
         )
-    else:
+    elif frame is None and cmd_frame is None:
         # Если нет ответа от метки
         cmd_frame = _no_tag_response(ctx, reader)
 

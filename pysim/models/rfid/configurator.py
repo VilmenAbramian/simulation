@@ -127,9 +127,9 @@ class Settings:
     trext: bool = True  # использовать ли в ответах расширенную преамбулу
 
     # --- Настройки QueryAdjust ---
-    q: int = 5  # значение параметра Q в начале
+    q: int = 0  # значение параметра Q в начале
     use_query_adjust: bool = True
-    adjust_delta: float = 0.02  # коэффициент, на который изменяется значение q
+    adjust_delta: float = 0.5  # коэффициент, на который изменяется значение q
     q_fp: float = q
 
     # Значение поля Target команды Query, то есть флаг сессии, по которому
@@ -186,7 +186,7 @@ class Settings:
     # Например, если в качестве функции используется
     # `numpy.random.exponential`, то в качестве аргумента
     # можно передать среднее: (exponential, 42.0).
-    generation_interval: tuple = (lambda: 1.0, )
+    generation_interval: tuple = (lambda: 0.001, )
 
     num_tags: int = 1  # сколько меток нужно сгенерировать
 

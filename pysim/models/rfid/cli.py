@@ -11,16 +11,11 @@ import pysim.sim.simulator as sim
 DEFAULT_SPEED = 30             # kmph
 DEFAULT_ENCODING = '2'         # FM0, M2, M4, M8
 DEFAULT_TARI = '12.5'          # 6.25, 12.5, 18.75, 25
-DEFAULT_USE_TREXT = False      # don't use extended preamble
-DEFAULT_USE_DOPPLER = True     # simulate Doppler shift
-DEFAULT_FREQUENCY = 860.0      # reader frequency in MHz
-DEFAULT_Q = 2                  # Q parameter
-DEFAULT_NUM_TAGS = 1_000       # number of tags to simulate
 DEFAULT_TID_WORD_SIZE = 64     # number of words to read from TID (=1024 bits)
 DEFAULT_READER_OFFSET = 3.0    # meters from the wall
 DEFAULT_TAG_OFFSET = 2.0       # meters from the wall
 DEFAULT_ALTITUDE = 5.0
-DEFAULT_NUM_TAGS = 1
+DEFAULT_NUM_TAGS = 50
 DEFAULT_POWER = 29
 
 

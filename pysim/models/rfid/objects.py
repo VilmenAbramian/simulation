@@ -1198,7 +1198,6 @@ class Tag:
 
         if self.state in {Tag.State.ARBITRATE, Tag.State.REPLY}:
             print(f'Изменение q метки. Старое значение: {self.q}')
-            self.logger.critical('ИЗМЕНЕНИЕ Q!!!')
             self.logger.critical(f'Состояние метки ДО: {self.describe()}')
             # Переход в arbitrate с новым Q и новым номером слота
             self._set_state(Tag.State.ARBITRATE)
@@ -1211,6 +1210,7 @@ class Tag:
                 self._rn = np.random.randint(0, 0x10000)
                 return std.TagFrame(self._preamble, std.QueryReply(self._rn))
             self.logger.critical(f'Состояние метки ПОСЛЕ: {self.describe()}')
+            print(f'Изменение q метки. Новое значение: {self.q}')
             return None
 
         elif (
@@ -1363,7 +1363,7 @@ class Generator:
         return self.travel_distance / self.velocity
 
     def create_tag(self, model):
-        # print('GENERATOR: create new tag')
+        print('GENERATOR: create new tag')
         def hex_string_bitlen(s):
             return len(s.strip()) * 4
 
