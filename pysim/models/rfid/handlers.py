@@ -25,7 +25,6 @@ def start_simulation(kernel):
         ctx.update_interval, update_positions, msg='Обновить расположение'
     )
     kernel.call(turn_reader_on, (ctx.reader,), msg='Запуск считывателя')
-    kernel.call(generate_tag, (generator, ))
 
 
 def _update_power(time, reader, tags, transaction, medium, statistics):
@@ -154,7 +153,7 @@ def generate_tag(kernel, generator):
 
     _update_power(kernel.time, ctx.reader, [tag], None, ctx.medium,
                   ctx.statistics)
-    kernel.logger.error(
+    kernel.logger.info(
         f'(+) tag {tag.tag_id} created for {generator.lifetime}s: {str(tag)}'
     )
 
@@ -162,7 +161,7 @@ def generate_tag(kernel, generator):
 def remove_tag(kernel, tag):
     ctx = kernel.context
     ctx.tags.remove(tag)
-    kernel.logger.error(f'(x) tag {tag.tag_id} died')
+    kernel.logger.info(f'(x) tag {tag.tag_id} died')
     ctx.num_tags_simulated += 1
     if (ctx.max_tags_num is not None and
             ctx.num_tags_simulated >= ctx.max_tags_num):
@@ -179,7 +178,7 @@ def update_positions(kernel):
                   ctx.medium, ctx.statistics)
 
 
-def _no_tag_response(ctx, reader):
+def _no_tag_response(kernel, ctx, reader):
     '''
     Обработка отсутствия ответа метки после
     завершения транзакции считывателя
@@ -195,6 +194,9 @@ def _no_tag_response(ctx, reader):
             reader.q_fp = max(0, reader.q_fp-reader.adjust_delta)
             new_q = round(reader.q_fp)
             if abs(reader.q - new_q) == 1:
+                kernel.logger.error(
+                    f'Считыватель уменьшил Q с {reader.q} до {new_q}'
+                )
                 reader.q = new_q  # обновляем q в считывателе
                 # Отправить команду QueryAdjust
                 reader.updn = -1
@@ -231,7 +233,7 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
                 on_slot_end, reader=reader, tag=tag,
                 statistics=ctx.statistics)
 
-        kernel.logger.warning(
+        kernel.logger.info(
             '---> Received tag data: EPC={}, received power={} from tag {}'
             ''.format(
                 ''.join('{:02X}'.format(b) for b in frame.reply.epc),
@@ -244,7 +246,7 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
         tag_read_record = ctx.statistics.get_tag_record(tag).tag_read_record
         tag_read_record.read_tid = True
 
-        kernel.logger.warning(
+        kernel.logger.info(
             '---> Received TID: memory={}, received power={} from tag {}'
             ''.format(
                 ''.join('{:02X}'.format(b) for b in frame.reply.memory),
@@ -253,7 +255,7 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
     return ctx.reader.receive(frame)
 
 
-def _multiple_tag_response(ctx, reader, transaction):
+def _multiple_tag_response(kernel, ctx, reader, transaction):
     '''
     Обработка коллизии
     '''
@@ -266,6 +268,9 @@ def _multiple_tag_response(ctx, reader, transaction):
             reader.q_fp = min(15, reader.q_fp+reader.adjust_delta)
             new_q = round(reader.q_fp)
             if abs(reader.q - new_q) == 1:
+                kernel.logger.error(
+                    f'Считыватель увеличил Q с {reader.q} до {new_q}'
+                )
                 reader.q = new_q  # обновляем q в считывателе
                 # Отправить команду QueryAdjust
                 reader.updn = 1
@@ -273,8 +278,8 @@ def _multiple_tag_response(ctx, reader, transaction):
                 reader.updn = 0
     if cmd_frame is None:
         cmd_frame = ctx.reader.timeout()
-    print('Q СЧИТЫВАТЕЛЯ: ', reader.q)
     return cmd_frame
+
 
 def finish_transaction(kernel, transaction):
     kernel.logger.debug(f'finished transaction: {str(transaction)}')
@@ -283,9 +288,10 @@ def finish_transaction(kernel, transaction):
     assert transaction is ctx.transaction
     cmd_frame = None
 
-    # Коллизия
     if len(transaction.replies) > 1:
-        cmd_frame = _multiple_tag_response(ctx, reader, transaction)
+        # Коллизия
+        kernel.logger.error('Коллизия!')
+        cmd_frame = _multiple_tag_response(kernel, ctx, reader, transaction)
 
     tag, frame, snr, ber = transaction.received_tag_frame(
         ctx.medium, kernel.time)
@@ -297,7 +303,7 @@ def finish_transaction(kernel, transaction):
         )
     elif frame is None and cmd_frame is None:
         # Если нет ответа от метки
-        cmd_frame = _no_tag_response(ctx, reader)
+        cmd_frame = _no_tag_response(kernel, ctx, reader)
 
     # Processing new command (reader frame)
     ctx.transaction = _build_transaction(kernel, ctx.reader, cmd_frame)

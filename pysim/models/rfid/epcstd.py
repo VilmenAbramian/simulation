@@ -556,7 +556,7 @@ def to_bytes(value):
 
 
 class AckReply(Reply):
-    def __init__(self, epc="", pc=0x0000, crc=0x0000):
+    def __init__(self, epc='', pc=0x0000, crc=0x0000):
         super().__init__(ReplyType.ACK_REPLY)
         self._data = to_bytes(epc)
         self.pc = pc

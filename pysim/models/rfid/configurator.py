@@ -49,8 +49,8 @@ class Settings:
         return rtcal * self.trcal_rtcal_mul
 
     # --- Геометрия и траектория движения ---
-    speed: float = 10 * KMPH_TO_MPS_MUL       # скорость метки, м/с
-    initial_distance_to_reader: float = 0.0  # как далеко метка от ридера, м
+    speed: float = 30 * KMPH_TO_MPS_MUL       # скорость метки, м/с
+    initial_distance_to_reader: float = 10.0  # как далеко метка от ридера, м
     travel_distance: float = 20.0  # как далеко метка летит до уничтожения, м
 
     reader_antenna_x: float = 5.0  # расстояние от ридера до стены по оси OX, м
@@ -127,9 +127,12 @@ class Settings:
     trext: bool = True  # использовать ли в ответах расширенную преамбулу
 
     # --- Настройки QueryAdjust ---
-    q: int = 0  # значение параметра Q в начале
+    q: int = 2  # значение параметра Q в начале
+    # (если есть значение по умолчанию в click, то не используется)
     use_query_adjust: bool = True
-    adjust_delta: float = 0.5  # коэффициент, на который изменяется значение q
+    # (если есть значение по умолчанию в click, то не используется)
+    # коэффициент, на который изменяется значение q
+    adjust_delta: float = 0.1
     q_fp: float = q
 
     # Значение поля Target команды Query, то есть флаг сессии, по которому
@@ -186,9 +189,11 @@ class Settings:
     # Например, если в качестве функции используется
     # `numpy.random.exponential`, то в качестве аргумента
     # можно передать среднее: (exponential, 42.0).
-    generation_interval: tuple = (lambda: 0.001, )
+    generation_interval: tuple = (lambda: 1.0, )
 
-    num_tags: int = 1  # сколько меток нужно сгенерировать
+    # Количество генерируемых меток (если есть значение
+    # по умолчанию в click, то не используется)
+    num_tags: int = 1000
 
     # --- Настройки статистики ---
     # Сохранять ли данные о мощностях сигналов
@@ -270,8 +275,10 @@ def create_model(settings=None, verbose=False, **kwargs) -> Model:
 
     # --- Reader QueryAdjust settings ---
     reader.q = settings.q
-    reader.use_query_adjust = settings.use_query_adjust
-    reader.adjust_delta = settings.adjust_delta
+    reader.use_query_adjust = kwargs.get(
+        'useadjust', settings.use_query_adjust
+    )
+    reader.adjust_delta = kwargs.get('delta', settings.adjust_delta)
     reader.q_fp = settings.q_fp
 
     # 2) Attaching antennas to reader

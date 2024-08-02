@@ -8,15 +8,17 @@ from processing import result_processing
 import pysim.sim.simulator as sim
 
 
-DEFAULT_SPEED = 30             # kmph
+DEFAULT_SPEED = 10             # kmph
 DEFAULT_ENCODING = '2'         # FM0, M2, M4, M8
 DEFAULT_TARI = '12.5'          # 6.25, 12.5, 18.75, 25
 DEFAULT_TID_WORD_SIZE = 64     # number of words to read from TID (=1024 bits)
 DEFAULT_READER_OFFSET = 3.0    # meters from the wall
 DEFAULT_TAG_OFFSET = 2.0       # meters from the wall
 DEFAULT_ALTITUDE = 5.0
-DEFAULT_NUM_TAGS = 50
+DEFAULT_NUM_TAGS = 40          # Количество генерируемых меток
 DEFAULT_POWER = 29
+USE_QUERY_ADJUST = False       # Использовать ли QueryAdjust
+DEFAULT_ADJUST_DELTA = 0.5     # Значение для корректировки Q в QueryAdjust
 
 
 # ----------------------------------------------------------------------------
@@ -30,46 +32,59 @@ def cli():
     '-s', '--speed', default=(DEFAULT_SPEED,), multiple=True,
     help='Vehicle speed, kmph. You can provide multiple values, e.g. '
          '`-s 10 -s 20 -s 80` for parallel computation.',
-    show_default=True,)
+    show_default=True,
+)
 @click.option(
     '-m', '--encoding', type=click.Choice(['1', '2', '4', '8']),
-    default=DEFAULT_ENCODING, help='Tag encoding', show_default=True)
+    default=DEFAULT_ENCODING, help='Tag encoding', show_default=True
+)
 @click.option(
     '-t', '--tari', default=DEFAULT_TARI, show_default=True,
-    type=click.Choice(['6.25', '12.5', '18.75', '25']), help='Tari value')
+    type=click.Choice(['6.25', '12.5', '18.75', '25']), help='Tari value'
+)
 @click.option(
     '-ws', '--tid-word-size', default=(DEFAULT_TID_WORD_SIZE,), multiple=True,
     help='Size of TID bank in words (x16 bits). This is both TID bank '
          'size and the number of words the reader requests from the tag. '
          'You can provide multiple values for this parameter for parallel '
-         'computation.',
-    show_default=True,)
+         'computation.', show_default=True,
+)
 @click.option(
     '-a', '--altitude', multiple=True, default=(DEFAULT_ALTITUDE,),
     help='Drone with RFID-reader altitude. You can pass multiple values of '
-         'this parameter for parallel computation.',
-    show_default=True)
+         'this parameter for parallel computation.', show_default=True
+)
 @click.option(
     '-ro', '--reader-offset', default=(DEFAULT_READER_OFFSET,), multiple=True,
     help='Reader offset from the wall. You can pass multiple values of this '
-         'parameter for parallel computation.',
-    show_default=True,)
+         'parameter for parallel computation.', show_default=True,
+)
 @click.option(
     '-to', '--tag-offset', default=(DEFAULT_TAG_OFFSET,), multiple=True,
     help='Tag offset from the wall. You can pass multiple values of this '
-         'parameter for parallel computation.',
-    show_default=True)
+         'parameter for parallel computation.', show_default=True
+)
 @click.option(
     '-p', '--power', default=(DEFAULT_POWER,), multiple=True,
     help='Reader transmitter power. You can pass multiple values of this '
-         'parameter for parallel computation.',
-    show_default=True)
+         'parameter for parallel computation.', show_default=True
+)
 @click.option(
     '-n', '--num-tags', default=DEFAULT_NUM_TAGS, show_default=True,
-    help='Number of tags to simulate.')
+    help='Number of tags to simulate.'
+)
 @click.option(
     '-v', '--verbose', is_flag=True, default=False, show_default=True,
-    help='Print additional data, e.g. detailed model configuration.')
+    help='Print additional data, e.g. detailed model configuration.'
+)
+@click.option(
+    '-ua', '--useadjust', is_flag=True, default=USE_QUERY_ADJUST,
+    show_default=True, help='Use QueryAdjust command for correct Q'
+)
+@click.option(
+    '-d', '--delta', default=DEFAULT_ADJUST_DELTA, show_default=True,
+    help='Coefficient for QueryAdjust algorithm'
+)
 def cli_run(**kwargs):
     '''
     Точка входа модели RFID.
@@ -94,7 +109,8 @@ def check_vars_for_multiprocessing(**kwargs):
     '''
     var_arg_names = (
         'speed', 'tid_word_size', 'altitude', 'reader_offset',
-        'tag_offset', 'power')
+        'tag_offset', 'power'
+    )
     variadic = None
     for arg_name in var_arg_names:
         if len(kwargs[arg_name]) > 1:
@@ -166,6 +182,8 @@ def prepare_simulation(kwargs):
         power=kwargs['power'],
         num_tags=kwargs['num_tags'],
         verbose=kwargs['verbose'],
+        useadjust=kwargs['useadjust'],
+        delta=kwargs['delta']
     )
     configurator.run_model(model, sim.ModelLoggerConfig())
     t_end_ns = time_ns()
@@ -174,6 +192,9 @@ def prepare_simulation(kwargs):
         'inventory_prob': model.statistics.inventory_probability(),
         'read_tid_prob': model.statistics.read_tid_probability()
     }
+    print(
+        'Статистика: ', model.statistics.average_changing_q()
+    )
     return (result, ((t_end_ns - t_start_ns) / 1_000_000_000))
 
 

@@ -12,10 +12,6 @@ import channel as chan
 # HELPERS
 #############################################################################
 class Listeners:
-    """
-    Класс, в котором хранится лог с какими-то функциями?
-    """
-
     def __init__(self):
         self._items = []
         self._id = itertools.count()
@@ -59,10 +55,10 @@ def inc_hex_string(s):
     while pos >= 0:
         x = int(s[pos], 16)
         if x < 15:
-            return s[:pos] + "{:1X}".format(x + 1) + ("0" * (len(s) - 1 - pos))
+            return s[:pos] + '{:1X}'.format(x + 1) + ('0' * (len(s) - 1 - pos))
         else:
             pos -= 1
-    return "0" * len(s)
+    return '0' * len(s)
 
 
 #############################################################################
@@ -111,7 +107,7 @@ class Antenna:
         if self.rp_type == 'dipole':
             return chan.rp_dipole
         else:
-            raise ValueError(f"unsupported rp_type='{self.rp_type}'")
+            raise ValueError(f'unsupported rp_type="{self.rp_type}"')
 
     @property
     def normalized_direction_theta(self):
@@ -194,7 +190,7 @@ class _ReaderOFF(_ReaderState):
         # the FSM moves to the first state as defined by the first slot
         reader.set_power(reader.max_power)
         slot = reader.next_slot()
-        if reader.target_strategy == "switch":
+        if reader.target_strategy == 'switch':
             reader.target = std.InventoryFlag.A
             reader.num_rounds_before_target_switch = reader.rounds_per_target
 
@@ -240,7 +236,7 @@ class _ReaderQUERY(_ReaderState):
         return t_cmd + t1 + t3
 
     def enter(self, reader):
-        if reader.target_strategy == "switch":
+        if reader.target_strategy == 'switch':
             if reader.num_rounds_before_target_switch <= 0:
                 reader.target = reader.target.invert()
                 reader.num_rounds_before_target_switch = \
@@ -269,13 +265,13 @@ class _ReaderQUERY(_ReaderState):
         return reader.set_state(Reader.State.ACK)
 
     def handle_ack_reply(self, reader, frame):
-        raise RuntimeError("unexpected AckReply in QUERY state")
+        raise RuntimeError('unexpected AckReply in QUERY state')
 
     def handle_reqrn_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReqRNReply in QUERY state")
+        raise RuntimeError('unexpected ReqRNReply in QUERY state')
 
     def handle_read_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReadReply in QUERY state")
+        raise RuntimeError('unexpected ReadReply in QUERY state')
 
 
 # ----------------------------------------------------------------------------
@@ -311,13 +307,13 @@ class _ReaderQREP(_ReaderState):
         return reader.set_state(Reader.State.ACK)
 
     def handle_ack_reply(self, reader, frame):
-        raise RuntimeError("unexpected AckReply in QREP state")
+        raise RuntimeError('unexpected AckReply in QREP state')
 
     def handle_reqrn_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReqRNReply in QUERY state")
+        raise RuntimeError('unexpected ReqRNReply in QUERY state')
 
     def handle_read_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReadReply in QUERY state")
+        raise RuntimeError('unexpected ReadReply in QUERY state')
 
 
 # ----------------------------------------------------------------------------
@@ -358,13 +354,13 @@ class _ReaderAdjust(_ReaderState):
         return reader.set_state(Reader.State.ACK)
 
     def handle_ack_reply(self, reader, frame):
-        raise RuntimeError("unexpected AckReply in ADJUST state")
+        raise RuntimeError('unexpected AckReply in ADJUST state')
 
     def handle_reqrn_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReqRNReply in ADJUST state")
+        raise RuntimeError('unexpected ReqRNReply in ADJUST state')
 
     def handle_read_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReadReply in ADJUST state")
+        raise RuntimeError('unexpected ReadReply in ADJUST state')
 
 
 # ----------------------------------------------------------------------------
@@ -397,7 +393,7 @@ class _ReaderACK(_ReaderState):
         return reader.set_state(slot.first_state)
 
     def handle_query_reply(self, reader, frame):
-        raise RuntimeError("unexpected RN16 in ACK state")
+        raise RuntimeError('unexpected RN16 in ACK state')
 
     def handle_ack_reply(self, reader, frame):
         if reader.read_tid_bank:
@@ -407,10 +403,10 @@ class _ReaderACK(_ReaderState):
             return reader.set_state(slot.first_state)
 
     def handle_reqrn_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReqRNReply in ACK state")
+        raise RuntimeError('unexpected ReqRNReply in ACK state')
 
     def handle_read_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReadReply in ACK state")
+        raise RuntimeError('unexpected ReadReply in ACK state')
 
 
 # ----------------------------------------------------------------------------
@@ -442,17 +438,17 @@ class _ReaderREQRN(_ReaderState):
         return reader.set_state(slot.first_state)
 
     def handle_query_reply(self, reader, frame):
-        raise RuntimeError("unexpected RN16 in REQRN state")
+        raise RuntimeError('unexpected RN16 in REQRN state')
 
     def handle_ack_reply(self, reader, frame):
-        raise RuntimeError("unexpected AckReply in REQRN state")
+        raise RuntimeError('unexpected AckReply in REQRN state')
 
     def handle_reqrn_reply(self, reader, frame):
         reader.last_rn = frame.reply.rn
         return reader.set_state(Reader.State.READ)
 
     def handle_read_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReadReply in REQRN state")
+        raise RuntimeError('unexpected ReadReply in REQRN state')
 
 
 # ----------------------------------------------------------------------------
@@ -486,18 +482,18 @@ class _ReaderREAD(_ReaderState):
         return reader.set_state(slot.first_state)
 
     def handle_query_reply(self, reader, frame):
-        raise RuntimeError("unexpected RN16 in READ state")
+        raise RuntimeError('unexpected RN16 in READ state')
 
     def handle_ack_reply(self, reader, frame):
-        raise RuntimeError("unexpected AckReply in READ state")
+        raise RuntimeError('unexpected AckReply in READ state')
 
     def handle_reqrn_reply(self, reader, frame):
-        raise RuntimeError("unexpected ReqRNReply in READ state")
+        raise RuntimeError('unexpected ReqRNReply in READ state')
 
     def handle_read_reply(self, reader, frame):
         assert isinstance(frame.reply, std.ReadReply)
-        reader.kernel.logger.info("received TID={}".format(
-            "".join("{:02X}".format(b) for b in frame.reply.memory)))
+        reader.kernel.logger.info('received TID={}'.format(
+            ''.join('{:02X}'.format(b) for b in frame.reply.memory)))
         slot = reader.next_slot()
         return reader.set_state(slot.first_state)
 
@@ -565,7 +561,7 @@ class _ReaderSlot:
         return self._owner
 
     def on_start(self, reader):
-        reader.kernel.logger.debug(f".. SLOT #{self.index} STARTED")
+        reader.kernel.logger.debug(f'.. SLOT #{self.index} STARTED')
         reader.slot_start_listeners.call(self.owner.index, self.index)
 
     def on_finish(self, reader):
@@ -601,7 +597,7 @@ class _ReaderRound:
         return self._slot
 
     def on_start(self, reader):
-        reader.kernel.logger.info(f"ROUND #{self.index} STARTED")
+        reader.kernel.logger.info(f'ROUND #{self.index} STARTED')
         reader.round_start_listeners.call(self.index)
 
     def on_finish(self, reader):
@@ -671,7 +667,7 @@ class Reader:
     sel = std.SelFlag.ALL
     session = std.Session.S0
     target = std.InventoryFlag.A
-    target_strategy = "const"  # or "const" or "switch"
+    target_strategy = 'const'  # or 'const' or 'switch'
     rounds_per_target = 1
 
     # Power settings
@@ -725,7 +721,7 @@ class Reader:
         self._slot_start_listeners = Listeners()  # (round_index, slot_index)
         self._slot_finish_listeners = Listeners()  # (round_index, slot_index)
 
-        # This field is used when target_strategy is "switch"
+        # This field is used when target_strategy is 'switch'
         self.num_rounds_before_target_switch = None
 
     @property
@@ -795,7 +791,7 @@ class Reader:
         return self._state.handle_timeout(self)
 
     def turn_on(self):
-        self.kernel.logger.debug("reader turned ON")
+        self.kernel.logger.debug('reader turned ON')
         self._power_on_listeners.call()
         if self.always_start_with_first_antenna:
             self._antenna_index = 0
@@ -803,8 +799,8 @@ class Reader:
         return self._state.handle_turn_on(self)
 
     def turn_off(self):
-        self.kernel.logger.debug("reader turned OFF")
-        self._power_off_listeners.call()  # TODO не понимаю!
+        self.kernel.logger.debug('reader turned OFF')
+        self._power_off_listeners.call()
         self._time_last_turned_on = None
         return self._state.handle_turn_off(self)
 
@@ -1150,7 +1146,8 @@ class Tag:
         self.q = command.q
         self._slot_counter = np.random.randint(0, pow(2, self.q))
         self.logger.warning(
-            f'Внимание! Метка выбрала номер слота: {self._slot_counter}'
+            f'Внимание! Метка {self._tag_id} выбрала '
+            f'номер слота: {self._slot_counter}'
         )
         self._preamble = std.create_tag_preamble(self.encoding, self.trext)
         if self._slot_counter == 0:
@@ -1197,20 +1194,30 @@ class Tag:
             return None
 
         if self.state in {Tag.State.ARBITRATE, Tag.State.REPLY}:
-            print(f'Изменение q метки. Старое значение: {self.q}')
-            self.logger.critical(f'Состояние метки ДО: {self.describe()}')
-            # Переход в arbitrate с новым Q и новым номером слота
+            # print(
+            #     f'Изменение q метки {self._tag_id}. '
+            #     f'Старое значение: {self.q}'
+            # )
+            self.logger.critical(
+                f'Состояние метки {self._tag_id} ДО: {self.describe()}'
+            )
             self._set_state(Tag.State.ARBITRATE)
             updn = qadjust.updn
             if self.q + updn >= 0 or self.q + updn <= 15:
                 self.q = self.q + updn
-            self._slot_counter = np.random.randint(0, pow(2, self.q))
+                self._slot_counter = np.random.randint(0, pow(2, self.q))
+                stat = self.kernel.context.statistics
+                stat.get_tag_record(self).num_qadjust_attained += 1
             if self._slot_counter == 0:
                 self._set_state(Tag.State.REPLY)
                 self._rn = np.random.randint(0, 0x10000)
                 return std.TagFrame(self._preamble, std.QueryReply(self._rn))
-            self.logger.critical(f'Состояние метки ПОСЛЕ: {self.describe()}')
-            print(f'Изменение q метки. Новое значение: {self.q}')
+            self.logger.critical(
+                f'Состояние метки {self._tag_id} ПОСЛЕ: {self.describe()}'
+            )
+            # print(
+            #     f'Изменение q метки {self._tag_id}. Новое значение: {self.q}'
+            # )
             return None
 
         elif (
@@ -1263,7 +1270,7 @@ class Tag:
             # цифр из строки content.
             if (frame.command.word_count * 4) < len(content):
                 content = content[:frame.command.word_count * 4]
-            # print(f"Content ({len(content) // 4} words): {content}")
+            # print(f'Content ({len(content) // 4} words): {content}')
             return std.TagFrame(
                 self._preamble, std.ReadReply(content, rn=self.rn))
 
@@ -1283,7 +1290,7 @@ class Tag:
         elif isinstance(cmd, std.Read):
             return self.process_read(frame)
         else:
-            raise TypeError(f"unexpected command '{frame}'")
+            raise TypeError(f'unexpected command "{frame}"')
 
     def describe(self):
         return (f'tag id={self.tag_id}, state={self.state.name},'
@@ -1363,7 +1370,7 @@ class Generator:
         return self.travel_distance / self.velocity
 
     def create_tag(self, model):
-        print('GENERATOR: create new tag')
+        # print('GENERATOR: create new tag')
         def hex_string_bitlen(s):
             return len(s.strip()) * 4
 
@@ -1657,10 +1664,10 @@ class Transaction():
             (None, None, None, None)
 
     def __str__(self):
-        replies = ", ".join(f"{str(r.reply)} from {t.tag_id}"
+        replies = ', '.join(f'{str(r.reply)} from {t.tag_id}'
                             for t, r in self.replies)
-        return (f"Transaction {{ cmd={self.command.command},"
-                f"replies={replies}, duration={self.duration:.9f} }}")
+        return (f'Transaction {{ cmd={self.command.command},'
+                f'replies={replies}, duration={self.duration:.9f} }}')
 
 
 #############################################################################
@@ -1679,10 +1686,10 @@ class _TagReadRecord:
     read_tid = False
 
     def __str__(self):
-        return (f"(round={self.round_index}, ant={self.antenna_index},"
-                f"tag_pos={self.tag_pos}, ant_pos={self.reader_antenna_pos},"
-                f"BER={self.ber}, SNR={self.snr},"
-                f"read_tid={self.read_tid})")
+        return (f'(round={self.round_index}, ant={self.antenna_index},'
+                f'tag_pos={self.tag_pos}, ant_pos={self.reader_antenna_pos},'
+                f'BER={self.ber}, SNR={self.snr},'
+                f'read_tid={self.read_tid})')
 
 
 class _TagPowerRecord:
@@ -1766,6 +1773,7 @@ class _TagRecord:
         # list of _TagReadRecord's
         self.inventory_history = []
         self.num_rounds_attained = 0
+        self.num_qadjust_attained = 0
         # list of (pos, antenna, power@tag, power@reader, BER):
         self.power_mapping = []
         self._tag_read_record = None
@@ -1861,6 +1869,9 @@ class Statistics:
         recs = [tr for tr in self.tags_history if
                 len([trd for trd in tr.inventory_history if trd.read_tid]) > 0]
         return len(recs) / len(self.tags_history)
+
+    def average_changing_q(self):
+        return [tag.num_qadjust_attained for tag in self.tags_history]
 
     def to_long_string(self):
         return """Statistics {{
