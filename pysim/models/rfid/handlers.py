@@ -80,7 +80,6 @@ def turn_reader_on(kernel, reader):
 
     # Turning ON and getting the first command
     cmd_frame = reader.turn_on()
-    print('Команда: ', cmd_frame)
 
     # Managing antennas
     if reader.num_antennas > 1:
