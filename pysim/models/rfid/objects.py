@@ -1653,6 +1653,8 @@ class Transaction():
     def received_tag_frame(self, medium, time):
         # NOTE: if two or more tags reply, their reply is treated as collision
         #       no matter of SNR. Try to implement this.
+        if len(self.replies) > 1:
+            print('Коллизия!')
         if len(self.replies) != 1:
             return None, None, None, None
         tag, frame = self.replies[0]

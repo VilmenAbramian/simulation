@@ -8,7 +8,7 @@ from processing import result_processing
 import pysim.sim.simulator as sim
 
 
-DEFAULT_SPEED = 10             # kmph
+DEFAULT_SPEED = 25             # kmph
 DEFAULT_ENCODING = '2'         # FM0, M2, M4, M8
 DEFAULT_TARI = '12.5'          # 6.25, 12.5, 18.75, 25
 DEFAULT_TID_WORD_SIZE = 64     # number of words to read from TID (=1024 bits)

@@ -127,7 +127,7 @@ class Settings:
     trext: bool = True  # использовать ли в ответах расширенную преамбулу
 
     # --- Настройки QueryAdjust ---
-    q: int = 2  # значение параметра Q в начале
+    q: int = 5  # значение параметра Q в начале
     # (если есть значение по умолчанию в click, то не используется)
     use_query_adjust: bool = True
     # (если есть значение по умолчанию в click, то не используется)
@@ -280,6 +280,7 @@ def create_model(settings=None, verbose=False, **kwargs) -> Model:
     )
     reader.adjust_delta = kwargs.get('delta', settings.adjust_delta)
     reader.q_fp = settings.q_fp
+    print(reader.use_query_adjust)
 
     # 2) Attaching antennas to reader
     ant = Antenna()
