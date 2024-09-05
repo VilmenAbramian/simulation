@@ -166,7 +166,8 @@ class State():
                     f'{STATE_CODES_REVERSE[self.code]}'
                 )
                 next_state = self.calculate_next_state(self.code)
-                sim.call(
+                sim.schedule(
+                    self.interval,
                     sim.context.choose_state(
                         next_state
                     ).handle_receive, (packet,)
@@ -191,7 +192,7 @@ class State():
             sim.call(sim.context.arbitrate.handle_timeout)
             sim.logger.warning(f'Отправлено заявок: {self.num_pakage_sent}')
         else:
-            sim.schedule(self.interval, self.handle_timeout, (packet,))
+            sim.call(self.handle_timeout, (packet,))
 
     def calculate_next_state(self, name):
         if name >= 4:
