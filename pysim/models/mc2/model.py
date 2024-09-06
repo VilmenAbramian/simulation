@@ -62,9 +62,10 @@ class Model:
             processing_time=0,
             max_transmisions=None
         )
+        self.scenario = config.scenario
 
         # Делаем запись в журнал
-        logger.debug('Модель успешно сконфигурирована')
+        logger.debug(f'Модель в режиме №{self.scenario} успешно сконфигурирована')
 
     def choose_state(self, state_number):
         '''

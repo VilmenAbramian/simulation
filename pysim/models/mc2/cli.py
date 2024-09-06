@@ -37,6 +37,11 @@ DEFAULT_MAX_TRANSMISSIONS = 10
     help='Количество отправляемых пакетов',
     show_default=True
 )
+@click.option(
+    '-s', '--scenario', default=2,
+    help='Выбор одного из 3х сценариев моделирования',
+    show_default=True
+)
 def cli_run(**kwargs):
     '''
     Точка входа модели.
@@ -48,6 +53,7 @@ def cli_run(**kwargs):
         probability=kwargs['probability'],
         processing_time=kwargs['processing_time'],
         max_transmisions=kwargs['max_transmisions'],
+        scenario = kwargs['scenario']
     ), ModelLoggerConfig())
     print('Суммарное время: ', result.sim_time)
     print('Среднее время до поглощения: ', result.sim_time/kwargs['max_transmisions'])
