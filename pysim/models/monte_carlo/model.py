@@ -37,40 +37,42 @@ class Model:
             next_state_probability=config.probability[0],
             processing_time=config.processing_time[0],
             max_transmisions=config.max_transmisions,
-            scenario = config.scenario
+            scenario=config.scenario
         )
         self.reply = State(
             code=STATE_CODES['Reply'],
             next_state_probability=config.probability[1],
             processing_time=config.processing_time[1],
             max_transmisions=config.max_transmisions,
-            scenario = config.scenario
+            scenario=config.scenario
         )
         self.acknowledged = State(
             code=STATE_CODES['Acknowledged'],
             next_state_probability=config.probability[2],
             processing_time=config.processing_time[2],
             max_transmisions=config.max_transmisions,
-            scenario = config.scenario
+            scenario=config.scenario
         )
         self.secured = State(
             code=STATE_CODES['Secured'],
             next_state_probability=config.probability[3],
             processing_time=config.processing_time[3],
             max_transmisions=config.max_transmisions,
-            scenario = config.scenario
+            scenario=config.scenario
         )
         self.final = State(
             code=STATE_CODES['Final'],
             next_state_probability=0,
             processing_time=0,
             max_transmisions=None,
-            scenario = config.scenario
+            scenario=config.scenario
         )
         self.scenario = config.scenario
 
         # Делаем запись в журнал
-        logger.debug(f'Модель в режиме №{self.scenario} успешно сконфигурирована')
+        logger.debug(
+            f'Модель в режиме №{self.scenario} успешно сконфигурирована'
+        )
 
     def choose_state(self, state_number):
         '''
@@ -132,6 +134,52 @@ class State():
         # Statistics:
         self.num_pakage_sent = 0
 
+    def success_state_change(self, sim, packet):
+        '''
+        Изменение состояния метки прошло успешно
+        '''
+        sim.logger.info(
+            'Изменение состояния метки с '
+            f'{STATE_CODES_REVERSE[self.code]}'
+        )
+        next_state = self.calculate_next_state(self.code)
+        sim.schedule(
+            self.interval,
+            sim.context.choose_state(
+                next_state
+            ).handle_receive, (packet,)
+        )
+
+    def faild_state_change(self, sim, packet):
+        '''
+        Метка не смогла изменить состояние прямым путём
+        в результате чего она в зависимости от выбранного
+        сценария моделирования она либо возвращается в
+        исходное состояние, либо остаётся в текущем
+        '''
+        sim.logger.debug(
+            f'Неудачная передача пакета № {packet.number}'
+        )
+        if self.scenario == 1:
+            # По первому сценарию метка возвращается в исходное состояние
+            sim.logger.info(
+                    'Метка возвращается в исходное состояние!'
+                )
+            next_state = 0
+            sim.schedule(
+                self.interval,
+                sim.context.choose_state(
+                    next_state
+                ).handle_receive, (packet,)
+            )
+        elif self.scenario == 2:
+            # По второму сценарию метка остаётся в текущем состоянии
+            sim.logger.info(
+                'Метка осталась в состоянии '
+                f'{STATE_CODES_REVERSE[self.code]}'
+            )
+            sim.schedule(self.interval, self.handle_timeout, (packet,))
+
     def handle_timeout(self, sim: Simulator, packet: Packet = None) -> None:
         '''
         При достижении таймаута метка рассчитывает,
@@ -160,39 +208,10 @@ class State():
             )
             if random.random() > self.probability:
                 # Метка осталась в текущем состоянии (неудача)
-                sim.logger.debug(
-                    f'Неудачная передача пакета № {packet.number}'
-                )
-                if self.scenario == 1:
-                    sim.logger.info(
-                            'Метка возвращается в исходное состояние!'
-                        )
-                    next_state = 0
-                    sim.schedule(
-                        self.interval,
-                        sim.context.choose_state(
-                            next_state
-                        ).handle_receive, (packet,)
-                )
-                elif self.scenario == 2:
-                    sim.logger.info(
-                        'Метка осталась в состоянии '
-                        f'{STATE_CODES_REVERSE[self.code]}'
-                    )
-                    sim.schedule(self.interval, self.handle_timeout, (packet,))
+                self.faild_state_change(sim, packet)
             else:
                 # Метка изменила состояние (удача)
-                sim.logger.info(
-                    'Изменение состояния метки с '
-                    f'{STATE_CODES_REVERSE[self.code]}'
-                )
-                next_state = self.calculate_next_state(self.code)
-                sim.schedule(
-                    self.interval,
-                    sim.context.choose_state(
-                        next_state
-                    ).handle_receive, (packet,)
-                )
+                self.success_state_change(sim, packet)
         else:
             sim.logger.info(
                 "reached max pings (%d), stopping", self.max_transmisions

@@ -5,15 +5,16 @@ from pysim.sim.simulator import (
     run_simulation,
     ModelLoggerConfig
 )
-from pysim.models.mc2.objects import Config
-from pysim.models.mc2.handlers import initialize, finalize
+from pysim.models.monte_carlo.objects import Config
+from pysim.models.monte_carlo.handlers import initialize, finalize
 
 
-MODEL_NAME = 'Monte-Carlo-2-scenario'
-DEFAULT_PROBABILITY = (0.1, 0.1, 0.1, 0.1)
+MODEL_NAME = 'Monte-Carlo-simulation'
+DEFAULT_PROBABILITY = (0.9, 0.91, 0.92, 0.93)
 DEFAULT_PROCESSING_TIME = (0.01, 0.011, 0.012, 0.013)
 DEFAULT_MAX_TRANSMISSIONS = 10
 DEFAULT_SCENARIO = 1
+STATES_TUPLE = (1, 2, 3)
 
 
 @click.command()
@@ -48,16 +49,20 @@ def cli_run(**kwargs):
     Точка входа модели.
     Задать параметры работы.
     '''
-    print(f'Running {MODEL_NAME} model')
+    if kwargs['scenario'] not in STATES_TUPLE:
+        raise AttributeError('Недопустимый номер сценария!')
+
+    print(f'Running {MODEL_NAME} model. Scenario number {kwargs['scenario']}')
     print('Входные параметры: ', kwargs)
     result = run_model(Config(
         probability=kwargs['probability'],
         processing_time=kwargs['processing_time'],
         max_transmisions=kwargs['max_transmisions'],
-        scenario = kwargs['scenario']
+        scenario=kwargs['scenario']
     ), ModelLoggerConfig())
     print('Суммарное время: ', result.sim_time)
-    print('Среднее время до поглощения: ', result.sim_time/kwargs['max_transmisions'])
+    print('Среднее время до поглощения: ',
+          result.sim_time/kwargs['max_transmisions'])
 
 
 def run_model(
