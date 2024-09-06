@@ -10,9 +10,10 @@ from pysim.models.mc2.handlers import initialize, finalize
 
 
 MODEL_NAME = 'Monte-Carlo-2-scenario'
-DEFAULT_PROBABILITY = (0.9, 0.91, 0.92, 0.93)
+DEFAULT_PROBABILITY = (0.1, 0.1, 0.1, 0.1)
 DEFAULT_PROCESSING_TIME = (0.01, 0.011, 0.012, 0.013)
 DEFAULT_MAX_TRANSMISSIONS = 10
+DEFAULT_SCENARIO = 1
 
 
 @click.command()
@@ -38,7 +39,7 @@ DEFAULT_MAX_TRANSMISSIONS = 10
     show_default=True
 )
 @click.option(
-    '-s', '--scenario', default=2,
+    '-s', '--scenario', default=DEFAULT_SCENARIO,
     help='Выбор одного из 3х сценариев моделирования',
     show_default=True
 )

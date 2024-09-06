@@ -36,31 +36,36 @@ class Model:
             code=STATE_CODES['Arbitrate'],
             next_state_probability=config.probability[0],
             processing_time=config.processing_time[0],
-            max_transmisions=config.max_transmisions
+            max_transmisions=config.max_transmisions,
+            scenario = config.scenario
         )
         self.reply = State(
             code=STATE_CODES['Reply'],
             next_state_probability=config.probability[1],
             processing_time=config.processing_time[1],
-            max_transmisions=config.max_transmisions
+            max_transmisions=config.max_transmisions,
+            scenario = config.scenario
         )
         self.acknowledged = State(
             code=STATE_CODES['Acknowledged'],
             next_state_probability=config.probability[2],
             processing_time=config.processing_time[2],
-            max_transmisions=config.max_transmisions
+            max_transmisions=config.max_transmisions,
+            scenario = config.scenario
         )
         self.secured = State(
             code=STATE_CODES['Secured'],
             next_state_probability=config.probability[3],
             processing_time=config.processing_time[3],
-            max_transmisions=config.max_transmisions
+            max_transmisions=config.max_transmisions,
+            scenario = config.scenario
         )
         self.final = State(
             code=STATE_CODES['Final'],
             next_state_probability=0,
             processing_time=0,
-            max_transmisions=None
+            max_transmisions=None,
+            scenario = config.scenario
         )
         self.scenario = config.scenario
 
@@ -111,12 +116,14 @@ class State():
         code: int,
         next_state_probability: float,
         processing_time: float,
-        max_transmisions: int | None
+        max_transmisions: int | None,
+        scenario: int
     ):
-        self.code: int = code  # Номер состояния метки
+        self.code = code  # Номер состояния метки
         self.probability = next_state_probability
         self.interval = processing_time
         self.max_transmisions = max_transmisions
+        self.scenario = scenario
 
         if self.code == 0:
             self.number: int = random.randint(a=0, b=1_000_000)
@@ -138,6 +145,7 @@ class State():
         '''
 
         if self.code == 0:
+            # В начальном состоянии (Arbitrate) создаём новый "пакет"
             packet = Packet(
                 present_state=self.code,
                 number=self.number
@@ -151,17 +159,29 @@ class State():
                 f'Время обработки вышло, отправка пакета № {packet.number}'
             )
             if random.random() > self.probability:
-                # Метка осталась в текущем состоянии
+                # Метка осталась в текущем состоянии (неудача)
                 sim.logger.debug(
                     f'Неудачная передача пакета № {packet.number}'
                 )
-                sim.logger.info(
-                    'Метка осталась в состоянии '
-                    f'{STATE_CODES_REVERSE[self.code]}'
+                if self.scenario == 1:
+                    sim.logger.info(
+                            'Метка возвращается в исходное состояние!'
+                        )
+                    next_state = 0
+                    sim.schedule(
+                        self.interval,
+                        sim.context.choose_state(
+                            next_state
+                        ).handle_receive, (packet,)
                 )
-                sim.schedule(self.interval, self.handle_timeout, (packet,))
+                elif self.scenario == 2:
+                    sim.logger.info(
+                        'Метка осталась в состоянии '
+                        f'{STATE_CODES_REVERSE[self.code]}'
+                    )
+                    sim.schedule(self.interval, self.handle_timeout, (packet,))
             else:
-                # Метка изменила состояние
+                # Метка изменила состояние (удача)
                 sim.logger.info(
                     'Изменение состояния метки с '
                     f'{STATE_CODES_REVERSE[self.code]}'
