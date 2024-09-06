@@ -10,10 +10,11 @@ from pysim.models.monte_carlo.handlers import initialize, finalize
 
 
 MODEL_NAME = 'Monte-Carlo-simulation'
-DEFAULT_PROBABILITY = (0.9, 0.91, 0.92, 0.93)
-DEFAULT_PROCESSING_TIME = (0.01, 0.011, 0.012, 0.013)
-DEFAULT_MAX_TRANSMISSIONS = 10
-DEFAULT_SCENARIO = 1
+DEFAULT_PROBABILITY = (0.5, 0.6, 0.7, 0.8)
+DEFAULT_PROCESSING_TIME = (1, 1, 1, 1)
+DEFAULT_MAX_TRANSMISSIONS = 1000
+DEFAULT_CHUNKS_NUMBER = 10
+DEFAULT_SCENARIO = 2
 STATES_TUPLE = (1, 2, 3)
 
 
@@ -40,6 +41,11 @@ STATES_TUPLE = (1, 2, 3)
     show_default=True
 )
 @click.option(
+    '-cn', '--chunks_number', default=DEFAULT_CHUNKS_NUMBER,
+    help='Количество "чанков", на которые разбито состояние Secured',
+    show_default=True
+)
+@click.option(
     '-s', '--scenario', default=DEFAULT_SCENARIO,
     help='Выбор одного из 3х сценариев моделирования',
     show_default=True
@@ -51,6 +57,8 @@ def cli_run(**kwargs):
     '''
     if kwargs['scenario'] not in STATES_TUPLE:
         raise AttributeError('Недопустимый номер сценария!')
+    if kwargs['scenario'] == 3 and kwargs['chunks_number'] < 1:
+        raise AttributeError('Недопустимое количество "чанков"!')
 
     print(f'Running {MODEL_NAME} model. Scenario number {kwargs['scenario']}')
     print('Входные параметры: ', kwargs)
@@ -58,6 +66,7 @@ def cli_run(**kwargs):
         probability=kwargs['probability'],
         processing_time=kwargs['processing_time'],
         max_transmisions=kwargs['max_transmisions'],
+        chunks_number = kwargs['chunks_number'],
         scenario=kwargs['scenario']
     ), ModelLoggerConfig())
     print('Суммарное время: ', result.sim_time)

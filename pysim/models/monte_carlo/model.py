@@ -12,7 +12,8 @@ STATE_CODES = {
     'Reply': 1,
     'Acknowledged': 2,
     'Secured': 3,
-    'Final': 4
+    'Final': 4,
+    'mult_Final': 5
 }
 
 STATE_CODES_REVERSE = {  # Нужен для читаемости логов
@@ -23,6 +24,7 @@ STATE_CODES_REVERSE = {  # Нужен для читаемости логов
     4: 'Final'
 }
 
+num_pakage_sent = 0
 
 class Model:
     '''
@@ -32,6 +34,7 @@ class Model:
     '''
     def __init__(self, config: Config, logger: ModelLogger):
         self.config = config
+        self.scenario = config.scenario
         self.arbitrate = State(
             code=STATE_CODES['Arbitrate'],
             next_state_probability=config.probability[0],
@@ -53,13 +56,26 @@ class Model:
             max_transmisions=config.max_transmisions,
             scenario=config.scenario
         )
-        self.secured = State(
-            code=STATE_CODES['Secured'],
-            next_state_probability=config.probability[3],
-            processing_time=config.processing_time[3],
-            max_transmisions=config.max_transmisions,
-            scenario=config.scenario
-        )
+        if self.scenario == 3:
+            self.secured = []
+            for i in range(config.chunks_number):
+                secured_state = State(
+                    code=STATE_CODES['Final'],
+                    next_state_probability=0,
+                    processing_time=0,
+                    max_transmisions=None,
+                    scenario=config.scenario,
+                    secured_number = i
+                )
+                self.secured.append(secured_state)
+        else:
+            self.secured = State(
+                code=STATE_CODES['Secured'],
+                next_state_probability=config.probability[3],
+                processing_time=config.processing_time[3],
+                max_transmisions=config.max_transmisions,
+                scenario=config.scenario
+            )
         self.final = State(
             code=STATE_CODES['Final'],
             next_state_probability=0,
@@ -67,7 +83,7 @@ class Model:
             max_transmisions=None,
             scenario=config.scenario
         )
-        self.scenario = config.scenario
+        self.num_transmissions = 0
 
         # Делаем запись в журнал
         logger.debug(
@@ -119,13 +135,15 @@ class State():
         next_state_probability: float,
         processing_time: float,
         max_transmisions: int | None,
-        scenario: int
+        scenario: int,
+        secured_number = None # Для 3го сценария
     ):
         self.code = code  # Номер состояния метки
         self.probability = next_state_probability
         self.interval = processing_time
         self.max_transmisions = max_transmisions
         self.scenario = scenario
+        self.secured_number = secured_number
 
         if self.code == 0:
             self.number: int = random.randint(a=0, b=1_000_000)
@@ -167,7 +185,7 @@ class State():
                 )
             next_state = 0
             sim.schedule(
-                self.interval,
+                sim.context.arbitrate.interval,
                 sim.context.choose_state(
                     next_state
                 ).handle_receive, (packet,)
@@ -191,7 +209,6 @@ class State():
             sim (Simulator): экземпляр симулятора
             packet (Packet): экземпляр "пакета"
         '''
-
         if self.code == 0:
             # В начальном состоянии (Arbitrate) создаём новый "пакет"
             packet = Packet(
@@ -202,7 +219,7 @@ class State():
             self.number += 1
 
         if (self.max_transmisions is None or
-                self.num_pakage_sent < self.max_transmisions):
+                sim.context.num_transmissions < self.max_transmisions):
             sim.logger.debug(
                 f'Время обработки вышло, отправка пакета № {packet.number}'
             )
@@ -229,6 +246,7 @@ class State():
         packet.present_state = self.code
         self.num_pakage_sent += 1
         if self.code == 4:
+            sim.context.num_transmissions += 1
             sim.call(sim.context.arbitrate.handle_timeout)
             sim.logger.warning(f'Отправлено заявок: {self.num_pakage_sent}')
         else:
