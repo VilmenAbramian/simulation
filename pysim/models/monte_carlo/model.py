@@ -13,7 +13,6 @@ STATE_CODES = {
     'Acknowledged': 2,
     'Secured': 3,
     'Final': 4,
-    'mult_Final': 5
 }
 
 STATE_CODES_REVERSE = {  # Нужен для читаемости логов
@@ -24,7 +23,6 @@ STATE_CODES_REVERSE = {  # Нужен для читаемости логов
     4: 'Final'
 }
 
-num_pakage_sent = 0
 
 class Model:
     '''
@@ -57,17 +55,19 @@ class Model:
             scenario=config.scenario
         )
         if self.scenario == 3:
+            self.chunks_number = config.chunks_number
             self.secured = []
-            for i in range(config.chunks_number):
+            for i in range(self.chunks_number):
                 secured_state = State(
-                    code=STATE_CODES['Final'],
-                    next_state_probability=0,
-                    processing_time=0,
-                    max_transmisions=None,
+                    code=STATE_CODES['Secured'],
+                    next_state_probability=config.probability[3],
+                    processing_time=config.processing_time[3],
+                    max_transmisions=config.max_transmisions,
                     scenario=config.scenario,
-                    secured_number = i
+                    secured_number=i
                 )
                 self.secured.append(secured_state)
+            self.chunks_passed = 0
         else:
             self.secured = State(
                 code=STATE_CODES['Secured'],
@@ -136,7 +136,7 @@ class State():
         processing_time: float,
         max_transmisions: int | None,
         scenario: int,
-        secured_number = None # Для 3го сценария
+        secured_number=None  # Для 3го сценария
     ):
         self.code = code  # Номер состояния метки
         self.probability = next_state_probability
@@ -160,13 +160,25 @@ class State():
             'Изменение состояния метки с '
             f'{STATE_CODES_REVERSE[self.code]}'
         )
-        next_state = self.calculate_next_state(self.code)
-        sim.schedule(
-            self.interval,
-            sim.context.choose_state(
-                next_state
-            ).handle_receive, (packet,)
-        )
+        if (self.scenario == 3 and self.code in (2, 3) and
+                sim.context.chunks_passed < sim.context.chunks_number):
+            # В случае 3го сценария переключаемся между "чанками"
+            sim.logger.info(
+                f'Метка успешно передала "чанк" номер {self.secured_number}'
+            )
+            sim.schedule(
+                self.interval,
+                sim.context.secured[sim.context.chunks_passed].handle_receive,
+                (packet,)
+            )
+        else:
+            next_state = self.calculate_next_state(self.code)
+            sim.schedule(
+                self.interval,
+                sim.context.choose_state(
+                    next_state
+                ).handle_receive, (packet,)
+            )
 
     def faild_state_change(self, sim, packet):
         '''
@@ -190,7 +202,7 @@ class State():
                     next_state
                 ).handle_receive, (packet,)
             )
-        elif self.scenario == 2:
+        elif self.scenario in (2, 3):
             # По второму сценарию метка остаётся в текущем состоянии
             sim.logger.info(
                 'Метка осталась в состоянии '
@@ -245,7 +257,11 @@ class State():
         )
         packet.present_state = self.code
         self.num_pakage_sent += 1
+        if self.scenario == 3 and self.code == 3:
+            sim.context.chunks_passed += 1
         if self.code == 4:
+            if self.scenario == 3:
+                sim.context.chunks_passed = 0
             sim.context.num_transmissions += 1
             sim.call(sim.context.arbitrate.handle_timeout)
             sim.logger.warning(f'Отправлено заявок: {self.num_pakage_sent}')
