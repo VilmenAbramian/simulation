@@ -4,8 +4,8 @@ from setuptools import find_packages, setup
 setup(
     name="pyrfidsim",
     version="0.1.0",
-    author="Andrey Larionov",
-    author_email="larioandr@gmail.com",
+    author="Abramian Vilmen",
+    author_email="abramian.vl@phystech.edu",
     platforms=["any"],
     license="MIT",
     url="https://github.com/ipu69/pyrfidsim",
