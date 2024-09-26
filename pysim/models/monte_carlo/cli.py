@@ -2,7 +2,7 @@ import click
 from multiprocessing import Pool
 import multiprocessing
 
-from processing import result_processing
+# from processing import result_processing
 from pysim.sim.simulator import (
     build_simulation,
     run_simulation,
@@ -92,7 +92,9 @@ def cli_run(**kwargs):
         result = create_config(kwargs)
     else:
         result = run_multiple_simulation(kwargs)
-    result_processing(kwargs, result)
+    print(result)
+    return result
+    # result_processing(kwargs, result)
 
 
 def create_config(kwargs):
