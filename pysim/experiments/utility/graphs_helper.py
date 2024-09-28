@@ -222,11 +222,9 @@ def calculate_first_case(phases):
 # phases is array of tuples (p, t), where p is transmission prob, t is timeout time
 def calculate_second_case(phases):
     res = 0
-
     for phase in phases:
         for n in range(1000):
             res += (n + 1) * phase[1] * phase[0] * ((1 - phase[0]) ** n)
-
     return res
 
 
@@ -246,7 +244,7 @@ def convert_data_for_analitica(probs, t):
     return all_phases
 
 
-def run_analitica(script_number, all_phases):
+def run_analitica(script_number, all_phases, chunks_number):
     analit_res = []
     if script_number == 1:
         for i in range(len(all_phases)):
@@ -255,6 +253,6 @@ def run_analitica(script_number, all_phases):
         for i in range(len(all_phases)):
             analit_res.append(calculate_second_case(all_phases[i])*1_000)
     elif script_number == 3:
-        for i in range(3):
-            analit_res.append(calculate_third_case(all_phases[i], all_phases[-1], CHUNKS_NUMBER)*1_000)
+        for i in range(len(all_phases)):
+            analit_res.append(calculate_third_case(all_phases[i][0:3], all_phases[i][4], chunks_number)*1_000)
     return analit_res
