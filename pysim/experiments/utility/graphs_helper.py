@@ -206,17 +206,15 @@ def calculate_first_case(phases):
     res = 0;
     times = [phase[1] for phase in phases]
     probs = [phase[0] for phase in phases]
-    
-    for n1 in range(40):
-        for n2 in range(40):
-            for n3 in range(40):
-                for n4 in range(40):
-                    t = times[0] + times[1] + times[2] + times[3] + (n1 + n2+ n3 + n4) * times[0] + (n2 + n3 + n4) * times[1] + (n3 + n4) * times[2] + n4 * times[3]
-                    p = ((1 - probs[0]) ** n1) * (probs[0] ** (n2 + n3 + n4 + 1)) * ((1 - probs[1]) ** n2) * (probs[1] ** (n3 + n4 + 1)) * ((1 - probs[2]) ** n3) * (probs[2] ** (n4 + 1)) * ((1 - probs[3]) ** n4) * probs[3]
-                    fact = math.factorial(n1 + n2 + n3 + n4) / (math.factorial(n1) * math.factorial(n2) * math.factorial(n3) * math.factorial(n4))
-                    res += t * p * fact
 
-    return res
+    matrix = np.array([
+        [probs[0]    , -probs[0], 0        , 0        ],
+        [probs[1] - 1, 1        , -probs[1], 0        ],
+        [probs[2] - 1, 0        , 1        , -probs[2]],
+        [probs[3] - 1, 0        , 0        , 1        ]
+    ])
+
+    return np.dot(np.linalg.inv(matrix)[0], np.array(times))
 
 
 # phases is array of tuples (p, t), where p is transmission prob, t is timeout time

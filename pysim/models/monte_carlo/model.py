@@ -197,7 +197,7 @@ class State():
                 )
             next_state = 0
             sim.schedule(
-                sim.context.arbitrate.interval,
+                self.interval,
                 sim.context.choose_state(
                     next_state
                 ).handle_receive, (packet,)
