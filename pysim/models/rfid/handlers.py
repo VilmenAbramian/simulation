@@ -1,8 +1,7 @@
 import numpy as np
-from pprint import pprint
 
 import epcstd as std
-from objects import Model, Tag, Transaction
+from objects import Model, Reader, Tag, Transaction
 
 
 def start_simulation(kernel):
@@ -26,7 +25,6 @@ def start_simulation(kernel):
         ctx.update_interval, update_positions, msg='Обновить расположение'
     )
     kernel.call(turn_reader_on, (ctx.reader,), msg='Запуск считывателя')
-    # pprint(f'Список запланированных событий: {kernel._kernel.future_events()}')
 
 
 def _update_power(time, reader, tags, transaction, medium, statistics):
@@ -34,12 +32,17 @@ def _update_power(time, reader, tags, transaction, medium, statistics):
         power = medium.estimate_tag_rx_power(reader, tag, time)
         tag.set_power(time, power)
         tag.pos += tag.velocity * tag.normalized_direction * (
-            time - tag.last_pos_update)
+            time - tag.last_pos_update
+        )
         tag.last_pos_update = time
         # uncomment lines below for PL debug
-        # print(f"Estimated tag RX power: {power}")
-        # print(f"- tag:    pos={tag.antenna.pos}, direction={tag.antenna.direction_theta}")
-        # print(f"- reader: pos={reader.antenna.pos}, direction={reader.antenna.direction_theta}")
+        # print(f'Estimated tag RX power: {power}')
+        # print(f'- tag:    pos={tag.antenna.pos}, '
+        #       f'direction={tag.antenna.direction_theta}')
+        # print(
+        #     f'- reader: pos={reader.antenna.pos}, '
+        #     f'direction={reader.antenna.direction_theta}'
+        # )
 
     if transaction is not None:
         for tag in transaction.tags:
@@ -66,26 +69,24 @@ def _build_transaction(kernel, reader, reader_frame):
                                   {Tag.State.ARBITRATE, Tag.State.REPLY}]
             for tag in participating_tags:
                 stat.get_tag_record(tag).num_rounds_attained += 1
-                # print("incrementing num_rounds for tag = {}".format(tag.tag_id))
 
     now = kernel.time
     return Transaction(ctx.medium, reader, reader_frame, tag_frames, now)
 
 
 def turn_reader_on(kernel, reader):
-    '''
-    Включение считывателя
-    '''
     ctx = kernel.context
 
     # Turning ON and getting the first command
     cmd_frame = reader.turn_on()
 
     # Managing antennas
+    # В модели БПЛА у считывателя всегда одна антенна
     if reader.num_antennas > 1:
         reader.antenna_switch_event_id = kernel.schedule(
-            reader.antenna_switch_interval, switch_reader_antenna, (reader, ))
-    kernel.logger.debug(f"switched antenna #{reader.antenna_index}")
+            reader.antenna_switch_interval, switch_reader_antenna, (reader, )
+        )
+        kernel.logger.debug(f'switched antenna #{reader.antenna_index}')
 
     # Updating tags and transaction power
     assert ctx.transaction is None
@@ -152,13 +153,15 @@ def generate_tag(kernel, generator):
 
     _update_power(kernel.time, ctx.reader, [tag], None, ctx.medium,
                   ctx.statistics)
-    kernel.logger.info(f"(+) tag {tag.tag_id} created for {generator.lifetime}s: {str(tag)}")
+    kernel.logger.info(
+        f'(+) tag {tag.tag_id} created for {generator.lifetime}s: {str(tag)}'
+    )
 
 
 def remove_tag(kernel, tag):
     ctx = kernel.context
     ctx.tags.remove(tag)
-    kernel.logger.info(f"(x) tag {tag.tag_id} died")
+    kernel.logger.info(f'(x) tag {tag.tag_id} died')
     ctx.num_tags_simulated += 1
     if (ctx.max_tags_num is not None and
             ctx.num_tags_simulated >= ctx.max_tags_num):
@@ -175,60 +178,138 @@ def update_positions(kernel):
                   ctx.medium, ctx.statistics)
 
 
+def _no_tag_response(kernel, ctx, reader):
+    '''
+    Обработка отсутствия ответа метки после
+    завершения транзакции считывателя
+    '''
+    cmd_frame = None
+    # Если используется команда QueryAdjust И
+    # считыватель в состоянии Query или QueryRep
+    if reader.use_query_adjust and (
+        reader.state == Reader.State.QUERY or
+        reader.state == Reader.State.QREP
+    ):
+        if reader.q > 0 and reader.q <= 15:
+            reader.q_fp = max(0, reader.q_fp-reader.adjust_delta)
+            new_q = round(reader.q_fp)
+            if abs(reader.q - new_q) == 1:
+                kernel.logger.error(
+                    f'Считыватель уменьшил Q с {reader.q} до {new_q}'
+                )
+                reader.q = new_q  # обновляем q в считывателе
+                # Отправить команду QueryAdjust
+                reader.updn = -1
+                cmd_frame = reader.set_state(Reader.State.QAdjust)
+                reader.updn = 0
+    if cmd_frame is None:
+        cmd_frame = ctx.reader.timeout()
+    return cmd_frame
+
+
+def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
+    '''
+    Обработка единственного ответа от метки после
+    завершения транзакции считывателя
+    '''
+    if isinstance(frame.reply, std.AckReply):
+        tag_read_record = (
+            ctx.statistics.get_tag_record(tag)
+            .new_tag_read_record(reader, reader.inventory_round.index))
+        tag_read_record.tag_pos = np.array(tag.pos, copy=True)
+        tag_read_record.reader_antenna_pos = np.array(
+            reader.antenna.pos, copy=True)
+        tag_read_record.ber = ber
+        tag_read_record.snr = snr
+
+        # noinspection PyShadowingNames
+        def on_slot_end(round_index, slot_index, reader, tag, statistics):
+            statistics.get_tag_record(tag).close_tag_read_record()
+            reader.slot_finish_listeners.remove(
+                statistics.slot_end_listener_id)
+
+        ctx.statistics.slot_end_listener_id = \
+            ctx.reader.slot_finish_listeners.add(
+                on_slot_end, reader=reader, tag=tag,
+                statistics=ctx.statistics)
+
+        kernel.logger.info(
+            '---> Received tag data: EPC={}, received power={} from tag {}'
+            ''.format(
+                ''.join('{:02X}'.format(b) for b in frame.reply.epc),
+                transaction.reader_rx_power_map.get(tag),
+                tag.tag_id
+            )
+        )
+
+    if isinstance(frame.reply, std.ReadReply):
+        tag_read_record = ctx.statistics.get_tag_record(tag).tag_read_record
+        tag_read_record.read_tid = True
+
+        kernel.logger.info(
+            '---> Received TID: memory={}, received power={} from tag {}'
+            ''.format(
+                ''.join('{:02X}'.format(b) for b in frame.reply.memory),
+                transaction.reader_rx_power_map.get(tag), tag.tag_id))
+
+    return ctx.reader.receive(frame)
+
+
+def _multiple_tag_response(kernel, ctx, reader, transaction):
+    '''
+    Обработка коллизии
+    '''
+    cmd_frame = None
+    if reader.use_query_adjust and (
+        reader.state == Reader.State.QUERY or
+        reader.state == Reader.State.QREP
+    ):
+        if reader.q >= 0 and reader.q < 15:
+            reader.q_fp = min(15, reader.q_fp+reader.adjust_delta)
+            new_q = round(reader.q_fp)
+            if abs(reader.q - new_q) == 1:
+                kernel.logger.error(
+                    f'Считыватель увеличил Q с {reader.q} до {new_q}'
+                )
+                reader.q = new_q  # обновляем q в считывателе
+                # Отправить команду QueryAdjust
+                reader.updn = 1
+                cmd_frame = reader.set_state(Reader.State.QAdjust)
+                reader.updn = 0
+    if cmd_frame is None:
+        cmd_frame = ctx.reader.timeout()
+    return cmd_frame
+
+
 def finish_transaction(kernel, transaction):
-    kernel.logger.debug(f"finished transaction: {str(transaction)}")
+    kernel.logger.debug(f'finished transaction: {str(transaction)}')
     ctx = kernel.context
     reader = ctx.reader
     assert transaction is ctx.transaction
+    cmd_frame = None
+
+    if len(transaction.replies) > 1:
+        # Коллизия
+        kernel.logger.error('Коллизия!')
+        cmd_frame = _multiple_tag_response(kernel, ctx, reader, transaction)
 
     tag, frame, snr, ber = transaction.received_tag_frame(
         ctx.medium, kernel.time)
+
     if frame is not None:
-        if isinstance(frame.reply, std.AckReply):
-            tag_read_record = (
-                ctx.statistics.get_tag_record(tag)
-                .new_tag_read_record(reader, reader.inventory_round.index))
-            tag_read_record.tag_pos = np.array(tag.pos, copy=True)
-            tag_read_record.reader_antenna_pos = np.array(
-                reader.antenna.pos, copy=True)
-            tag_read_record.ber = ber
-            tag_read_record.snr = snr
-
-            # noinspection PyShadowingNames
-            def on_slot_end(round_index, slot_index, reader, tag, statistics):
-                statistics.get_tag_record(tag).close_tag_read_record()
-                reader.slot_finish_listeners.remove(
-                    statistics.slot_end_listener_id)
-
-            ctx.statistics.slot_end_listener_id = \
-                ctx.reader.slot_finish_listeners.add(
-                    on_slot_end, reader=reader, tag=tag,
-                    statistics=ctx.statistics)
-
-            kernel.logger.info(
-                "---> Received tag data: EPC={}, received power={} from tag {}"
-                "".format(
-                    "".join("{:02X}".format(b) for b in frame.reply.epc),
-                    transaction.reader_rx_power_map.get(tag), tag.tag_id))
-
-        if isinstance(frame.reply, std.ReadReply):
-            tag_read_record = ctx.statistics.get_tag_record(tag).tag_read_record
-            tag_read_record.read_tid = True
-
-            kernel.logger.info(
-                "---> Received TID: memory={}, received power={} from tag {}"
-                "".format(
-                    "".join("{:02X}".format(b) for b in frame.reply.memory),
-                    transaction.reader_rx_power_map.get(tag), tag.tag_id))
-
-        cmd_frame = ctx.reader.receive(frame)
-    else:
-        cmd_frame = ctx.reader.timeout()
+        # Если есть один ответ от метки
+        cmd_frame = _one_tag_response(
+            kernel, transaction, ctx, reader, tag, frame, snr, ber
+        )
+    elif frame is None and cmd_frame is None:
+        # Если нет ответа от метки
+        cmd_frame = _no_tag_response(kernel, ctx, reader)
 
     # Processing new command (reader frame)
     ctx.transaction = _build_transaction(kernel, ctx.reader, cmd_frame)
     ctx.transaction.timeout_event_id = kernel.schedule(
-        transaction.duration, finish_transaction, (ctx.transaction, ))
+        transaction.duration, finish_transaction, (ctx.transaction, )
+    )
     if transaction.reply_start_time is not None:
         dt = transaction.reply_start_time - kernel.time
         kernel.schedule(dt, update_power_at_response_start, (transaction, ))
@@ -236,9 +317,10 @@ def finish_transaction(kernel, transaction):
 
 def switch_reader_antenna(kernel, reader):
     antenna = reader.select_next_antenna()
-    kernel.logger.debug(f"switched antenna #{antenna.index}")
+    kernel.logger.debug(f'switched antenna #{antenna.index}')
     reader.antenna_switch_event_id = kernel.schedule(
-        reader.antenna_switch_interval, switch_reader_antenna, (reader, ))
+        reader.antenna_switch_interval, switch_reader_antenna, (reader, )
+    )
 
 
 def update_power_at_response_start(kernel, transaction):

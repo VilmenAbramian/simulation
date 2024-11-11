@@ -250,6 +250,7 @@ class MemoryBank(Enum):
 class CommandCode(Enum):
     QUERY = ('1000', 'Query')
     QUERY_REP = ('00', 'QueryRep')
+    QUERY_ADJUST = ('1001', 'QueryAdjust')
     ACK = ('01', 'ACK')
     REQ_RN = ('11000001', 'Req_RN')
     READ = ('11000010', 'Read')
@@ -365,6 +366,21 @@ def encode_ebv(value, first_block=True):
                encode_ebv(value % 128, first_block=first_block)
 
 
+def encode_updn(value):
+    '''
+    Преобразовать значение UpDown в битовый код
+    для команды QueryAdjust
+    '''
+    if value == 1:
+        return '110'
+    elif value == 0:
+        return '000'
+    elif value == -1:
+        return '011'
+    else:
+        raise ValueError(f'Несуществующее значение updn: {value}!')
+
+
 #
 #######################################################################
 # Commands
@@ -423,6 +439,19 @@ class QueryRep(Command):
 
     def __str__(self):
         return "{o.code}{{{o.session}}}".format(o=self)
+
+
+class QueryAdjust(Command):
+    def __init__(self, session=None, updn=0):
+        super().__init__(CommandCode.QUERY_ADJUST)
+        self.session = session if session is not None else stdParams.session
+        self.updn = updn
+
+    def encode(self):
+        return self.code.code + self.session.code + encode_updn(self.updn)
+
+    def __str__(self):
+        return f'{self.code}{self.session}{encode_updn(self.updn)}'
 
 
 class Ack(Command):
@@ -527,7 +556,7 @@ def to_bytes(value):
 
 
 class AckReply(Reply):
-    def __init__(self, epc="", pc=0x0000, crc=0x0000):
+    def __init__(self, epc='', pc=0x0000, crc=0x0000):
         super().__init__(ReplyType.ACK_REPLY)
         self._data = to_bytes(epc)
         self.pc = pc
@@ -837,6 +866,13 @@ def query_duration(tari=None, rtcal=None, trcal=None, delim=None, dr=None,
 def query_rep_duration(tari=None, rtcal=None, trcal=None, delim=None,
                        session=None):
     return reader_frame_duration(QueryRep(session), tari, rtcal, trcal,
+                                 delim)
+
+
+def query_adjust_duration(
+    delim=None, tari=None, rtcal=None, session=None, updn=None
+):
+    return reader_frame_duration(QueryAdjust(session, updn), tari, rtcal,
                                  delim)
 
 
