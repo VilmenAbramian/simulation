@@ -77,10 +77,10 @@ class ModelLoggerConfig:
     console_colors: dict[int, str] | None = None
 
     # Уровень логгирования в консоль, если не задан - использовать level
-    console_level: int = 0
+    console_level: int = None
 
     # Имя лог-файла (без runId). Если не задан, логгирования в файл не будет.
-    file_name: str | None = 'results/logs/RFIDlog.txt'
+    file_name: str | None = None
     
     # Уровень логгирования в файл, если не задан - использовать level
     file_level: int = 0
@@ -89,7 +89,7 @@ class ModelLoggerConfig:
     file_name_sep: str = "_"
 
     # Формировать имя файла без run_id. Удобно для отладки модели.
-    file_name_no_run_id: bool = False
+    file_name_no_run_id: bool = True
 
 
 class ModelLogger:

@@ -1,17 +1,18 @@
 from itertools import product
-import math # Для работы аналитической модели
 import numpy as np
-from pprint import pprint
 
-# Подключение старые пакеты для моделирования протокола RFID
-from pysim.models.monte_carlo.protocol import (TagFrame, ReaderFrame, TagEncoding,
+# Подключение старых пакетов для моделирования протокола RFID
+from pysim.models.monte_carlo.old_protocol import (TagFrame, ReaderFrame, TagEncoding,
     Sel, DR, Session, Bank, InventoryFlag as Flag,
     Query, QueryRep, Ack, ReqRn, Read,
     Rn16Reply, AckReply, ReqRnReply, ReadReply, max_t1, max_t2)
 
-# Подключение имитационок для аналитики
-from pysim.models.monte_carlo.cli import create_config, run_multiple_simulation
+# Подключение имитационок
+from pysim.models.monte_carlo.cli import run_multiple_simulation
 
+# ----------------------------------------------------
+# Задать константы для работы моделей
+# ----------------------------------------------------
 
 def random_hex_string(bs: int) -> str:
     '''
@@ -26,6 +27,10 @@ EPC_SIZE = 12     # длина EPCID в байтах
 TID_SIZE = 8      # длина TID в байтах
 EPC = random_hex_string(EPC_SIZE)
 TID = random_hex_string(TID_SIZE)
+
+# ----------------------------------------------------
+# Подготовка входных параметров в модели
+# ----------------------------------------------------
 
 def calculate_chunks(words_number: int, chunks_number: int) -> tuple[int, int]:
     '''
@@ -183,11 +188,9 @@ def prepare_times(params, probs, chunks_number):
     return t
 
 
-# Подготовка словарей для запуска имитационок
-# Словарь для запуска одной имитационки:
 def create_dicts(probabilities, times, chunks_number, scenario, max_transmissions):
     '''
-    Готовит словарь для запуска нескольких имитационок параллельно
+    Подготовка словаря для запуска нескольких имитационок параллельно
     '''
     return {
         'probability': probabilities,
@@ -197,13 +200,32 @@ def create_dicts(probabilities, times, chunks_number, scenario, max_transmission
         'scenario': scenario
     }
 
+# ----------------------------------------------------
+# Запуск имитационных моделей
+# ----------------------------------------------------
+
 def run_set_simulations(start_dict):
+    '''
+    Параллельный запуск нескольких имитационных
+    моделей для построения одной кривой графика.
+    '''
     return run_multiple_simulation(start_dict)
 
+# ----------------------------------------------------
+# Подготовка и запуск аналитических
+# моделей для расчёта времени
+# ----------------------------------------------------
 
-# phases is array of tuples (p, t), where p is transmission prob, t is timeout time
 def calculate_first_case(phases):
-    res = 0;
+    '''
+    Расчёт для 1го сценария 1й версии аналитической модели.
+
+    params:
+
+    - phases - массив кортежей вида (p, t),
+      где p - вероятность передачи,
+      t - время нахождения в состоянии;
+    '''
     times = [phase[1] for phase in phases]
     probs = [phase[0] for phase in phases]
 
@@ -217,8 +239,16 @@ def calculate_first_case(phases):
     return np.dot(np.linalg.inv(matrix)[0], np.array(times))
 
 
-# phases is array of tuples (p, t), where p is transmission prob, t is timeout time
 def calculate_second_case(phases):
+    '''
+    Расчёт для 2го сценария 1й версии аналитической модели.
+
+    params:
+
+    - phases - массив кортежей вида (p, t),
+      где p - вероятность передачи,
+      t - время нахождения в состоянии;
+    '''
     res = 0
     for phase in phases:
         for n in range(1000):
@@ -227,11 +257,28 @@ def calculate_second_case(phases):
 
 
 def calculate_third_case(phases, chunk_phase, chunk_count):
+    '''
+    Расчёт для 3го сценария 1й версии аналитической модели.
+    Данная модель предполагает, что времёна и вероятности перехода
+    во всех состояниях Secured_R равны.
+
+    params:
+
+    - phases - массив кортежей вида (p, t),
+      где p - вероятность передачи,
+      t - время нахождения в состоянии;
+    - chunk_phase - кортеж вида (p, t) для
+      всех состояний Secured_R;
+    - chunk_count - количество состояний Secured_R.
+    '''
     return calculate_second_case(phases) + chunk_count * calculate_second_case([chunk_phase])
 
 
-# Коневертация данных в формат, который требуют аналитические модели
 def convert_data_for_analitica(probs, t):
+    '''
+    Конвертация входных данных в формат,
+    который требуют аналитические модели.
+    '''
     all_phases = []
     sub_phase = []
     for cases in range(len(probs)):
@@ -243,6 +290,13 @@ def convert_data_for_analitica(probs, t):
 
 
 def run_analitica(script_number, all_phases, chunks_number):
+    '''
+    Последовательный запуск нескольких аналитических
+    моделей для построения одной кривой графика.
+    Распараллеливание в данном случае не применяется
+    ввиду и так высокой скорости выполнения
+    в последовательном режиме.
+    '''
     analit_res = []
     if script_number == 1:
         for i in range(len(all_phases)):
