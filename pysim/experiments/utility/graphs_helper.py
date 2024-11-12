@@ -1,11 +1,7 @@
-from itertools import product
 import numpy as np
 
 # Подключение старых пакетов для моделирования протокола RFID
-from pysim.models.monte_carlo.old_protocol import (TagFrame, ReaderFrame, TagEncoding,
-    Sel, DR, Session, Bank, InventoryFlag as Flag,
-    Query, QueryRep, Ack, ReqRn, Read,
-    Rn16Reply, AckReply, ReqRnReply, ReadReply, max_t1, max_t2)
+import pysim.models.monte_carlo.old_protocol as p
 
 # Подключение имитационок
 from pysim.models.monte_carlo.cli import run_multiple_simulation
@@ -16,7 +12,7 @@ from pysim.models.monte_carlo.cli import run_multiple_simulation
 
 def random_hex_string(bs: int) -> str:
     '''
-    Функция для генерации случайного EPC и TID
+    Генерация случайных EPC и TID
     '''
     return "".join([f"{np.random.randint(0, 256):02X}" for _ in range(bs)])
 
@@ -27,6 +23,11 @@ EPC_SIZE = 12     # длина EPCID в байтах
 TID_SIZE = 8      # длина TID в байтах
 EPC = random_hex_string(EPC_SIZE)
 TID = random_hex_string(TID_SIZE)
+
+# Константы для флагов
+SESSION_FLAG = p.Session.S0
+INVENTORY_FLAG = p.InventoryFlag.A
+SELECT_FLAG = p.Sel.SL_ALL
 
 # ----------------------------------------------------
 # Подготовка входных параметров в модели
@@ -51,83 +52,94 @@ def calculate_chunks(words_number: int, chunks_number: int) -> tuple[int, int]:
     return words_number_in_one_chunk, last_chunk_len
 
 
-def build_messages_df(tari_us, m, drs, trext, chunks_number, words_number_in_one_chunk, last_chunk_len):
+def create_commands(tari, rtcal, trcal, dr, m, trext):
+    '''
+    Создать команды RFID считывателя
+    '''
+    commands = {}
+    commands['preamble'] = p.ReaderFrame.Preamble(tari, rtcal, trcal)
+    commands['sync'] = p.ReaderFrame.Sync(tari, rtcal)
+    
+    commands['query'] = p.Query(dr=dr, m=m, trext=trext, sel=SELECT_FLAG, 
+                        session=SESSION_FLAG, target=INVENTORY_FLAG, 
+                        q=Q, crc5=0x15)
+    commands['query_rep'] = p.QueryRep(session=SESSION_FLAG)
+    commands['ack'] = p.Ack(0x5555)
+    commands['req_rn'] = p.ReqRn(0x5555, 0x5555)
+    commands['read'] = p.Read(p.Bank.TID, 0, 4, rn=0x5555, crc16=0x5555)
+
+    return commands
+
+
+def create_replies(chunks_number, words_number_in_one_chunk, last_chunk_len):
+    '''
+    Создать ответы RFID метки
+    '''
+    replies = {}
+    replies['rn16'] = p.Rn16Reply(0x5555)
+    replies['epc_pc'] = p.AckReply(EPC)
+    replies['handle'] = p.ReqRnReply(0)
+    data = []
+    # Для 3го сценария создаём несколько ответов для каждого 'чанка'
+    if chunks_number > 1:
+        for _ in range(chunks_number-1):
+            data.append(p.ReadReply([0xABAB] * words_number_in_one_chunk, 0, 0))
+        data.append(p.ReadReply([0xABAB] * last_chunk_len, 0, 0))
+    else:
+        data = [p.ReadReply([0xABAB] * words_number_in_one_chunk, 0, 0)]
+    replies['data'] = data
+
+    return replies
+
+
+def build_messages_df(tari_us, m, dr, trext, chunks_number, words_number_in_one_chunk, last_chunk_len):
     """
-    Построить DataFrame для всевозможных настроек канала и рассчитанными 
-    длительностями команд и ответов.
-    
-    В датафрейме используются следующие единицы измерений:
-    
-    - для длительностей: микросекунды (мкс)
-    - для частот: килогерцы (КГц)
-    - для скоростей: килобиты в секунду (кбит/с)
-    
-    Returns:
-        df (DataFrame)
+    Создать RFID сообщения для расчёта их
+    длины (в битах) и длительности (в мкс)
     """
     params = []
-    for tari_us, m, dr, trext in product(tari_us, m, drs, trext):
-        tari = tari_us * 1e-6
-        rtcal = RTCAL_MUL * tari
-        trcal = TRCAL_MUL * rtcal
-        blf = dr.ratio / trcal
-        bitrate = blf / m.value
-        
-        # Строим команды
-        # --------------
-        preamble = ReaderFrame.Preamble(tari, rtcal, trcal)
-        sync = ReaderFrame.Sync(tari, rtcal)
-        
-        query = Query(dr=dr, m=m, trext=trext, sel=Sel.SL_ALL, 
-                           session=Session.S0, target=Flag.A, 
-                           q=Q, crc5=0x15)
-        query_rep = QueryRep(session=Session.S0)
-        ack = Ack(0x5555)
-        req_rn = ReqRn(0x5555, 0x5555)
-        read = Read(Bank.TID, 0, 4, rn=0x5555, crc16=0x5555)
-        
-        # Строим ответы
-        # -------------
-        rn16 = Rn16Reply(0x5555)
-        epc_pc = AckReply(EPC)
-        handle = ReqRnReply(0)
-        data = []
-        # Для 3го сценария создаём несколько ответов для каждого 'чанка'
-        if chunks_number > 1:
-            for i in range(chunks_number-1):
-                data.append(ReadReply([0xABAB] * words_number_in_one_chunk, 0, 0))
-            data.append(ReadReply([0xABAB] * last_chunk_len, 0, 0))
-        else:
-            data = [ReadReply([0xABAB] * words_number_in_one_chunk, 0, 0)]
-        data_durations = []
-        data_lens = []
-        for data_answer in data:
-            data_durations.append(TagFrame(m, trext, blf, data_answer).duration)
-            data_lens.append(TagFrame(m, trext, blf, data_answer).bitlen)
+    tari = tari_us * 1e-6
+    rtcal = RTCAL_MUL * tari
+    trcal = TRCAL_MUL * rtcal
+    blf = dr.ratio / trcal
+    
+    # Строим команды
+    commands = create_commands(tari, rtcal, trcal, dr, m, trext)
+    sync = commands['sync']
+    
+    # Строим ответы
+    replies = create_replies(chunks_number, words_number_in_one_chunk, last_chunk_len)
 
-        params.append({
-            'DR': dr,
-            'M': m,
-            'Tari': tari_us,     
-            'TRext': trext,
-            'RTcal': rtcal,
-            'TRcal': trcal,
-            'BLF': blf,
-            'Query': ReaderFrame(preamble, query).duration,
-            'QueryRep': ReaderFrame(sync, query_rep).duration,
-            'Ack': ReaderFrame(sync, ack).duration,
-            'Req_RN': ReaderFrame(sync, req_rn).duration,
-            'Read': ReaderFrame(sync, read).duration,
-            'Query_len': 22,
-            'RN16': TagFrame(m, trext, blf, rn16).duration,
-            'EPC+PC+CRC': TagFrame(m, trext, blf, epc_pc).duration,
-            'Handle': TagFrame(m, trext, blf, handle).duration,
-            'Data': data_durations,
-            'RN16_len': TagFrame(m, trext, blf, rn16).bitlen,
-            'EPC+PC+CRC_len': TagFrame(m, trext, blf, epc_pc).bitlen,
-            'Handle_len': TagFrame(m, trext, blf, handle).bitlen,
-            'Data_len': data_lens,
-        })
+    # Длительность (мкс) и длина (биты) ответа на комаду Read
+    data_durations = []
+    data_lens = []
+    for data_answer in replies['data']:
+        data_durations.append(p.TagFrame(m, trext, blf, data_answer).duration)
+        data_lens.append(p.TagFrame(m, trext, blf, data_answer).bitlen)
+
+    params.append({
+        'DR': dr,
+        'M': m,
+        'Tari': tari_us,     
+        'TRext': trext,
+        'RTcal': rtcal,
+        'TRcal': trcal,
+        'BLF': blf,
+        'Query': p.ReaderFrame(commands['preamble'], commands['query']).duration,
+        'QueryRep': p.ReaderFrame(sync, commands['query_rep']).duration,
+        'Ack': p.ReaderFrame(sync, commands['ack']).duration,
+        'Req_RN': p.ReaderFrame(sync, commands['req_rn']).duration,
+        'Read': p.ReaderFrame(sync, commands['read']).duration,
+        'Query_len': 22,
+        'RN16': p.TagFrame(m, trext, blf, replies['rn16']).duration,
+        'EPC+PC+CRC': p.TagFrame(m, trext, blf, replies['epc_pc']).duration,
+        'Handle': p.TagFrame(m, trext, blf, replies['handle']).duration,
+        'Data': data_durations,
+        'RN16_len': p.TagFrame(m, trext, blf, replies['rn16']).bitlen,
+        'EPC+PC+CRC_len': p.TagFrame(m, trext, blf, replies['epc_pc']).bitlen,
+        'Handle_len': p.TagFrame(m, trext, blf, replies['handle']).bitlen,
+        'Data_len': data_lens,
+    })
     return params
 
 
@@ -163,8 +175,8 @@ def prepare_probs(params, chunks_number, ber, points_number):
 
 
 def prepare_times(params, probs, chunks_number):
-    T1 = max_t1(params[0]['RTcal'], params[0]['BLF'])
-    T2 = max_t2(params[0]['BLF'])
+    T1 = p.max_t1(params[0]['RTcal'], params[0]['BLF'])
+    T2 = p.max_t2(params[0]['BLF'])
     T1_2 = T1 + T2
     delta = 1e-5
     
