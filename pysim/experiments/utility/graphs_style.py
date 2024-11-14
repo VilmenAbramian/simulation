@@ -3,12 +3,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import os
 import platform
-from typing import Union, Sequence
+from typing import Sequence
 
 
 CMAP_NAME = 'inferno'  # Цветовая схема для графиков
-IMAGE_BASE_DIR = "images"  # Здесь будут храниться все построенные изображения
-IMAGE_EXTENSIONS = ("pdf", "png")  # В каких форматах сохранять изображения
+IMAGE_BASE_DIR = 'images'  # Здесь будут храниться все построенные изображения
+IMAGE_EXTENSIONS = ('pdf', 'png')  # В каких форматах сохранять изображения
 
 
 def setup_matplotlib() -> None:
@@ -23,20 +23,20 @@ def setup_matplotlib() -> None:
 
         # Шрифт PT Serif Caption можно установить с Google Fonts.
         # После установки шрифта нужно удалить кэш matplitlib,
-        # на Ubuntu: ~/.cache/matplotlib 
+        # на Ubuntu: ~/.cache/matplotlib
         'font.sans-serif': ['PT Serif Caption',],
     })
 
     locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
 
-    
+
 def get_color(x: float):
     """
     Получить цвет из текущей карты.
-    
+
     Args:
         x (float): число от 0 до 1
-    
+
     Returns:
         color
     """
@@ -48,9 +48,9 @@ def savefig(name: str, exts: Sequence[str] = IMAGE_EXTENSIONS,
     """
     Сохранить изображение в файлы с общим именем и разными расширениями.
     Изображения будут сохранены в папку directory.
-    
+
     Если name - пустая строка, ничего сохраняться не будет.
-    
+
     Args:
         name (str): название файла без расширения
         exts (list of str): набор расширений, по-умолчанию png и pdf
@@ -66,18 +66,18 @@ def savefig(name: str, exts: Sequence[str] = IMAGE_EXTENSIONS,
 
 
 def set_axes_formatter(
-        *axes, 
-        use_x: bool = False, 
-        use_y: bool = False, 
+        *axes,
+        use_x: bool = False,
+        use_y: bool = False,
         platforms: Sequence[str] = ("Linux",)
 ) -> None:
     """
     У некоторых нормальных шрифтов нет глифов, которые нужны
     в русской локали. Поэтому стараемся избежать ситуации,
     когда эти глифы нужны.
-    
+
     Сейчас обходим глиф-пробел 8239 в формате больших целых.
-    
+
     Args:
         axes (list of Axes): графики, к которым применить
         use_x (bool): применять ли к OX (False)
@@ -93,7 +93,7 @@ def set_axes_formatter(
             else:
                 return f"{value:n}"
         return str(value)
-    
+
     if not platforms or platform.system() in platforms:
         for axes_ in axes:
             if not (isinstance(axes_, list) or isinstance(axes_, tuple)):
