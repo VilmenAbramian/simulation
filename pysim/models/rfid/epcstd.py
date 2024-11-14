@@ -579,7 +579,7 @@ class AckReply(Reply):
                 o=self, epc=self.get_epc_string())
 
 
-class ReqRnReply(Reply):
+class ReqRNReply(Reply):
     def __init__(self, rn=0x0000, crc=0x0000):
         super().__init__(ReplyType.REQRN_REPLY)
         self.rn = rn
@@ -610,6 +610,11 @@ class ReadReply(Reply):
 
     @property
     def bitlen(self):
+        '''
+        Логика описана в стандарте:
+        Table 6.45: Tag reply to a successful Read command
+        33 = 1 (Header) + 16 (RN) + 16 (CRC)
+        '''
         return 33 + len(self.memory) * 8
 
     def __str__(self):
@@ -780,6 +785,13 @@ class TagFrame:
         t_body = self.get_body_duration(blf)
         t_suffix = m / blf
         return t_preamble + t_body + t_suffix
+    
+    @property
+    def bitlen(self):
+        # +1 for end-of-signaling 'dummy' data-1
+        m = self.preamble.encoding
+        trext = self.preamble.extended
+        return tag_preamble_bitlen(encoding=m, trext=trext) + self.reply.bitlen + 1
 
     def __str__(self):
         return "Frame{{{o.preamble}{o.reply}}}".format(o=self)
@@ -955,6 +967,11 @@ def tag_bitrate(dr=None, trcal=None, encoding=None):
 
 
 def get_frt(trcal=None, dr=None, temp_range=None):
+    '''
+    FrT - Frequency tolerance
+    Расчёт частоты ответа метки в зависимости от
+    выбранных параметров RFID и температуры
+    '''
     trcal = trcal if trcal is not None else stdParams.trcal
     dr = dr if dr is not None else stdParams.divide_ratio
     temp_range = (temp_range if temp_range is not None
@@ -1013,6 +1030,10 @@ def min_link_t(param_index, rtcal=None, trcal=None, dr=None, temp=None):
 
 
 def max_link_t(param_index, rtcal=None, trcal=None, dr=None, temp=None):
+    '''
+    Логика описана в стандарте:
+    Table 6.16: Link timing parameters
+    '''
     rtcal = rtcal if rtcal is not None else stdParams.rtcal
     trcal = trcal if trcal is not None else stdParams.trcal
     dr = dr if dr is not None else stdParams.divide_ratio
@@ -1234,7 +1255,7 @@ def get_elementary_timings(tari=None, rtcal=None, trcal=None, delim=None,
     read = Read(bank, word_ptr, word_count, rn, crc)
     query_reply = QueryReply(rn)
     ack_reply = AckReply(epc, pc, crc)
-    req_rn_reply = ReqRnReply(rn, crc)
+    req_rn_reply = ReqRNReply(rn, crc)
     read_reply = ReadReply(mem, rn, crc)
     blf = get_blf(dr, trcal)
 

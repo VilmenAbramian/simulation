@@ -780,7 +780,7 @@ class Reader:
             return self._state.handle_query_reply(self, tag_frame)
         elif isinstance(reply, std.AckReply):
             return self._state.handle_ack_reply(self, tag_frame)
-        elif isinstance(reply, std.ReqRnReply):
+        elif isinstance(reply, std.ReqRNReply):
             return self._state.handle_reqrn_reply(self, tag_frame)
         elif isinstance(reply, std.ReadReply):
             return self._state.handle_read_reply(self, tag_frame)
@@ -1251,7 +1251,7 @@ class Tag:
         if reqrn.rn == self.rn:
             self._set_state(Tag.State.SECURED)
             self._rn = np.random.randint(0, 0x10000)
-            return std.TagFrame(self._preamble, std.ReqRnReply(self._rn))
+            return std.TagFrame(self._preamble, std.ReqRNReply(self._rn))
         else:
             return None
 
