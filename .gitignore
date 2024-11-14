@@ -140,3 +140,4 @@ dmypy.json
 /pysim/models/pingpong_oop/results
 /pysim/models/rfid/results
 /pysim/models/monte_carlo/results
+/pysim/experiments/img
