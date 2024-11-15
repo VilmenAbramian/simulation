@@ -31,10 +31,10 @@ def calculate_first_case(phases):
     probs = [phase[0] for phase in phases]
 
     matrix = np.array([
-        [probs[0]    , -probs[0], 0        , 0        ],
-        [probs[1] - 1, 1        , -probs[1], 0        ],
-        [probs[2] - 1, 0        , 1        , -probs[2]],
-        [probs[3] - 1, 0        , 0        , 1        ]
+        [probs[0],     -probs[0], 0,         0],
+        [probs[1] - 1, 1,         -probs[1], 0],
+        [probs[2] - 1, 0,         1,         -probs[2]],
+        [probs[3] - 1, 0,         0,         1]
     ])
 
     return np.dot(np.linalg.inv(matrix)[0], np.array(times))
