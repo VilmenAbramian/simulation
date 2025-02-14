@@ -1,9 +1,12 @@
 import numpy as np
 
 
-def create_matrix_1(p1, p2, p3, p4):
-    '''Кумулятивная матрица для 1 сценария'''
+SEC2MILLISEC = 1000
 
+
+def create_matrix_1(*probabilities: tuple[int]) -> np.ndarray:
+    '''
+    Кумулятивная матрица для 1 сценария вида:
     matrix = np.array([
         [1-p1, p1,  0, 0,  0],
         [1-p2, 0,  p2, 0,  0],
@@ -11,12 +14,19 @@ def create_matrix_1(p1, p2, p3, p4):
         [1-p4, 0,   0, 0,  p4],
         [0,    0,   0, 0,  1]
     ])
+    '''
+    n = len(probabilities)
+    matrix = np.zeros((n + 1, n + 1))
+    for i in range(n):
+        matrix[i, 0] = 1 - probabilities[i]
+        matrix[i, i + 1] = probabilities[i]
+    matrix[n, n] = 1
     return np.cumsum(matrix, axis=1)
 
 
-def create_matrix_2(p1, p2, p3, p4):
-    '''Кумулятивная матрица для 2 сценария'''
-
+def create_matrix_2(*probabilities: tuple[int]) -> np.ndarray:
+    '''
+    Кумулятивная матрица для 2 сценария вида:
     matrix = np.array([
         [1-p1, p1,    0,    0,     0],
         [0,    1-p2,  p2,   0,     0],
@@ -24,24 +34,31 @@ def create_matrix_2(p1, p2, p3, p4):
         [0,    0,     0,    1-p4,  p4],
         [0,    0,     0,    0,     1]
     ])
+    '''
+    n = len(probabilities)
+    matrix = np.zeros((n + 1, n + 1))
+    for i in range(n):
+        matrix[i, i] = 1 - probabilities[i]
+        matrix[i, i + 1] = probabilities[i]
+    matrix[n, n] = 1
     return np.cumsum(matrix, axis=1)
 
 
-def create_matrix_3(probabilities):
+def create_matrix_3(probabilities: list[list]) -> np.ndarray:
     '''Кумулятивная матрица для 3 сценария'''
     n = len(probabilities) + 1
     matrix = np.zeros((n, n))
-
     for i in range(n-1):
         matrix[i][i] = 1 - probabilities[i]  # Элементы на главной диагонали
         matrix[i][i + 1] = probabilities[i]  # Элементы над главной диагональю
-
     matrix[n-1][n-1] = 1  # Последний элемент (поглощающее состояние)
-
     return np.cumsum(matrix, axis=1)
 
 
-def create_input_probs(scenario, probs):
+def create_input_probs(
+        scenario: int,
+        probs: list[list[list]]
+        ) -> list[np.ndarray[tuple[int]]]:
     '''
     Подготовить кумулятивные матрицы для
     запуска нескольких моделей Монте-Карло.
@@ -63,7 +80,10 @@ def create_input_probs(scenario, probs):
     return matrix_list
 
 
-def run_multiple_models(scenario, probs, times, transmissions):
+def run_multiple_models(scenario: int,
+                        probs: list[list[list]],
+                        times: list[list[list[float]]],
+                        transmissions: int) -> list[float]:
     matrix_list = create_input_probs(scenario, probs)
     res_time = []
     for i in range(len(probs)):
@@ -72,7 +92,9 @@ def run_multiple_models(scenario, probs, times, transmissions):
     return res_time
 
 
-def monte_carlo(transition_matrix, stay_times, num_trials):
+def monte_carlo(transition_matrix: np.array,
+                stay_times: np.array,
+                num_trials: int) -> float:
     num_states = len(transition_matrix)
     absorption_times = []
 
@@ -90,7 +112,7 @@ def monte_carlo(transition_matrix, stay_times, num_trials):
                     break
         absorption_times.append(total_time)
 
-    return sum(absorption_times)/len(absorption_times)*1000
+    return sum(absorption_times)/len(absorption_times)*SEC2MILLISEC
 
 
 if __name__ == '__main__':
