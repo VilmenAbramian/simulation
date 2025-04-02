@@ -1,7 +1,7 @@
 import numpy as np
 
-import epcstd as std
-from objects import Model, Reader, Tag, Transaction
+import pysim.models.rfid.epcstd as std
+from pysim.models.rfid.objects import Model, Reader, Tag, Transaction
 
 
 def start_simulation(kernel):

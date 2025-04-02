@@ -2,9 +2,9 @@ from dataclasses import dataclass, field
 import numpy as np
 from tabulate import tabulate
 
-import epcstd as std
-import handlers
-from objects import Reader, Model, Antenna, Generator, Medium
+import pysim.models.rfid.epcstd as std
+import pysim.models.rfid.handlers as handlers
+from pysim.models.rfid.objects import Reader, Model, Antenna, Generator, Medium
 import pysim.sim.simulator as sim
 
 

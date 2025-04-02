@@ -5,7 +5,7 @@ setup(
     name='pyrfidsim',
     version='1.0.0',
     author='Vilmen Abramian',
-    author_email='abramian.vl@phystech.edu',
+    author_email='vilmen.abramian@gmail.com',
     platforms=['any'],
     license='MIT',
     url='https://github.com/VilmenAbramian/simulation',

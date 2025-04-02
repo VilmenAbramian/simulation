@@ -8,8 +8,8 @@ from pysim.sim.simulator import (
     run_simulation,
     ModelLoggerConfig
 )
-from pysim.models.monte_carlo.objects import Config
-from pysim.models.monte_carlo.handlers import initialize, finalize
+from pysim.models.tag_time.objects import Config
+from pysim.models.tag_time.handlers import initialize, finalize
 
 
 MODEL_NAME = 'Monte-Carlo-simulation'

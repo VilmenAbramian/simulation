@@ -2,9 +2,9 @@ import click
 import multiprocessing
 from time import time_ns
 
-import configurator
-import epcstd as std
-from processing import result_processing
+import pysim.models.rfid.configurator as configurator
+import pysim.models.rfid.epcstd as std
+from pysim.models.rfid.processing import result_processing
 import pysim.sim.simulator as sim
 
 

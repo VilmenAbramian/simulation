@@ -4,8 +4,8 @@ import enum
 import itertools
 
 
-import epcstd as std
-import channel as chan
+import pysim.models.rfid.epcstd as std
+import pysim.models.rfid.channel as chan
 
 
 #############################################################################

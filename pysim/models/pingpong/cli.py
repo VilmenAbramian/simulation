@@ -2,14 +2,15 @@ import click
 from multiprocessing import Pool
 import multiprocessing
 
-from objects import Config, Result
+from pysim.models.pingpong.handlers import initialize, finalize
+from pysim.models.pingpong.objects import Config, Result
+from pysim.models.pingpong.processing import result_processing
 from pysim.sim.simulator import (
     build_simulation,
     run_simulation,
     ModelLoggerConfig
 )
-from processing import result_processing
-from pysim.models.pingpong_oop.handlers import initialize, finalize
+
 
 MODEL_NAME = 'PingPongOOP'
 DEFAULT_INTERVAL = 10.0
@@ -93,7 +94,7 @@ def run_multiple_simulation(variadic, **kwargs):
     help='Количество отправляемых клиентом Ping-ов',
     show_default=True
 )
-def run(**kwargs):
+def cli_run(**kwargs):
     '''
     Точка входа модели Ping-Pong.
     Задать параметры работы.
@@ -140,4 +141,4 @@ def run_model(
 
 
 if __name__ == '__main__':
-    run()
+    cli_run()

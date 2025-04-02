@@ -45,7 +45,7 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Unit tests / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -137,7 +137,7 @@ dmypy.json
 .pyre/
 
 # Folders
-/pysim/models/pingpong_oop/results
+/pysim/models/pingpong/results
 /pysim/models/rfid/results
-/pysim/models/monte_carlo/results
+/pysim/models/tag_time/results
 /pysim/experiments/img

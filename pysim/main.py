@@ -1,63 +1,36 @@
 import click
 import importlib
-import logging
 import pkgutil
-
-from pysim.sim import simulator
-from pysim.sim.logger import ModelLoggerConfig
 
 
 models_list = []  # Заполняется в коде инициализации, в конце файла
 
 
-########################################
-# CLI
-########################################
-
-# Корневая группа
+# Создаёт корневую команду sim, к которой можно добавлять подкоманды.
 @click.group
 def cli():
     pass
 
 
-# Вывести список моделей
 @cli.command('list')
 def list_models():
+    '''Выводит список моделей.'''
     for model_name in models_list:
         print(f"* {model_name}")
 
 
-# Запустить модель. Команды в группу добавляются в коде инициализации ниже.
 @cli.group('run')
 def run():
+    '''Запустить модель.'''
     pass
-
-
-@cli.command('sim')
-def run_simulate():
-    def initialize(sim: simulator.Simulator):
-        sim.logger.info('Запускаем инициализацию')
-
-    logging.warning('Сalling simulate()')    
-    simulator.simulate(
-        model_name='dummy', 
-        init=initialize, 
-        max_num_events=1,
-        logger_config=ModelLoggerConfig(
-            file_name="model.log",
-            file_level=logging.WARNING,
-            file_name_no_run_id=True
-        )
-    )
-    print("Just another line at the end (EOS)")
 
 
 #############################################################################
 # ИНИЦИАЛИЗАЦИЯ
 #
-# Просматриваем все подмодули в модуле models. 
-# Для каждого подмодуля, в котором есть файл cli.py, и в котором есть команда 
-# click `run()`, то есть функция вида добавляем в качестве подкоманды в группу 
+# Просматриваем все подмодули в модуле models.
+# Для каждого подмодуля, в котором есть файл cli.py, и в котором есть команда
+# click `run()`, то есть функция вида добавляем в качестве подкоманды в группу
 # `run`, в качестве имени используем название подмодуля.
 #
 # Имена таких подмодулей (моделей) сохраняем в массиве models, их можно
@@ -68,14 +41,14 @@ def run_simulate():
 #
 # -----------------------------------------------------
 # # File: models.echo.cli.py
-# 
+#
 # @click.command
 # def run():
 #     print("Hello, I am an echo protocol model")
 # ----------------------------------------------------
 #
 # Тогда в CLI будет добавлена команда `sim run echo`:
-# 
+#
 # > sim run echo
 # Hello, I am an echo protocol model
 #
@@ -86,12 +59,9 @@ def __initialize__():
     from pysim import models  # type: ignore
     for submodule in pkgutil.iter_modules(models.__path__):
         name = submodule.name
-        print('Имя: ', name)
         try:
             module = importlib.import_module('.cli', f'pysim.models.{name}')
-            print('Модуль: ', module)        
             try:
-                print('Я здесь!')
                 cmd: click.Command = getattr(module, "cli_run")
             except AttributeError:
                 print(f"WARNING: no function 'cli_run(...)' found in {name}")
@@ -99,11 +69,10 @@ def __initialize__():
             if isinstance(cmd, click.Command):
                 run.add_command(cmd, name)
                 models_list.append(name)
-                print('Список моделей: ', models_list)
             else:
                 print("WARNING: cli_run() must be a Click command or group")
         except ModuleNotFoundError:
-            pass
+            print(f'В модуле {name} некорректное оформление!')
 
 
 __initialize__()
