@@ -4,6 +4,9 @@ import scipy
 import scipy.special as special
 
 
+# --------------------------------------------
+# Вспомогательные функции
+# --------------------------------------------
 def to_sin(cos):
     return (1 - cos ** 2) ** .5
 
@@ -25,45 +28,21 @@ def to_power(value, log=True, dbm=False):
     return to_log(power, dbm=dbm) if log else power
 
 
-#
-# Radiation Pattern
-#
-def __patch_factor(a_cos, t_cos, wavelen, width, length, tol=1e-9):
-    a_sin = to_sin(a_cos)
-    t_sin = to_sin(t_cos)
-    kw = np.pi / wavelen * width
-    kl = np.pi / wavelen * length
-    if a_cos < tol:
-        return 0
-    if np.abs(a_sin) < tol:
-        return 1.
-    elif np.abs(t_sin) < tol:
-        return np.cos(kl * a_sin)
-    else:
-        return np.sin(kw * a_sin * t_sin) / (kw * a_sin * t_sin) * np.cos(kl * a_sin * t_cos)
+def deg2rad(a: float) -> float:
+    """Перевести угол из градусов в радианы."""
+    return a / 180.0 * np.pi
 
 
-def __patch_theta(a_cos, t_cos, wavelen, width, length):
-    return __patch_factor(a_cos, t_cos, wavelen, width, length) * t_cos
+def lin2db(value_linear):
+    return 10 * np.log10(value_linear) if value_linear >= 1e-15 else -np.inf
 
-
-def __patch_phi(a_cos, t_cos, wavelen, width, length):
-    return -1 * __patch_factor(a_cos, t_cos, wavelen, width, length) * to_sin(t_cos) * a_cos
-
-
-def rp_isotropic(**kwargs):
-    return 1.0
-
-
+# --------------------------------------------
+# Диаграмма направленности
+# --------------------------------------------
 def rp_dipole(*, azimuth, tol=1e-9):
     a_sin = to_sin(azimuth)
     return np.abs(np.cos(np.pi / 2 * a_sin) / azimuth) if azimuth > tol else 0.
-
-
-def rp_patch(*, a_cos, t_cos, wavelen, width, length):
-    return (np.abs(__patch_factor(a_cos, t_cos, wavelen, width, length)) *
-            (t_cos ** 2 + a_cos ** 2 * to_sin(t_cos) ** 2) ** 0.5)
-
+# --------------------------------------------
 
 #
 # Reflection
@@ -82,7 +61,23 @@ def reflection_constant(**kwargs):
     return -1.0 + 0.j
 
 
-def reflection(*, cosine, polarization, permittivity, conductivity, wavelen, **kwargs):
+def reflection(
+        cosine: float,
+        polarization,
+        permittivity,
+        conductivity,
+        wavelen,
+    ):
+    '''
+    Расчитать коэффициент отражения.
+
+    Args:
+        cosine: косинус угла падения
+        pol (float): поляризация
+        permittivity (float)
+        conductivity (float)
+        wavelen (float)
+    '''
     sine = (1 - cosine ** 2) ** .5
 
     if polarization != 0:
@@ -209,13 +204,55 @@ def q_func(x):
 def ber(snr, distr='rayleigh', tol=1e-8):
     if snr < tol:
         return 0.5
-
     if distr == 'rayleigh':
-
         t = (1 + 2 / snr) ** 0.5
         return 0.5 - 1 / t + 2 / np.pi * np.arctan(t) / t
-
     else:
-
         t = q_func(snr ** 0.5)
         return 2 * t * (1 - t)
+
+# ----------------------------------------------------------------------------
+# Накидывание говна
+# ----------------------------------------------------------------------------
+
+# Функция, рассчитывающая потери в свободном пространстве
+def free_space_path_loss_3d(
+        *, time, wavelen,
+        tx_pos, tx_dir_theta, tx_velocity, tx_rp,
+        rx_pos, rx_dir_theta, rx_velocity, rx_rp,
+        **kwargs):
+    """
+    Computes free space signal attenuation between the transmitter and the
+    receiver in linear scale.
+    :param wavelen: a wavelen of signal carrier
+    :param time: Time passed from the start of reception (это константа!)
+    :param tx_velocity: the velocity of the transmitter
+    :param tx_dir_theta: the vector pointed the direction with azimuth
+        angle equals 0 of the transmitter antenna.
+    :param tx_pos: a current position of the transmitter.
+    :param tx_rp: a radiation pattern of the transmitter
+    :param rx_velocity: the velocity of the receiver
+    :param rx_dir_theta: the vector pointed the direction with azimuth angle
+        equals 0 of the transmitter antenna.
+    :param rx_pos: a current position of the receiver
+    :param rx_rp: a radiation pattern of the receiver
+    :return: free space path loss in linear scale
+    """
+    d_vector = rx_pos - tx_pos
+    d = la.norm(d_vector)
+    d_vector_tx_n = d_vector / d
+    d_vector_rx_n = -d_vector_tx_n
+
+    # Azimuth angle computation for computation of attenuation
+    # caused by deflection from polar direction
+    tx_azimuth = np.dot(d_vector_tx_n, tx_dir_theta)
+    rx_azimuth = np.dot(d_vector_rx_n, rx_dir_theta)
+
+    relative_velocity = rx_velocity - tx_velocity
+    velocity_pr = np.dot(d_vector_tx_n, relative_velocity)
+
+    # Attenuation caused by radiation pattern
+    g0 = tx_rp(azimuth=tx_azimuth) * rx_rp(azimuth=rx_azimuth)
+
+    k = 2 * np.pi / wavelen
+    return (0.5/k)**2 * np.abs(g0/d*np.exp(-1j*k*(d - time * velocity_pr)))**2
