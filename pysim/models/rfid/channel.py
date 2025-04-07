@@ -3,9 +3,8 @@ from numpy import linalg as la
 import scipy
 import scipy.special as special
 
-
 # --------------------------------------------
-# Вспомогательные функции
+# Вспомогательные функции. Перевод величин
 # --------------------------------------------
 def to_sin(cos):
     return (1 - cos ** 2) ** .5
@@ -28,13 +27,19 @@ def to_power(value, log=True, dbm=False):
     return to_log(power, dbm=dbm) if log else power
 
 
-def deg2rad(a: float) -> float:
+def deg2rad(angle: float) -> float:
     """Перевести угол из градусов в радианы."""
-    return a / 180.0 * np.pi
+    return angle / 180.0 * np.pi
 
 
 def lin2db(value_linear):
+    """Перевести линейное отношение в дБ."""
     return 10 * np.log10(value_linear) if value_linear >= 1e-15 else -np.inf
+
+
+def kmph2mps(speed: float) -> float:
+    """Перевести км/ч в м/с."""
+    return speed * 5 / 18
 
 # --------------------------------------------
 # Диаграмма направленности
@@ -98,9 +103,9 @@ def reflection(
 #
 # Pathloss
 #
-def two_ray_pathloss(*, time, ground_reflection, wavelen,
-                     tx_pos, tx_dir_theta, tx_dir_phi, tx_velocity, tx_rp,
-                     rx_pos, rx_dir_theta, rx_dir_phi, rx_velocity, rx_rp, log=False, crutch=False, **kwargs):
+def two_ray_pathloss(time, ground_reflection, wavelen,
+                     tx_pos, tx_dir_theta, tx_velocity, tx_rp,
+                     rx_pos, rx_dir_theta, rx_velocity, rx_rp, log=False, crutch=False, **kwargs):
     """
     Computes free space signal attenuation between the transmitter and the receiver in linear scale.
     :param wavelen: a wavelen of signal carrier
