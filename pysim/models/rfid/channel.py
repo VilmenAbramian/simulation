@@ -1,5 +1,8 @@
-import numpy as np
 from numpy import linalg as la
+from numpy.typing import NDArray
+from typing import Callable
+
+import numpy as np
 import scipy
 import scipy.special as special
 
@@ -47,11 +50,11 @@ def kmph2mps(speed: float) -> float:
 def rp_dipole(*, azimuth, tol=1e-9):
     a_sin = to_sin(azimuth)
     return np.abs(np.cos(np.pi / 2 * a_sin) / azimuth) if azimuth > tol else 0.
-# --------------------------------------------
 
-#
-# Reflection
-#
+
+# --------------------------------------------
+# Коэффициент отражения
+# --------------------------------------------
 def __c_parallel(cosine, permittivity, conductivity, wavelen):
     eta = permittivity - 60j * wavelen * conductivity
     return (eta - cosine ** 2) ** 0.5
@@ -100,27 +103,34 @@ def reflection(
     return polarization * r_parallel + (1 - polarization) * r_perpendicular
 
 
-#
-# Pathloss
-#
-def two_ray_pathloss(time, ground_reflection, wavelen,
-                     tx_pos, tx_dir_theta, tx_velocity, tx_rp,
+# --------------------------------------------
+# Pathloss - потери в канале
+# --------------------------------------------
+def two_ray_pathloss(
+        time:float, ground_reflection:Callable, wavelen:float,
+        tx_pos:np.ndarray[float, float, float],
+        tx_dir_theta,
+        tx_velocity:np.ndarray[float, float, float],
+        tx_rp,
                      rx_pos, rx_dir_theta, rx_velocity, rx_rp, log=False, crutch=False, **kwargs):
-    """
-    Computes free space signal attenuation between the transmitter and the receiver in linear scale.
-    :param wavelen: a wavelen of signal carrier
-    :param time: Time passed from the start of reception
-    :param ground_reflection: a function to compute a complex-valued reflection coefficient
-    :param tx_velocity: the velocity of the transmitter
-    :param tx_dir_theta: the vector pointed the direction with azimuth angle equals 0 of the transmitter antenna.
-    :param tx_pos: a current position of the transmitter.
-    :param tx_rp: a radiation pattern of the transmitter
-    :param rx_velocity: the velocity of the receiver
-    :param rx_dir_theta: the vector pointed the direction with azimuth angle equals 0 of the transmitter antenna.
-    :param rx_pos: a current position of the receiver
-    :param rx_rp: a radiation pattern of the receiver
-    :return: free space path loss in linear scale
-    """
+    '''
+    Вычисляет затухание сигнала в свободном пространстве между передатчиком и приемником в линейном масштабе.
+
+    Args:
+        time: время, прошедшее с начала приема
+        ground_reflection: функция для вычисления комплексного коэффициента отражения
+        wavelen: длина волны
+        tx_pos: текущее положение передатчика
+        tx_dir_theta: TODO: the vector pointed the direction with azimuth angle equals 0 of the transmitter antenna
+        tx_velocity: скорость передатчика
+        :param tx_rp: a radiation pattern of the transmitter
+        :param rx_velocity: the velocity of the receiver
+        :param rx_dir_theta: the vector pointed the direction with azimuth angle equals 0 of the transmitter antenna.
+        :param rx_pos: a current position of the receiver
+        :param rx_rp: a radiation pattern of the receiver
+    Return:
+         :return: free space path loss in linear scale
+    '''
     # LoS - Line-of-Sight, NLoS - Non-Line-of-Sight
 
     # Ray geometry computation
