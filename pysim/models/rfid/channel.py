@@ -107,89 +107,88 @@ def reflection(
 # Pathloss - потери в канале
 # --------------------------------------------
 def two_ray_pathloss(
-        time:float, ground_reflection:Callable, wavelen:float,
-        tx_pos:np.ndarray[float, float, float],
-        tx_dir_theta,
-        tx_velocity:np.ndarray[float, float, float],
-        tx_rp,
-                     rx_pos, rx_dir_theta, rx_velocity, rx_rp, log=False, crutch=False, **kwargs):
+        time:float,
+        ground_reflection:Callable,
+        wavelen:float,
+        tx_pos:NDArray[float],
+        tx_dir_theta:NDArray[float],
+        tx_velocity:NDArray[float],
+        tx_rp:Callable,
+        rx_pos:NDArray[float],
+        rx_dir_theta:NDArray[float],
+        rx_velocity:NDArray[float],
+        rx_rp:Callable,
+        log=True,
+        **kwargs
+):
     '''
     Вычисляет затухание сигнала в свободном пространстве между передатчиком и приемником в линейном масштабе.
+
+    Так как отражённый луч состоит из двух частей: передатчик-стена + стена-приёмник, то для его
+    анализа нужно рассматривать обе части. Но вместо этого можно представить этот составной луч
+    как один, но такой же длины - как если бы он прошёл сквозь стену и попал на 'зазеркальную'
+    метку. Координаты такой метки (если метка выступает в качестве приёмника):
+    [-rx_pos[0], rx_pos[1], rx_pos[2]]. Минус перед координатой абцисс (X) как раз и
+    означает, что метка в 'зазеркалье', так как 'зеркало'-стена находится в плоскости YOZ.
+    Также данные лучи для краткости обозначаются как:
+    LoS - Line-of-Sight, прямой луч;
+    NLoS - Non-Line-of-Sight, отражённый луч
 
     Args:
         time: время, прошедшее с начала приема
         ground_reflection: функция для вычисления комплексного коэффициента отражения
         wavelen: длина волны
         tx_pos: текущее положение передатчика
-        tx_dir_theta: TODO: the vector pointed the direction with azimuth angle equals 0 of the transmitter antenna
+        tx_dir_theta: вектор направления главного луча антенны передатчика
         tx_velocity: скорость передатчика
-        :param tx_rp: a radiation pattern of the transmitter
-        :param rx_velocity: the velocity of the receiver
-        :param rx_dir_theta: the vector pointed the direction with azimuth angle equals 0 of the transmitter antenna.
-        :param rx_pos: a current position of the receiver
-        :param rx_rp: a radiation pattern of the receiver
+        tx_rp: диаграмма направленности передатчика
+        rx_pos: текущее положение приёмника
+        rx_dir_theta: вектор направления главного луча антенны приёмника
+        rx_velocity: скорость приёмника
+        rx_rp: диаграмма направленности приёмника
     Return:
-         :return: free space path loss in linear scale
+        Затухание в двухлучевом канале
     '''
-    # LoS - Line-of-Sight, NLoS - Non-Line-of-Sight
+    # Вычисление геометрии прямого и отражённого от стены лучей
+    wall_normal = np.array([1, 0, 0]) # Нормаль к стене, от которой происходит отражение
+    rx_pos_refl = np.array([-rx_pos[0], rx_pos[1], rx_pos[2]]) # 'Зазеркальный'приёмник
 
-    # Ray geometry computation
-    # print(f"tx-pos: {tx_pos}, rx-pos: {rx_pos}")
-    ground_normal = np.array([1, 0, 0])
-    rx_pos_refl = np.array([-rx_pos[0], rx_pos[1], rx_pos[2]])  # Reflect RX relatively the ground. Координаты метки "под землёй". Это "тень" метки, благодаря которой мы можем узнать координаты точки отражения (точка математически условна, так как находится под землёй)
+    d0_vector = rx_pos - tx_pos  # LoS
+    d1_vector = rx_pos_refl - tx_pos  # NLoS
+    d0 = np.linalg.norm(d0_vector)  # Длина LoS
+    d1 = np.linalg.norm(d1_vector)  # Длина NLoS
 
-    d0_vector = rx_pos - tx_pos  # LoS ray vector
-    d1_vector = rx_pos_refl - tx_pos  # NLoS ray vector
-    d0 = la.norm(d0_vector)  # LoS ray length
-    d1 = la.norm(d1_vector)  # NLoS ray length
-    d0_vector_tx_n = d0_vector / d0  # LoS ray vector normalized
-    d0_vector_rx_n = -d0_vector_tx_n
-    d1_vector_tx_n = d1_vector / d1  # NLoS ray vector normalized
-    d1_vector_rx_n = np.array([-d1_vector_tx_n[0], -d1_vector_tx_n[1], d1_vector_tx_n[2]])
+    d0_vector_tx_n = d0_vector / d0  # LoS нормализован
+    d0_vector_rx_n = -d0_vector_tx_n # Минус для того, чтобы скалярное произведение было положительным
+    d1_vector_tx_n = d1_vector / d1  # NLoS нормализован
+    d1_vector_rx_n = np.array([-d1_vector_tx_n[0], d1_vector_tx_n[1], d1_vector_tx_n[2]])
 
-    # Предполагается, что стена, от которой происходит отражение - это плоскость YOZ
-    x_rfp = 0
-    y_rfp = -tx_pos[0] * (rx_pos_refl[1] - tx_pos[1]) / (rx_pos_refl[0] - tx_pos[0]) + tx_pos[1]
-    z_rfp = -tx_pos[0] * (rx_pos_refl[2] - tx_pos[2]) / (rx_pos_refl[0] - tx_pos[0]) + tx_pos[2]
-    ref_point = np.array([x_rfp, y_rfp, z_rfp])  # Координаты точки, в которой происходит отражение от стены
-
-    reflected_vector = np.array([(rx_pos[0] - x_rfp), (rx_pos[1] - y_rfp), (rx_pos[2] - z_rfp)])
-    reflected_vector_n = reflected_vector / la.norm(reflected_vector)
-
-    # Azimuth angle computation for computation of attenuation
-    # caused by deflection from polar direction
-    tx_azimuth_0 = np.dot(d0_vector_tx_n, tx_dir_theta)
-    rx_azimuth_0 = np.dot(d0_vector_rx_n, rx_dir_theta)
-    tx_azimuth_1 = np.dot(d1_vector_tx_n, tx_dir_theta)
-    rx_azimuth_1 = -1 * np.dot(d1_vector_rx_n, rx_dir_theta)  # Версия Андрея
-    # rx_azimuth_1 = np.arccos(-1*np.dot(reflected_vector_n, rx_dir_theta))  # Моя версия
+    # theta - семейство углов между направлениями главных лучей антенн
+    # приёмника/передатчика и направлениями LoS/NLoS
+    tx_azimuth_0 = np.dot(d0_vector_tx_n, tx_dir_theta) # Косинус между антенной передатчика и LoS
+    rx_azimuth_0 = np.dot(d0_vector_rx_n, rx_dir_theta) # Косинус между антенной приёмника и LoS
+    tx_azimuth_1 = np.dot(d1_vector_tx_n, tx_dir_theta) # Косинус между антенной передатчика и NLoS
+    rx_azimuth_1 = -1 * np.dot(d1_vector_rx_n, rx_dir_theta) # Косинус между антенной приёмника и NLoS
 
     # A grazing angle of NLoS ray for computation of reflection coefficient
-    grazing_angle = -1 * np.dot(d1_vector_rx_n, ground_normal)  # Версия Андрея
-    # grazing_angle = np.arccos(np.dot(reflected_vector_n, ground_normal)) #Моя версия
+    grazing_angle = -1 * np.dot(d1_vector_rx_n, wall_normal)  # Версия Андрея
 
     relative_velocity = rx_velocity - tx_velocity
     velocity_pr_0 = np.dot(d0_vector_tx_n, relative_velocity)
     velocity_pr_1 = np.dot(d1_vector_tx_n, relative_velocity)
 
-    # Attenuation caused by radiation pattern
+    # Затухание, определяемое ДН передающей и принимающей антенн
     g0 = (tx_rp(azimuth=tx_azimuth_0) * rx_rp(azimuth=rx_azimuth_0))
     g1 = (tx_rp(azimuth=tx_azimuth_1) * rx_rp(azimuth=rx_azimuth_1))
 
-    # Attenuation due to reflections (reflection coefficient) computation
+    # Затухание, вызванное отражением сигнала
+    r0 = 1 # прямой луч ни от чего не отражается
     r1 = ground_reflection(cosine=grazing_angle, wavelen=wavelen, **kwargs)
 
-    k = 2 * np.pi / wavelen
+    k = 2 * np.pi / wavelen # волновое число
 
-    pathloss = .5 / k * (g0 / d0 * np.exp(-1j * k * (d0 - time * velocity_pr_0)) +
-                         r1 * g1 / d1 * np.exp(-1j * k * (d1 - time * velocity_pr_1)))
-    # Короче, тут костыль, потому что я не помню, почему где-то ответ возводится в квадрат, а где-то нет,
-    # поэтому я сделал два варианта return.
-    if crutch:
-        return (0.5 / k) ** 2 * np.absolute(g0 / d0 * np.exp(-1j * k * (d0 - time * velocity_pr_0)) +
-                                            r1 * g1 / d1 * np.exp(-1j * k * (d1 - time * velocity_pr_1))) ** 2
-    else:
-        return to_power(pathloss) if log else pathloss
+    return (0.5 / k) ** 2 * np.absolute(r0 * g0 / d0 * np.exp(-1j * k * (d0 - time * velocity_pr_0)) +
+                                        r1 * g1 / d1 * np.exp(-1j * k * (d1 - time * velocity_pr_1))) ** 2
 
 
 #
