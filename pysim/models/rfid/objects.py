@@ -1409,7 +1409,7 @@ class Medium:
     '''
     Беспроводной канал связи
     Вся функциональность описана в модуле channel,
-    а этот класс создаёт прокси-объект для последующей работы.
+    Данный класс создаёт прокси-объект для последующей работы.
     '''
     SPEED_OF_LIGHT = 2.99792458 * 1e8
 
@@ -1449,16 +1449,15 @@ class Medium:
         if not self.use_doppler:
             on_interval = 0.0
 
-        pl = chan.two_ray_pathloss(
+        pl = chan.pathloss_model(
             time=on_interval, ground_reflection=self.ground_reflection,
             wavelen=self.wavelen, tx_pos=tx_ant.pos,
-            tx_dir_theta=tx_ant.normalized_direction_theta,
-            tx_dir_phi=tx_ant.direction_phi,
+            tx_antenna_dir=tx_ant.normalized_direction_theta,
             tx_velocity=tx_vel, tx_rp=tx_ant.radiation_pattern,
-            rx_pos=rx_ant.pos, rx_dir_theta=rx_ant.normalized_direction_theta,
-            rx_dir_phi=rx_ant.direction_phi, rx_velocity=rx_vel,
+            rx_pos=rx_ant.pos, rx_antenna_dir=rx_ant.normalized_direction_theta,
+            rx_velocity=rx_vel,
             rx_rp=rx_ant.radiation_pattern, log=True,
-            polarization=polarization, conductivity=self.conductivity,
+            tx_polarization=polarization, conductivity=self.conductivity,
             permittivity=self.permittivity) + self.polarization_loss
 
         # uncomment 5 lines blow for PL debug:

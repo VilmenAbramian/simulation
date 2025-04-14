@@ -1,6 +1,5 @@
-from numpy import linalg as la
 from numpy.typing import NDArray
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 import scipy
@@ -14,6 +13,7 @@ def to_sin(cos):
 
 
 def to_log(value, dbm=False, tol=1e-15):
+    """Перевести линейное отношение в дБ."""
     return 10 * np.log10(value) + 30 * int(dbm) if value >= tol else -np.inf
 
 
@@ -25,19 +25,9 @@ def vec3D(x, y, z):
     return np.array([x, y, z])
 
 
-def to_power(value, log=True, dbm=False):
-    power = np.abs(value) ** 2
-    return to_log(power, dbm=dbm) if log else power
-
-
 def deg2rad(angle: float) -> float:
     """Перевести угол из градусов в радианы."""
     return angle / 180.0 * np.pi
-
-
-def lin2db(value_linear):
-    """Перевести линейное отношение в дБ."""
-    return 10 * np.log10(value_linear) if value_linear >= 1e-15 else -np.inf
 
 
 def kmph2mps(speed: float) -> float:
@@ -75,6 +65,7 @@ def reflection(
         permittivity,
         conductivity,
         wavelen,
+        **kwargs
     ):
     '''
     Расчитать коэффициент отражения.
@@ -106,21 +97,25 @@ def reflection(
 # --------------------------------------------
 # Pathloss - потери в канале
 # --------------------------------------------
-def two_ray_pathloss(
-        time:float,
-        ground_reflection:Callable,
-        wavelen:float,
-        tx_pos:NDArray[float],
-        tx_dir_theta:NDArray[float],
-        tx_velocity:NDArray[float],
-        tx_rp:Callable,
-        rx_pos:NDArray[float],
-        rx_dir_theta:NDArray[float],
-        rx_velocity:NDArray[float],
-        rx_rp:Callable,
-        log=True,
-        **kwargs
-):
+def pathloss_model(
+    time: float, wavelen: float,
+
+    tx_pos: NDArray[np.float64],
+    tx_antenna_dir: NDArray[np.float64],
+    tx_rp: Callable,
+    tx_velocity: NDArray[np.float64],
+
+    rx_pos: NDArray[np.float64],
+    rx_antenna_dir: NDArray[np.float64],
+    rx_rp: Callable,
+    rx_velocity: NDArray[np.float64],
+
+    tx_polarization: float = None,
+    ground_reflection: Optional[Callable] = None,
+    conductivity: float = None,
+    permittivity: float = None,
+    log: bool = True,
+) -> float:
     '''
     Вычисляет затухание сигнала в свободном пространстве между передатчиком и приемником в линейном масштабе.
 
@@ -133,62 +128,73 @@ def two_ray_pathloss(
     Также данные лучи для краткости обозначаются как:
     LoS - Line-of-Sight, прямой луч;
     NLoS - Non-Line-of-Sight, отражённый луч
+    3D модель с геометрическим смыслом переменных и логики данной функции можно найти в
+    папке experiments.
 
     Args:
         time: время, прошедшее с начала приема
-        ground_reflection: функция для вычисления комплексного коэффициента отражения
         wavelen: длина волны
         tx_pos: текущее положение передатчика
-        tx_dir_theta: вектор направления главного луча антенны передатчика
-        tx_velocity: скорость передатчика
+        tx_antenna_dir: вектор направления главного луча антенны передатчика
         tx_rp: диаграмма направленности передатчика
+        tx_velocity: скорость передатчика
         rx_pos: текущее положение приёмника
-        rx_dir_theta: вектор направления главного луча антенны приёмника
-        rx_velocity: скорость приёмника
+        rx_antenna_dir: вектор направления главного луча антенны приёмника
         rx_rp: диаграмма направленности приёмника
+        tx_polarization: поляризация антенны передатчика
+        rx_velocity: скорость приёмника
+        ground_reflection: функция для вычисления комплексного коэффициента отражения
+        conductivity: проводимость поверхности отражения
+        permittivity: диэлектрическая проницаемость поверхности отражения
+        log: если True вернуть значение в дБ (логарифмический масштаб), если False вернуть в Вт (линейный масштаб)
     Return:
-        Затухание в двухлучевом канале
+        Затухание в канале
     '''
-    # Вычисление геометрии прямого и отражённого от стены лучей
-    wall_normal = np.array([1, 0, 0]) # Нормаль к стене, от которой происходит отражение
-    rx_pos_refl = np.array([-rx_pos[0], rx_pos[1], rx_pos[2]]) # 'Зазеркальный'приёмник
+    d_vector = rx_pos - tx_pos
+    d = np.linalg.norm(d_vector)
+    d_vector_tx_n = d_vector / d
+    d_vector_rx_n = -d_vector_tx_n
 
-    d0_vector = rx_pos - tx_pos  # LoS
-    d1_vector = rx_pos_refl - tx_pos  # NLoS
-    d0 = np.linalg.norm(d0_vector)  # Длина LoS
-    d1 = np.linalg.norm(d1_vector)  # Длина NLoS
-
-    d0_vector_tx_n = d0_vector / d0  # LoS нормализован
-    d0_vector_rx_n = -d0_vector_tx_n # Минус для того, чтобы скалярное произведение было положительным
-    d1_vector_tx_n = d1_vector / d1  # NLoS нормализован
-    d1_vector_rx_n = np.array([-d1_vector_tx_n[0], d1_vector_tx_n[1], d1_vector_tx_n[2]])
-
-    # theta - семейство углов между направлениями главных лучей антенн
-    # приёмника/передатчика и направлениями LoS/NLoS
-    tx_azimuth_0 = np.dot(d0_vector_tx_n, tx_dir_theta) # Косинус между антенной передатчика и LoS
-    rx_azimuth_0 = np.dot(d0_vector_rx_n, rx_dir_theta) # Косинус между антенной приёмника и LoS
-    tx_azimuth_1 = np.dot(d1_vector_tx_n, tx_dir_theta) # Косинус между антенной передатчика и NLoS
-    rx_azimuth_1 = -1 * np.dot(d1_vector_rx_n, rx_dir_theta) # Косинус между антенной приёмника и NLoS
-
-    # A grazing angle of NLoS ray for computation of reflection coefficient
-    grazing_angle = -1 * np.dot(d1_vector_rx_n, wall_normal)  # Версия Андрея
+    tx_azimuth = np.dot(d_vector_tx_n, tx_antenna_dir)
+    rx_azimuth = np.dot(d_vector_rx_n, rx_antenna_dir)
 
     relative_velocity = rx_velocity - tx_velocity
-    velocity_pr_0 = np.dot(d0_vector_tx_n, relative_velocity)
-    velocity_pr_1 = np.dot(d1_vector_tx_n, relative_velocity)
+    velocity_pr = np.dot(d_vector_tx_n, relative_velocity)
 
-    # Затухание, определяемое ДН передающей и принимающей антенн
-    g0 = (tx_rp(azimuth=tx_azimuth_0) * rx_rp(azimuth=rx_azimuth_0))
-    g1 = (tx_rp(azimuth=tx_azimuth_1) * rx_rp(azimuth=rx_azimuth_1))
+    k = 2 * np.pi / wavelen
+    r0 = 1
+    g0 = tx_rp(azimuth=tx_azimuth) * rx_rp(azimuth=rx_azimuth)
+    phase_shift_0 = -1j * k * (d - time * velocity_pr)
 
-    # Затухание, вызванное отражением сигнала
-    r0 = 1 # прямой луч ни от чего не отражается
-    r1 = ground_reflection(cosine=grazing_angle, wavelen=wavelen, **kwargs)
+    pathloss = (0.5 / k) ** 2 * np.abs(g0 / d * np.exp(phase_shift_0)) ** 2
 
-    k = 2 * np.pi / wavelen # волновое число
+    if ground_reflection is not None:
+        wall_normal = np.array([1, 0, 0])  # Нормаль к стене, от которой происходит отражение
+        rx_pos_refl = rx_pos.copy()
+        rx_pos_refl[0] *= -1
 
-    return (0.5 / k) ** 2 * np.absolute(r0 * g0 / d0 * np.exp(-1j * k * (d0 - time * velocity_pr_0)) +
-                                        r1 * g1 / d1 * np.exp(-1j * k * (d1 - time * velocity_pr_1))) ** 2
+        d1_vector = rx_pos_refl - tx_pos
+        d1 = np.linalg.norm(d1_vector)
+        d1_vector_tx_n = d1_vector / d1
+        d1_vector_rx_n = np.array([-d1_vector_tx_n[0], d1_vector_tx_n[1], d1_vector_tx_n[2]])
+
+        tx_azimuth_1 = np.dot(d1_vector_tx_n, tx_antenna_dir)
+        rx_azimuth_1 = -1 * np.dot(d1_vector_rx_n, rx_antenna_dir)
+        velocity_pr_1 = np.dot(d1_vector_tx_n, relative_velocity)
+
+        g1 = tx_rp(azimuth=tx_azimuth_1) * rx_rp(azimuth=rx_azimuth_1)
+        grazing_angle = -1 * np.dot(d1_vector_rx_n, wall_normal)
+        r1 = ground_reflection(
+            cosine=grazing_angle, wavelen=wavelen,
+            conductivity=conductivity, permittivity=permittivity,
+            polarization=tx_polarization
+        )
+        phase_shift_1 = -1j * k * (d1 - time * velocity_pr_1)
+
+        pathloss = (0.5 / k) ** 2 * np.abs(r0 * g0 / d * np.exp(phase_shift_0) +
+                                      r1 * g1 / d1 * np.exp(phase_shift_1)) ** 2
+
+    return to_log(pathloss) if log else pathloss
 
 
 #
@@ -224,49 +230,3 @@ def ber(snr, distr='rayleigh', tol=1e-8):
     else:
         t = q_func(snr ** 0.5)
         return 2 * t * (1 - t)
-
-# ----------------------------------------------------------------------------
-# Накидывание говна
-# ----------------------------------------------------------------------------
-
-# Функция, рассчитывающая потери в свободном пространстве
-def free_space_path_loss_3d(
-        *, time, wavelen,
-        tx_pos, tx_dir_theta, tx_velocity, tx_rp,
-        rx_pos, rx_dir_theta, rx_velocity, rx_rp,
-        **kwargs):
-    """
-    Computes free space signal attenuation between the transmitter and the
-    receiver in linear scale.
-    :param wavelen: a wavelen of signal carrier
-    :param time: Time passed from the start of reception (это константа!)
-    :param tx_velocity: the velocity of the transmitter
-    :param tx_dir_theta: the vector pointed the direction with azimuth
-        angle equals 0 of the transmitter antenna.
-    :param tx_pos: a current position of the transmitter.
-    :param tx_rp: a radiation pattern of the transmitter
-    :param rx_velocity: the velocity of the receiver
-    :param rx_dir_theta: the vector pointed the direction with azimuth angle
-        equals 0 of the transmitter antenna.
-    :param rx_pos: a current position of the receiver
-    :param rx_rp: a radiation pattern of the receiver
-    :return: free space path loss in linear scale
-    """
-    d_vector = rx_pos - tx_pos
-    d = la.norm(d_vector)
-    d_vector_tx_n = d_vector / d
-    d_vector_rx_n = -d_vector_tx_n
-
-    # Azimuth angle computation for computation of attenuation
-    # caused by deflection from polar direction
-    tx_azimuth = np.dot(d_vector_tx_n, tx_dir_theta)
-    rx_azimuth = np.dot(d_vector_rx_n, rx_dir_theta)
-
-    relative_velocity = rx_velocity - tx_velocity
-    velocity_pr = np.dot(d_vector_tx_n, relative_velocity)
-
-    # Attenuation caused by radiation pattern
-    g0 = tx_rp(azimuth=tx_azimuth) * rx_rp(azimuth=rx_azimuth)
-
-    k = 2 * np.pi / wavelen
-    return (0.5/k)**2 * np.abs(g0/d*np.exp(-1j*k*(d - time * velocity_pr)))**2
