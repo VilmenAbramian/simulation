@@ -6,23 +6,22 @@ import scipy
 import scipy.special as special
 
 # --------------------------------------------
-# Вспомогательные функции. Перевод величин
+# Вспомогательные функции. Перевод величин.
+# Преобразования
 # --------------------------------------------
-def to_sin(cos):
-    return (1 - cos ** 2) ** .5
+def to_sin(cos: float) -> float:
+    """Перевести косинус в синус."""
+    return (1 - cos ** 2) ** 0.5
 
 
-def to_log(value, dbm=False, tol=1e-15):
+def to_log(value: float, dbm: bool = False, tol: float = 1e-15) -> float:
     """Перевести линейное отношение в дБ."""
     return 10 * np.log10(value) + 30 * int(dbm) if value >= tol else -np.inf
 
 
-def from_log(value, dbm=False):
+def from_log(value: float, dbm: bool = False) -> float:
+    """Перевести дБ в линейное значение."""
     return 10 ** (value / 10 - 3 * int(dbm))
-
-
-def vec3D(x, y, z):
-    return np.array([x, y, z])
 
 
 def deg2rad(angle: float) -> float:
@@ -37,7 +36,8 @@ def kmph2mps(speed: float) -> float:
 # --------------------------------------------
 # Диаграмма направленности
 # --------------------------------------------
-def rp_dipole(*, azimuth, tol=1e-9):
+def rp_dipole(azimuth: float, tol: float = 1e-9) -> float:
+    """Расчет диаграммы направленности дипольной антенны."""
     a_sin = to_sin(azimuth)
     return np.abs(np.cos(np.pi / 2 * a_sin) / azimuth) if azimuth > tol else 0.
 
@@ -45,38 +45,42 @@ def rp_dipole(*, azimuth, tol=1e-9):
 # --------------------------------------------
 # Коэффициент отражения
 # --------------------------------------------
-def __c_parallel(cosine, permittivity, conductivity, wavelen):
+def __c_parallel(cosine: float, permittivity: float, conductivity: float, wavelen: float) -> complex:
+    """Расчет параллельной составляющей коэффициента отражения."""
     eta = permittivity - 60j * wavelen * conductivity
     return (eta - cosine ** 2) ** 0.5
 
 
-def __c_perpendicular(cosine, permittivity, conductivity, wavelen):
+def __c_perpendicular(cosine: float, permittivity: float, conductivity: float, wavelen: float) -> complex:
+    """Расчет перпендикулярной составляющей коэффициента отражения."""
     eta = permittivity - 60j * wavelen * conductivity
     return (eta - cosine ** 2) ** 0.5 / eta
 
 
-def reflection_constant(**kwargs):
+def reflection_constant():
     return -1.0 + 0.j
 
 
 def reflection(
         cosine: float,
-        polarization,
-        permittivity,
-        conductivity,
-        wavelen,
-        **kwargs
-    ):
-    '''
-    Расчитать коэффициент отражения.
+        polarization: float,
+        permittivity: float,
+        conductivity: float,
+        wavelen: float,
+    ) -> complex:
+    """
+    Расчет коэффициента отражения.
 
     Args:
         cosine: косинус угла падения
-        pol (float): поляризация
-        permittivity (float)
-        conductivity (float)
-        wavelen (float)
-    '''
+        polarization: поляризация передающей антенны
+        permittivity: диэлектрическая проницаемость поверхности отражения
+        conductivity: проводимость поверхности отражения
+        wavelen: длина волны падающего сигнала
+
+    Returns:
+        Коэффициент отражения
+    """
     sine = (1 - cosine ** 2) ** .5
 
     if polarization != 0:
@@ -98,32 +102,30 @@ def reflection(
 # Pathloss - потери в канале
 # --------------------------------------------
 def pathloss_model(
-    time: float, wavelen: float,
-
+    time: float,
+    wavelen: float,
     tx_pos: NDArray[np.float64],
     tx_antenna_dir: NDArray[np.float64],
     tx_rp: Callable,
     tx_velocity: NDArray[np.float64],
-
     rx_pos: NDArray[np.float64],
     rx_antenna_dir: NDArray[np.float64],
     rx_rp: Callable,
     rx_velocity: NDArray[np.float64],
-
     tx_polarization: float = None,
     ground_reflection: Optional[Callable] = None,
     conductivity: float = None,
     permittivity: float = None,
     log: bool = True,
 ) -> float:
-    '''
-    Вычисляет затухание сигнала в свободном пространстве между передатчиком и приемником в линейном масштабе.
+    """
+    Вычисляет затухание сигнала в одно- и двухлучевом случаях.
 
     Так как отражённый луч состоит из двух частей: передатчик-стена + стена-приёмник, то для его
     анализа нужно рассматривать обе части. Но вместо этого можно представить этот составной луч
     как один, но такой же длины - как если бы он прошёл сквозь стену и попал на 'зазеркальную'
     метку. Координаты такой метки (если метка выступает в качестве приёмника):
-    [-rx_pos[0], rx_pos[1], rx_pos[2]]. Минус перед координатой абцисс (X) как раз и
+    [-rx_pos[0], rx_pos[1], rx_pos[2]]. Минус перед координатой абсцисс (X) как раз и
     означает, что метка в 'зазеркалье', так как 'зеркало'-стена находится в плоскости YOZ.
     Также данные лучи для краткости обозначаются как:
     LoS - Line-of-Sight, прямой луч;
@@ -146,10 +148,11 @@ def pathloss_model(
         ground_reflection: функция для вычисления комплексного коэффициента отражения
         conductivity: проводимость поверхности отражения
         permittivity: диэлектрическая проницаемость поверхности отражения
-        log: если True вернуть значение в дБ (логарифмический масштаб), если False вернуть в Вт (линейный масштаб)
-    Return:
+        log: если True вернуть значение в дБ, если False вернуть в Вт
+
+    Returns:
         Затухание в канале
-    '''
+    """
     d_vector = rx_pos - tx_pos
     d = np.linalg.norm(d_vector)
     d_vector_tx_n = d_vector / d
@@ -197,31 +200,70 @@ def pathloss_model(
     return to_log(pathloss) if log else pathloss
 
 
-#
-# BER computation functions
-#
-def snr(power, noise):
+# --------------------------------------------
+# Функции вычисления SNR/BER
+# --------------------------------------------
+def snr(power: float, noise: float) -> float:
+    """
+    Вычислить отношение сигнала к шуму.
+
+    Args:
+        power: мощность сигнала
+        noise: мощность шума
+
+    Returns:
+        Отношение сигнала к шуму
+    """
     return from_log(power - noise)
 
 
-def snr_full(*, snr, miller=1, symbol=1.25e-6, preamble=9.3e-6,
-             bandwidth=1.2e6, tol=1e-8, **kwargs):
+def snr_full(snr: float, miller: float = 1, symbol: float = 1.25e-6, preamble: float = 9.3e-6,
+             bandwidth: float = 1.2e6, tol: float = 1e-8) -> float:
+    """
+    Вычислить полное отношение сигнала к шуму.
+
+    Args:
+        snr: отношение сигнала к шуму
+        miller: тип кодирования ответов метки
+        symbol: длительность символа (data-0 и data-1)
+        preamble: длительность преамбулы
+        bandwidth: полоса пропускания
+        tol: допустимая ошибка
+
+    Returns:
+        Полное отношение сигнала к шуму
+    """
     if snr < tol:
         return 0.5
-
-    # print(">>> miller={}, symbol={}, preamble={}, bandwidth={}".format(
-    #     miller, symbol, preamble, bandwidth
-    # ))
-    # print('++++++++++', snr, preamble, bandwidth, miller, symbol)
     sync_angle = (snr * preamble * bandwidth) ** -0.5
     return miller * snr * symbol * bandwidth * np.cos(sync_angle) ** 2
 
 
-def q_func(x):
+def q_func(x: float) -> float:
+    """
+    Вычислить Q-функцию.
+
+    Args:
+        x: аргумент функции
+
+    Returns:
+        Значение Q-функции
+    """
     return 0.5 - 0.5 * scipy.special.erf(x / 2 ** 0.5)
 
 
-def ber(snr, distr='rayleigh', tol=1e-8):
+def ber(snr: float, distr: str = 'rayleigh', tol: float = 1e-8) -> float:
+    """
+    Вычислить вероятность битовой ошибки.
+
+    Args:
+        snr: отношение сигнала к шуму
+        distr: распределение
+        tol: допустимая ошибка
+
+    Returns:
+        Вероятность битовой ошибки
+    """
     if snr < tol:
         return 0.5
     if distr == 'rayleigh':
