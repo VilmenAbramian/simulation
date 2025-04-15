@@ -3,7 +3,7 @@ from typing import Callable, Optional
 
 import numpy as np
 import scipy
-import scipy.special as special
+
 
 # --------------------------------------------
 # Вспомогательные функции. Перевод величин.
@@ -33,6 +33,7 @@ def kmph2mps(speed: float) -> float:
     """Перевести км/ч в м/с."""
     return speed * 5 / 18
 
+
 # --------------------------------------------
 # Диаграмма направленности
 # --------------------------------------------
@@ -45,13 +46,17 @@ def rp_dipole(azimuth: float, tol: float = 1e-9) -> float:
 # --------------------------------------------
 # Коэффициент отражения
 # --------------------------------------------
-def __c_parallel(cosine: float, permittivity: float, conductivity: float, wavelen: float) -> complex:
+def __c_parallel(
+        cosine: float, permittivity: float, conductivity: float, wavelen: float
+) -> complex:
     """Расчет параллельной составляющей коэффициента отражения."""
     eta = permittivity - 60j * wavelen * conductivity
     return (eta - cosine ** 2) ** 0.5
 
 
-def __c_perpendicular(cosine: float, permittivity: float, conductivity: float, wavelen: float) -> complex:
+def __c_perpendicular(
+        cosine: float, permittivity: float, conductivity: float, wavelen: float
+) -> complex:
     """Расчет перпендикулярной составляющей коэффициента отражения."""
     eta = permittivity - 60j * wavelen * conductivity
     return (eta - cosine ** 2) ** 0.5 / eta
@@ -67,7 +72,7 @@ def reflection(
         permittivity: float,
         conductivity: float,
         wavelen: float,
-    ) -> complex:
+) -> complex:
     """
     Расчет коэффициента отражения.
 
@@ -90,7 +95,9 @@ def reflection(
         r_parallel = 0.j
 
     if polarization != 1:
-        c_perpendicular = __c_perpendicular(cosine, permittivity, conductivity, wavelen)
+        c_perpendicular = __c_perpendicular(
+            cosine, permittivity, conductivity, wavelen
+        )
         r_perpendicular = (sine - c_perpendicular) / (sine + c_perpendicular)
     else:
         r_perpendicular = 0.j
@@ -121,17 +128,18 @@ def pathloss_model(
     """
     Вычисляет затухание сигнала в одно- и двухлучевом случаях.
 
-    Так как отражённый луч состоит из двух частей: передатчик-стена + стена-приёмник, то для его
-    анализа нужно рассматривать обе части. Но вместо этого можно представить этот составной луч
-    как один, но такой же длины - как если бы он прошёл сквозь стену и попал на 'зазеркальную'
+    Так как отражённый луч состоит из двух частей: передатчик-стена +
+    стена-приёмник, то для его анализа нужно рассматривать обе части.
+    Но вместо этого можно представить этот составной луч как один, но такой же
+    длины - как если бы он прошёл сквозь стену и попал на 'зазеркальную'
     метку. Координаты такой метки (если метка выступает в качестве приёмника):
-    [-rx_pos[0], rx_pos[1], rx_pos[2]]. Минус перед координатой абсцисс (X) как раз и
-    означает, что метка в 'зазеркалье', так как 'зеркало'-стена находится в плоскости YOZ.
-    Также данные лучи для краткости обозначаются как:
+    [-rx_pos[0], rx_pos[1], rx_pos[2]]. Минус перед координатой абсцисс (X)
+    как раз и означает, что метка в 'зазеркалье', так как 'зеркало'-стена
+    находится в плоскости YOZ. Также данные лучи для краткости обозначаются:
     LoS - Line-of-Sight, прямой луч;
     NLoS - Non-Line-of-Sight, отражённый луч
-    3D модель с геометрическим смыслом переменных и логики данной функции можно найти в
-    папке experiments.
+    3D модель с геометрическим смыслом переменных и логики данной функции
+    можно найти в папке experiments.
 
     Args:
         time: время, прошедшее с начала приема
@@ -145,7 +153,7 @@ def pathloss_model(
         rx_rp: диаграмма направленности приёмника
         tx_polarization: поляризация антенны передатчика
         rx_velocity: скорость приёмника
-        ground_reflection: функция для вычисления комплексного коэффициента отражения
+        ground_reflection: функция для вычисления коэффициента отражения
         conductivity: проводимость поверхности отражения
         permittivity: диэлектрическая проницаемость поверхности отражения
         log: если True вернуть значение в дБ, если False вернуть в Вт
@@ -172,14 +180,16 @@ def pathloss_model(
     pathloss = (0.5 / k) ** 2 * np.abs(g0 / d * np.exp(phase_shift_0)) ** 2
 
     if ground_reflection is not None:
-        wall_normal = np.array([1, 0, 0])  # Нормаль к стене, от которой происходит отражение
+        wall_normal = np.array([1, 0, 0])  # Нормаль к стене
         rx_pos_refl = rx_pos.copy()
         rx_pos_refl[0] *= -1
 
         d1_vector = rx_pos_refl - tx_pos
         d1 = np.linalg.norm(d1_vector)
         d1_vector_tx_n = d1_vector / d1
-        d1_vector_rx_n = np.array([-d1_vector_tx_n[0], d1_vector_tx_n[1], d1_vector_tx_n[2]])
+        d1_vector_rx_n = np.array(
+            [-d1_vector_tx_n[0], d1_vector_tx_n[1], d1_vector_tx_n[2]]
+        )
 
         tx_azimuth_1 = np.dot(d1_vector_tx_n, tx_antenna_dir)
         rx_azimuth_1 = -1 * np.dot(d1_vector_rx_n, rx_antenna_dir)
@@ -194,8 +204,10 @@ def pathloss_model(
         )
         phase_shift_1 = -1j * k * (d1 - time * velocity_pr_1)
 
-        pathloss = (0.5 / k) ** 2 * np.abs(r0 * g0 / d * np.exp(phase_shift_0) +
-                                      r1 * g1 / d1 * np.exp(phase_shift_1)) ** 2
+        pathloss = (0.5 / k) ** 2 * np.abs(
+            r0 * g0 / d * np.exp(phase_shift_0) +
+            r1 * g1 / d1 * np.exp(phase_shift_1)
+        ) ** 2
 
     return to_log(pathloss) if log else pathloss
 
@@ -217,7 +229,8 @@ def snr(power: float, noise: float) -> float:
     return from_log(power - noise)
 
 
-def snr_full(snr: float, miller: float = 1, symbol: float = 1.25e-6, preamble: float = 9.3e-6,
+def snr_full(snr: float, miller: float = 1,
+             symbol: float = 1.25e-6, preamble: float = 9.3e-6,
              bandwidth: float = 1.2e6, tol: float = 1e-8) -> float:
     """
     Вычислить полное отношение сигнала к шуму.
