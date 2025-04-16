@@ -178,7 +178,7 @@ def pathloss_model(
     phase_shift_0 = -1j * k * (d - time * velocity_pr)
 
     pathloss = (0.5 / k) ** 2 * np.abs(g0 / d * np.exp(phase_shift_0)) ** 2
-
+    flag = 0
     if ground_reflection is not None:
         wall_normal = np.array([1, 0, 0])  # Нормаль к стене
         rx_pos_refl = rx_pos.copy()
@@ -208,7 +208,9 @@ def pathloss_model(
             r0 * g0 / d * np.exp(phase_shift_0) +
             r1 * g1 / d1 * np.exp(phase_shift_1)
         ) ** 2
-
+        flag = 1
+    if flag == 0:
+        print('Однолучевой случай!')
     return to_log(pathloss) if log else pathloss
 
 
@@ -218,29 +220,32 @@ def pathloss_model(
 def snr(power: float, noise: float) -> float:
     """
     Вычислить отношение сигнала к шуму.
+    В формулах обозначено как гамма - γ.
 
     Args:
-        power: мощность сигнала
-        noise: мощность шума
+        power: мощность сигнала в дБ
+        noise: мощность шума в дБ
 
     Returns:
         Отношение сигнала к шуму
     """
-    return from_log(power - noise)
+    return from_log(power - noise) # TODO: переменовать фунцию в db2lin
 
 
-def snr_full(snr: float, miller: float = 1,
-             symbol: float = 1.25e-6, preamble: float = 9.3e-6,
-             bandwidth: float = 1.2e6, tol: float = 1e-8) -> float:
+def snr_full(
+    snr: float, miller: int = 1,
+    symbol: float = 1.25e-6, preamble: float = 9.3e-6,
+    bandwidth: float = 1.2e6, tol: float = 1e-8
+) -> float:
     """
     Вычислить полное отношение сигнала к шуму.
-
+    В формулах обозначено как гамма штрих - γ с волной
     Args:
-        snr: отношение сигнала к шуму
-        miller: тип кодирования ответов метки
-        symbol: длительность символа (data-0 и data-1)
-        preamble: длительность преамбулы
-        bandwidth: полоса пропускания
+        snr: отношение принятого сигнала к шуму
+        miller: тип кодирования ответов метки (1, 2, 4, 8)
+        symbol: длительность символа в секундах
+        preamble: длительность преамбулы в секундах
+        bandwidth: ширина полосы сигнала в Герцах
         tol: допустимая ошибка
 
     Returns:
