@@ -178,7 +178,6 @@ def pathloss_model(
     phase_shift_0 = -1j * k * (d - time * velocity_pr)
 
     pathloss = (0.5 / k) ** 2 * np.abs(g0 / d * np.exp(phase_shift_0)) ** 2
-    flag = 0
     if ground_reflection is not None:
         wall_normal = np.array([1, 0, 0])  # Нормаль к стене
         rx_pos_refl = rx_pos.copy()
@@ -208,9 +207,6 @@ def pathloss_model(
             r0 * g0 / d * np.exp(phase_shift_0) +
             r1 * g1 / d1 * np.exp(phase_shift_1)
         ) ** 2
-        flag = 1
-    if flag == 0:
-        print('Однолучевой случай!')
     return to_log(pathloss) if log else pathloss
 
 
