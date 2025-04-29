@@ -6,9 +6,20 @@ import platform
 from typing import Sequence
 
 
-CMAP_NAME = 'inferno'  # Цветовая схема для графиков
-IMAGE_BASE_DIR = 'images'  # Здесь будут храниться все построенные изображения
-IMAGE_EXTENSIONS = ('pdf', 'png')  # В каких форматах сохранять изображения
+class GraphConsts:
+    """
+    Класс для хранения констант оформления графиков.
+    """
+    CMAP_NAME = 'inferno'             # Цветовая схема для графиков
+    IMAGE_BASE_DIR = 'result_images'         # Папка для сохранения изображений
+    IMAGE_EXTENSIONS = ('pdf', 'png') # Расширения файлов для сохранения
+    FONT_SIZE = 16
+    FIGSIZE = (8, 5)
+    LEGEND_FONTSIZE = 14 # Легенда чуть меньше
+    LINEWIDTH = 2
+    MARKERSIZE = 8
+    MARKEVERY = 20
+
 
 
 def setup_matplotlib() -> None:
@@ -16,17 +27,20 @@ def setup_matplotlib() -> None:
     Настроить параметры matplotlib и локали.
     """
     matplotlib.rcParams.update({
-        'image.cmap': CMAP_NAME,
+        'image.cmap': GraphConsts.CMAP_NAME,
         'axes.formatter.use_locale': True,
-        'font.size': 16,
+        'font.size': GraphConsts.FONT_SIZE,
         'font.family': 'sans-serif',
+        'lines.linewidth': GraphConsts.LINEWIDTH,
+        'lines.markersize': GraphConsts.MARKERSIZE,
+        'legend.fontsize': GraphConsts.LEGEND_FONTSIZE,
+        'figure.figsize': GraphConsts.FIGSIZE,
 
         # Шрифт PT Serif Caption можно установить с Google Fonts.
         # После установки шрифта нужно удалить кэш matplitlib,
         # на Ubuntu: ~/.cache/matplotlib
         'font.sans-serif': ['PT Serif Caption',],
     })
-
     locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
 
 
@@ -40,28 +54,30 @@ def get_color(x: float):
     Returns:
         color
     """
-    return matplotlib.cm.get_cmap(CMAP_NAME)(x)
+    return matplotlib.cm.get_cmap(GraphConsts.CMAP_NAME)(x)
 
 
-def savefig(name: str, exts: Sequence[str] = IMAGE_EXTENSIONS,
-            directory: str = IMAGE_BASE_DIR) -> None:
+def savefig(name: str, exts: Sequence[str] = GraphConsts.IMAGE_EXTENSIONS,
+            directory: str = 'res_img') -> None:
     """
     Сохранить изображение в файлы с общим именем и разными расширениями.
-    Изображения будут сохранены в папку directory.
+    Изображения будут сохранены в папку GraphConsts.IMAGE_BASE_DIR/directory.
 
     Если name - пустая строка, ничего сохраняться не будет.
 
     Args:
         name (str): название файла без расширения
         exts (list of str): набор расширений, по-умолчанию png и pdf
-        directory (str): куда сохранить, по-умолчанию IMAGE_BASE_DIR
+        directory (str): подкаталог внутри IMAGE_BASE_DIR
     """
     if name is None:
         return
     name = name.strip()
     if name:
+        save_dir = os.path.join(GraphConsts.IMAGE_BASE_DIR, directory)
+        os.makedirs(save_dir, exist_ok=True)
         for ext in exts:
-            file_path = os.path.join(directory, f"{name}.{ext}")
+            file_path = os.path.join(save_dir, f"{name}.{ext}")
             plt.savefig(file_path, bbox_inches="tight")
 
 

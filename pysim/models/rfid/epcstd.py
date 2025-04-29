@@ -1318,3 +1318,28 @@ def prettify_elementary_timings(timings):
             s += str(timings[k])
         ret.append(s)
     return "\n".join(ret)
+
+
+# Мои функции ------------------------------------------------------------------
+def get_trcal(tari: float, rtcal_mul: float = 2.75, trcal_mul: float = 1.95) -> float:
+    """
+    Вычислить TRcal по заданному Tari и коэффициентам.
+    """
+    rtcal = tari * rtcal_mul
+    return rtcal * trcal_mul
+
+def get_blf(trcal: float, dr: float) -> float:
+    """
+    Вычислить BLF (скорость передачи в обратном направлении).
+    """
+    return dr / trcal
+
+def get_preamble(m: int, trcal: float, trext: bool = False, dr: float = 8) -> float:
+    """
+    Вычислить длительность преамбулы для ответа метки.
+    """
+    if m == 1:
+        n_bits = 18 if trext else 6
+    else:
+        n_bits = 22 if trext else 10
+    return n_bits / get_blf(trcal, dr)

@@ -34,6 +34,11 @@ def kmph2mps(speed: float) -> float:
     return speed * 5 / 18
 
 
+def normalize(vector: np.ndarray) -> np.ndarray:
+    """Отнормировать координаты вектора"""
+    norm_v = np.linalg.norm(vector)
+    return vector / norm_v if norm_v > 0 else vector
+
 # --------------------------------------------
 # Диаграмма направленности
 # --------------------------------------------
