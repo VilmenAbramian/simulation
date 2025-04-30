@@ -144,6 +144,8 @@ def prepare_multiple_simulation(variadic, **kwargs):
         'power': kwargs['power'],
         'num_tags': kwargs['num_tags'],
         'verbose': False,
+        'useadjust': kwargs.get('useadjust', False),
+        'delta': kwargs.get('delta', 0.5),
     } for _ in enumerate(variadic_values)]
 
     # Теперь заменим значения варьируемого аргумента, чтобы в каждом
