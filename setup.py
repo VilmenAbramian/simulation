@@ -1,6 +1,5 @@
 from setuptools import find_packages, setup
 
-
 setup(
     name='pyrfidsim',
     version='1.0.0',
@@ -9,7 +8,7 @@ setup(
     platforms=['any'],
     license='MIT',
     url='https://github.com/VilmenAbramian/simulation',
-    packages=['pysim'],
+    packages=find_packages(include=['pysim', 'pysim.*']),
     install_requires=[
         'click==8.1.7',
         'colorama==0.4.6',
@@ -19,11 +18,13 @@ setup(
         'scipy==1.15.2',
         'tabulate==0.9.0',
     ],
-    test_requires=[
+    tests_require=[
         'pytest',
     ],
-    entry_points='''
-        [console_scripts]
-        sim=pysim.main:cli
-    ''',
+    entry_points={
+        'console_scripts': [
+            'sim = pysim.main:cli',
+        ],
+    },
+    python_requires='>=3.12',
 )
