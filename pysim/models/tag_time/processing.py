@@ -1,4 +1,5 @@
 import json
+import os
 import matplotlib.pyplot as plt
 import time
 
@@ -31,6 +32,7 @@ def save_results(kwargs, res):
 def plot_results(kwargs, res, save_fig=True):
     current_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     filename = 'results/plots/' + current_time + '.png'
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     fig, ax = plt.subplots(figsize=(14, 8), layout='constrained')
     ax.plot(
         list(range(len(kwargs['probability']))), res,

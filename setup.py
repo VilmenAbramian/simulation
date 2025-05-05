@@ -11,9 +11,13 @@ setup(
     url='https://github.com/VilmenAbramian/simulation',
     packages=['pysim'],
     install_requires=[
-        'click',
-        'colorama',
-        'pydantic',
+        'click==8.1.7',
+        'colorama==0.4.6',
+        'pydantic==2.11.4',
+        'numpy==2.2.5',
+        'matplotlib==3.10.1',
+        'scipy==1.15.2',
+        'tabulate==0.9.0',
     ],
     test_requires=[
         'pytest',

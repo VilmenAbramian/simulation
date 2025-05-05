@@ -84,7 +84,7 @@ def cli_run(**kwargs):
     Задать параметры работы.
     '''
     mode = check_vars(**kwargs)
-    print(f'Running {MODEL_NAME} model. Scenario number {kwargs['scenario']}')
+    print(f'Running {MODEL_NAME} model. Scenario number {kwargs["scenario"]}')
     print('Входные параметры: ', kwargs)
     if mode == 'single':
         kwargs['probability'] = kwargs['probability'][0]

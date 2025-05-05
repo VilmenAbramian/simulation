@@ -1,4 +1,5 @@
 import json
+import os
 import matplotlib.pyplot as plt
 from tabulate import tabulate
 import time
@@ -39,7 +40,8 @@ def separate_res(results):
 
 
 def results_to_dict(ret):
-    results_dict = {'read_tid_prob': [], 'inventory_prob': [], 'rounds_per_tag':[]}
+    results_dict = {'read_tid_prob': [], 'inventory_prob': [],
+                    'rounds_per_tag':[]}
     for i in range(len(ret)):
         results_dict['read_tid_prob'].append(ret[i]['read_tid_prob'])
         results_dict['inventory_prob'].append(ret[i]['inventory_prob'])
@@ -91,7 +93,9 @@ def plot_results(initial_data, results, variadic, save_fig = True):
     results_dict = results_to_dict(ret)
     current_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     filename = 'results/plots/' + current_time + '-' + variadic + '.png'
-    units = {'speed': 'km/h', 'reader_offset': 'm', 'altitude': 'm', 'power': 'dBm', 'tid_word_size': 'words'}
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    units = {'speed': 'km/h', 'reader_offset': 'm', 'altitude': 'm',
+             'power': 'dBm', 'tid_word_size': 'words'}
     
     fig, ax = plt.subplots(figsize=(14, 8), layout='constrained')
     ax.plot(

@@ -32,10 +32,10 @@ def print_the_results_to_the_terminal(initial_data, res, many_results):
         print('Результаты одиночного моделирования:\n'
               f'Параметры: {initial_data}\n'
               '- Средний интервал отправки Ping клиентом'
-              f'(условные единицы) = {res['avg_interval']}\n',
+              f'(условные единицы) = {res["avg_interval"]}\n',
               '- Средняя длительность передачи сообщения'
-              f'(условные единицы) = {res['avg_delay']}\n',
-              f'- Вероятность потери сообщения = {res['miss_rate']}', sep=''
+              f'(условные единицы) = {res["avg_delay"]}\n',
+              f'- Вероятность потери сообщения = {res["miss_rate"]}', sep=''
               )
 
 
