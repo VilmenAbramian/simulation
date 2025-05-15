@@ -15,7 +15,7 @@ DEFAULT_TID_WORD_SIZE = 64     # number of words to read from TID (=1024 bits)
 DEFAULT_READER_OFFSET = 3.0    # meters from the wall
 DEFAULT_TAG_OFFSET = 2.0       # meters from the wall
 DEFAULT_ALTITUDE = 5.0
-DEFAULT_NUM_TAGS = 40          # Количество генерируемых меток
+DEFAULT_NUM_TAGS = 50          # Количество генерируемых меток
 DEFAULT_POWER = 29
 USE_QUERY_ADJUST = False       # Использовать ли QueryAdjust
 DEFAULT_ADJUST_DELTA = 0.5     # Значение для корректировки Q в QueryAdjust
@@ -159,15 +159,16 @@ def prepare_multiple_simulation(variadic, **kwargs):
     return pool.map(prepare_simulation, args_list)
 
 
-def prepare_simulation(kwargs):
-    print(f'[+] Estimating speed = {kwargs["speed"]} kmph, '
-          f'Tari = {kwargs["tari"]} us, '
-          f'M = {kwargs["encoding"]}, '
-          f'tid_size = {kwargs["tid_word_size"]} words, '
-          f'reader_offset = {kwargs["reader_offset"]} m, '
-          f'tag_offset = {kwargs["tag_offset"]} m, '
-          f'altitude = {kwargs["altitude"]} m, power = {kwargs["power"]} dBm, '
-          f'num_tags = {kwargs["num_tags"]}')
+def prepare_simulation(kwargs, show_params=False):
+    if show_params:
+        print(f'[+] Estimating speed = {kwargs["speed"]} kmph, '
+              f'Tari = {kwargs["tari"]} us, '
+              f'M = {kwargs["encoding"]}, '
+              f'tid_size = {kwargs["tid_word_size"]} words, '
+              f'reader_offset = {kwargs["reader_offset"]} m, '
+              f'tag_offset = {kwargs["tag_offset"]} m, '
+              f'altitude = {kwargs["altitude"]} m, power = {kwargs["power"]} dBm, '
+              f'num_tags = {kwargs["num_tags"]}')
     t_start_ns = time_ns()
     try:
         encoding = parse_tag_encoding(kwargs['encoding'])
@@ -194,9 +195,9 @@ def prepare_simulation(kwargs):
         'inventory_prob': model.statistics.inventory_probability(),
         'read_tid_prob': model.statistics.read_tid_probability()
     }
-    print(
-        'Статистика: ', model.statistics.average_changing_q()
-    )
+    # print(
+    #     'Статистика: ', model.statistics.average_changing_q()
+    # )
     return (result, ((t_end_ns - t_start_ns) / 1_000_000_000))
 
 

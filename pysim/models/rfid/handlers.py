@@ -290,7 +290,7 @@ def finish_transaction(kernel, transaction):
 
     if len(transaction.replies) > 1:
         # Коллизия
-        kernel.logger.error('Коллизия!')
+        # kernel.logger.error('Коллизия!')
         cmd_frame = _multiple_tag_response(kernel, ctx, reader, transaction)
 
     tag, frame, snr, ber = transaction.received_tag_frame(

@@ -14,7 +14,7 @@ KMPH_TO_MPS_MUL = 1.0 / 3.6
 
 @dataclass
 class Settings:
-    '''
+    """
     Настройки модели.
 
     При вызове create_model() можно передать готовый объект
@@ -25,7 +25,7 @@ class Settings:
     Также при вызове create_model() можно переопределить некоторые параметры.
     В этом случае у аргументов create_model() приоритет над значениями,
     которые хранятся в объекте класса Settings.
-    '''
+    """
     # --- Настройки кодировки команд считывателя (PIE) ---
     delim: float = 12.5e-6  # длительность символа-разделителя (константа), сек
     # длительность Tari, сек. (6.25, 12.5, 18.75, 25 мкс)
@@ -193,7 +193,7 @@ class Settings:
 
     # Количество генерируемых меток (если есть значение
     # по умолчанию в click, то не используется)
-    num_tags: int = 1000
+    num_tags: int = 6_000
 
     # --- Настройки статистики ---
     # Сохранять ли данные о мощностях сигналов
@@ -228,7 +228,6 @@ def create_model(settings=None, verbose=False, **kwargs) -> Model:
         settings = Settings()
 
     # 0) Building the model
-
     model = Model()
     model.max_tags_num = kwargs.get('num_tags', settings.num_tags)
     model.update_interval = settings.update_interval
@@ -280,7 +279,7 @@ def create_model(settings=None, verbose=False, **kwargs) -> Model:
     )
     reader.adjust_delta = kwargs.get('delta', settings.adjust_delta)
     reader.q_fp = settings.q_fp
-    print(reader.use_query_adjust)
+    # print(f'Использование QueryAdjust: {reader.use_query_adjust}')
 
     # 2) Attaching antennas to reader
     ant = Antenna()
