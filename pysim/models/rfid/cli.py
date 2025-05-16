@@ -3,25 +3,12 @@ import multiprocessing
 from time import time_ns
 
 import pysim.models.rfid.configurator as configurator
+from pysim.models.rfid.constants import default_params
 import pysim.models.rfid.epcstd as std
 from pysim.models.rfid.processing import result_processing
 import pysim.sim.simulator as sim
 
 
-DEFAULT_SPEED = 25             # kmph
-DEFAULT_ENCODING = '2'         # FM0, M2, M4, M8
-DEFAULT_TARI = '12.5'          # 6.25, 12.5, 18.75, 25
-DEFAULT_TID_WORD_SIZE = 64     # number of words to read from TID (=1024 bits)
-DEFAULT_READER_OFFSET = 3.0    # meters from the wall
-DEFAULT_TAG_OFFSET = 2.0       # meters from the wall
-DEFAULT_ALTITUDE = 5.0
-DEFAULT_NUM_TAGS = 50          # Количество генерируемых меток
-DEFAULT_POWER = 29
-USE_QUERY_ADJUST = False       # Использовать ли QueryAdjust
-DEFAULT_ADJUST_DELTA = 0.5     # Значение для корректировки Q в QueryAdjust
-
-
-# ----------------------------------------------------------------------------
 @click.group()
 def cli():
     pass
@@ -29,48 +16,51 @@ def cli():
 
 @cli.command('start')
 @click.option(
-    '-s', '--speed', default=(DEFAULT_SPEED,), multiple=True,
+        '-s', '--speed', multiple=True,
+    default=(default_params.speed_kmph,),
     help='Vehicle speed, kmph. You can provide multiple values, e.g. '
          '`-s 10 -s 20 -s 80` for parallel computation.',
     show_default=True,
 )
 @click.option(
-    '-m', '--encoding', type=click.Choice(['1', '2', '4', '8']),
-    default=DEFAULT_ENCODING, help='Tag encoding', show_default=True
+    '-m', '--encoding', type=click.Choice(['FM0', 'M2', 'M4', 'M8']),
+    default=default_params.encoding, help='Tag encoding', show_default=True
 )
 @click.option(
-    '-t', '--tari', default=DEFAULT_TARI, show_default=True,
+    '-t', '--tari', default=str(default_params.tari), show_default=True,
     type=click.Choice(['6.25', '12.5', '18.75', '25']), help='Tari value'
 )
 @click.option(
-    '-ws', '--tid-word-size', default=(DEFAULT_TID_WORD_SIZE,), multiple=True,
+    '-ws', '--tid-word-size', multiple=True,
+    default=(default_params.tid_word_size,),
     help='Size of TID bank in words (x16 bits). This is both TID bank '
          'size and the number of words the reader requests from the tag. '
          'You can provide multiple values for this parameter for parallel '
          'computation.', show_default=True,
 )
 @click.option(
-    '-a', '--altitude', multiple=True, default=(DEFAULT_ALTITUDE,),
+    '-a', '--altitude', multiple=True, default=(default_params.altitude,),
     help='Drone with RFID-reader altitude. You can pass multiple values of '
          'this parameter for parallel computation.', show_default=True
 )
 @click.option(
-    '-ro', '--reader-offset', default=(DEFAULT_READER_OFFSET,), multiple=True,
+    '-ro', '--reader-offset', multiple=True,
+    default=(default_params.reader_offset,),
     help='Reader offset from the wall. You can pass multiple values of this '
          'parameter for parallel computation.', show_default=True,
 )
 @click.option(
-    '-to', '--tag-offset', default=(DEFAULT_TAG_OFFSET,), multiple=True,
+    '-to', '--tag-offset', multiple=True, default=(default_params.tag_offset,),
     help='Tag offset from the wall. You can pass multiple values of this '
          'parameter for parallel computation.', show_default=True
 )
 @click.option(
-    '-p', '--power', default=(DEFAULT_POWER,), multiple=True,
+    '-p', '--power', multiple=True, default=(default_params.power_dbm,),
     help='Reader transmitter power. You can pass multiple values of this '
          'parameter for parallel computation.', show_default=True
 )
 @click.option(
-    '-n', '--num-tags', default=DEFAULT_NUM_TAGS, show_default=True,
+    '-n', '--num-tags', default=default_params.num_tags, show_default=True,
     help='Number of tags to simulate.'
 )
 @click.option(
@@ -78,11 +68,11 @@ def cli():
     help='Print additional data, e.g. detailed model configuration.'
 )
 @click.option(
-    '-ua', '--useadjust', is_flag=True, default=USE_QUERY_ADJUST,
+    '-ua', '--useadjust', is_flag=True, default=default_params.useadjust,
     show_default=True, help='Use QueryAdjust command for correct Q'
 )
 @click.option(
-    '-d', '--delta', default=DEFAULT_ADJUST_DELTA, show_default=True,
+    '-d', '--delta', default=default_params.delta, show_default=True,
     help='Coefficient for QueryAdjust algorithm'
 )
 def cli_run(**kwargs):
