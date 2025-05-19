@@ -7,7 +7,7 @@ import pysim.models.rfid.handlers as handlers
 import pysim.sim.simulator as sim
 
 
-def create_model(**click_params) -> Model:
+def create_model(print_params = False, **click_params) -> Model:
     """
     Собирает и возвращает имитационную модель RFID на основе
     заданных параметров.
@@ -23,17 +23,18 @@ def create_model(**click_params) -> Model:
     2. Значения по умолчанию из `RFIDDefaults` и `RFIDInternalParams`.
 
     Аргументы:
-        **click_params: Переопределяемые параметры модели, такие как:
-            - num_tags (int): число меток в симуляции;
-            - tari (float): длительность импульса Tari;
-            - encoding (str): тип кодирования ответа метки;
-            - power (float): максимальная мощность передатчика, дБм;
-            - tid_word_size (int): размер банка памяти для чтения;
-            - useadjust (bool): включить или выключить QueryAdjust;
-            - delta (float): шаг корректировки параметра Q;
-            - speed (float): скорость считывателя, км/ч;
-            - reader_offset, tag_offset, altitude: пространственные параметры
-              (в метрах);
+      print_params: Печатать или нет входные параметры модели
+      **click_params: Переопределяемые параметры модели, такие как:
+        - num_tags (int): число меток в симуляции;
+        - tari (float): длительность импульса Tari;
+        - encoding (str): тип кодирования ответа метки;
+        - power (float): максимальная мощность передатчика, дБм;
+        - tid_word_size (int): размер банка памяти для чтения;
+        - useadjust (bool): включить или выключить QueryAdjust;
+        - delta (float): шаг корректировки параметра Q;
+        - speed (float): скорость считывателя, км/ч;
+        - reader_offset, tag_offset, altitude: пространственные параметры
+          (в метрах);
 
     Возвращает:
         Model: полностью настроенная модель RFID.
@@ -129,16 +130,34 @@ def create_model(**click_params) -> Model:
         inner_params.tag_params.generation_interval[0], # Функция
         *inner_params.tag_params.generation_interval[1:] # Её параметры
     )
+
+    if print_params:
+        print_model_settings()
     return model
 
 
 def run_model(
-    model,
-    logger_config,
+    model: Model,
+    logger_config: sim.ModelLoggerConfig,
     max_real_time: float | None = None,
     max_sim_time: float | None = None,
     max_num_events: int | None = None,
 ):
+    """
+    Запускает симуляцию модели RFID и возвращает результат моделирования.
+
+    Аргументы:
+        model: объект модели RFID, сконфигурированный для запуска;
+        logger_config: настройки логирования для симуляции;
+        max_real_time: максимальное время моделирования по реальному
+          времени (в секундах);
+        max_sim_time: максимальное симулируемое время (в секундах);
+        max_num_events: максимальное количество событий, после которых
+          симуляция будет завершена.
+
+    Возвращает:
+        result: объект с результатами моделирования.
+    """
     sim_time, _, result = sim.run_simulation(
         sim.build_simulation(
             inner_params.model_name,
@@ -152,7 +171,16 @@ def run_model(
     return result
 
 
-def print_model_settings(model: Model, kernel: sim.Kernel):
+def print_model_settings(model: Model) -> None:
+    """
+    Печатает таблицу всех параметров, используемых в текущей симуляции RFID.
+
+    Отображаются параметры модели, считывателя, среды распространения (medium)
+    и генератора меток.
+
+    Аргументы:
+        model: объект модели RFID, содержащий все компоненты и параметры.
+    """
     reader = model.reader
     medium = model.medium
     generator = model.generators[0]
@@ -215,9 +243,5 @@ def print_model_settings(model: Model, kernel: sim.Kernel):
         ('tag', 'modulation_loss', generator.modulation_loss),
         ('tag', 'sensitivity', generator.sensitivity),
         ('generator', 'num_tags', generator.max_tags_generated),
-        # --- Kernel ---
-        ('kernel', 'max_simulation_time', kernel.max_simulation_time),
-        ('kernel', 'max_real_time', kernel.max_real_time),
-        ('kernel', 'logger_level', kernel.logger.level),
     ]
     print(tabulate(rows))

@@ -60,6 +60,36 @@ class RFIDDefaults(BaseModel):
         )
     )
 
+    @staticmethod
+    def parse_tag_encoding(s: str) -> std.TagEncoding:
+        """
+        Преобразует строковое представление модуляции метки в
+        соответствующее TagEncoding.
+
+        Поддерживаются как числовые значения ('1', '2', '4', '8'),
+        так и строковые ('FM0', 'M2', 'M4', 'M8').
+
+        Args:
+            s: Строка, обозначающая тип модуляции.
+
+        Returns:
+            std.TagEncoding: Перечисление, соответствующее типу модуляции.
+
+        Raises:
+            ValueError: Если переданное значение не распознано.
+        """
+        s = s.upper()
+        if s in {'1', "FM0"}:
+            return std.TagEncoding.FM0
+        elif s in {'2', 'M2'}:
+            return std.TagEncoding.M2
+        elif s in {'4', 'M4'}:
+            return std.TagEncoding.M4
+        elif s in {'8', 'M8'}:
+            return std.TagEncoding.M8
+        else:
+            raise ValueError('illegal encoding = {}'.format(s))
+
 
 class ReaderParams(BaseModel):
     """Настройки параметров RFID считывателя."""
@@ -241,6 +271,7 @@ class InventoryScenarioParams(BaseModel):
 class TagParams(BaseModel):
     """
     Настройки параметров RFID метки.
+
     Параметры s<n>_persistence определяют, через сколько времени без питания
     метка сбросит в A хранящийся флаг сессии. Для сессии S0 такого параметра
     нет, так как по стандарту EPC Class 1 Gen.2 метка должна сбросить в A
@@ -295,8 +326,10 @@ class TagParams(BaseModel):
 
 class RFIDInternalParams(BaseModel):
     """
-    Внутренние параметры по умолчанию для модели RFID. Эти параметры задаются
-    разработчиком модели и обычно не изменяются пользователем напрямую.
+    Внутренние параметры по умолчанию для модели RFID.
+
+    Эти параметры задаются разработчиком модели и обычно
+    не изменяются пользователем напрямую.
     """
     model_name: str = 'RFID'
     reader_params: ReaderParams = Field(default_factory=ReaderParams)

@@ -3,8 +3,9 @@ import multiprocessing
 from time import time_ns
 
 import pysim.models.rfid.configurator as configurator
-from pysim.models.rfid.constants import KMPH_TO_MPS_MUL, default_params, inner_params
-import pysim.models.rfid.epcstd as std
+from pysim.models.rfid.constants import (
+    KMPH_TO_MPS_MUL, default_params, inner_params
+)
 from pysim.models.rfid.processing import result_processing
 import pysim.sim.simulator as sim
 
@@ -161,7 +162,7 @@ def prepare_simulation(kwargs, show_params=False):
               f'num_tags = {kwargs["num_tags"]}')
     t_start_ns = time_ns()
     try:
-        encoding = parse_tag_encoding(kwargs['encoding'])
+        encoding = default_params.parse_tag_encoding(kwargs['encoding'])
     except ValueError:
         pass
     model = configurator.create_model(
@@ -189,20 +190,6 @@ def prepare_simulation(kwargs, show_params=False):
     #     'Статистика: ', model.statistics.average_changing_q()
     # )
     return (result, ((t_end_ns - t_start_ns) / 1_000_000_000))
-
-
-def parse_tag_encoding(s):
-    s = s.upper()
-    if s in {'1', "FM0"}:
-        return std.TagEncoding.FM0
-    elif s in {'2', 'M2'}:
-        return std.TagEncoding.M2
-    elif s in {'4', 'M4'}:
-        return std.TagEncoding.M4
-    elif s in {'8', 'M8'}:
-        return std.TagEncoding.M8
-    else:
-        raise ValueError('illegal encoding = {}'.format(s))
 
 
 if __name__ == '__main__':
