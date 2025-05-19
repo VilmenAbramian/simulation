@@ -1,11 +1,17 @@
 from pydantic import BaseModel, Field, confloat, conint
-from typing import Literal
+from typing import Any, Callable, Literal
 
+import pysim.models.rfid.epcstd as std
+from pysim.models.rfid.objects import Reader
+
+KMPH_TO_MPS_MUL = 1.0 / 3.6
 
 class RFIDDefaults(BaseModel):
     """
     Значения по умолчанию для параметров, которые могут
-    быть изменены пользователем.
+    быть изменены пользователем через консольный click интерфейс.
+
+    Для моделирования графиков в дипломе использовалось num_tags = 6000
     """
     tari: Literal[6.25, 12.5, 18.75, 25.0] = Field(
         12.5, description="Длительность импульса data-0 (в микросекундах)."
@@ -27,7 +33,7 @@ class RFIDDefaults(BaseModel):
     num_tags: conint(ge=10, le=10_000) = Field(
         50, description="Количество моделируемых меток в одной симуляции"
     )
-    speed_kmph: confloat(ge=0, le=150) = Field(
+    speed: confloat(ge=0, le=150) = Field(
         25.0, description="Скорость движения платформы"
                           "(например, БПЛА или автомобиля) в км/ч."
     )
@@ -55,19 +61,82 @@ class RFIDDefaults(BaseModel):
     )
 
 
-class RFIDInternalParams(BaseModel):
-    """
-    Внутренние параметры по умолчанию для модели RFID. Эти параметры задаются
-    разработчиком модели и обычно не изменяются пользователем напрямую.
-    """
-    reader_noise: confloat(ge=-110, le=-60) = Field(
-        -80.0, description="Шум в радиочастотной цепи считывателя, дБм."
+class ReaderParams(BaseModel):
+    """Настройки параметров RFID считывателя."""
+    delim: float = Field(
+        12.5e-6, description="Длительность символа-разделителя (Delim), сек."
     )
+    temp: Literal['NOMINAL', 'EXTENDED'] = Field(
+        "NOMINAL", description="Температурный диапазон.")
+    q: conint(ge=0, le=15) = Field(
+        5, description='Значение параметра Q в начале моделирования'
+    )
+    q_fp: confloat(ge=0.0, le=15.0) = Field(
+        q, description='Дробное значение Q для алгоритма'
+                       'коррекции Q в QueryAdjust'
+    )
+    rtcal_tari_mul: confloat(gt=2.5, le=3.0) = Field(
+        3.0, description="Множитель RTcal (RTcal = rtcal_tari_mul * Tari).")
+    trcal_rtcal_mul: confloat(gt=1.1, le=3) = Field(
+        2.5, description="Множитель TRcal (TRcal = trcal_rtcal_mul * RTcal).")
+
+    @property
+    def rtcal(self) -> float:
+        """
+        RTcal (Interrogator-to-Tag calibration symbol).
+        RTcal = 0_length + 1_length.
+        """
+        return self.get_rtcal(self.tari)
+
+    def get_rtcal(self, tari: float) -> float:
+        return tari * self.rtcal_tari_mul
+
+    @property
+    def trcal(self) -> float:
+        """
+        Определён в стандарте RFID для вычисления частоты сигнала меток
+        BLF Backscatter-link frequency (BLF = DR/TRcal)
+        """
+        return self.get_trcal(self.rtcal)
+
+    def get_trcal(self, rtcal: float) -> float:
+        return rtcal * self.trcal_rtcal_mul
+
+
+class GeometryParams(BaseModel):
+    """Геометрические параметры RFID системы в 3-х мерном пространстве."""
+    initial_distance_to_reader: confloat(ge=0.1, le=20.0) = Field(
+        10.0, description="Начальное расстояние до считывателя, м."
+    )
+    movement_direction: tuple[float, float, float] = Field(
+        (0, 1, 0), description='Единичный вектор направления движения.'
+    )
+    travel_distance: confloat(ge=1.0, le=100.0) = Field(
+        20.0, description="Путь метки от генерации до удаления, м."
+    )
+    reader_antenna_direction: tuple[int, int, int] = Field(
+        (0, 0, -1), description="Направление антенны считывателя"
+                                "в 3D-пространстве."
+    )
+    tag_antenna_direction: tuple[int, int, int] = Field(
+        (0, 0, 1), description="Направление антенны метки в 3D-пространстве."
+    )
+    update_interval: confloat(gt=0.05, le=0.05) = Field(
+        0.01, description="Интервал обновления координат"
+                          "(квант времени модели), сек."
+    )
+
+
+class EnergyParams(BaseModel):
+    """Энергетические параметры моделируемой системы."""
     reader_antenna_gain: confloat(ge=0, le=13) = Field(
         6.0, description="Усиление антенны считывателя, дБi."
     )
     reader_cable_loss: confloat(ge=-8, le=0) = Field(
         -2.0, description="Потери в кабеле считывателя, дБ."
+    )
+    reader_noise: confloat(ge=-110, le=-60) = Field(
+        -80.0, description="Шум в радиочастотной цепи считывателя, дБм."
     )
     tag_antenna_gain: confloat(ge=0, le=10) = Field(
         3.0, description="Усиление антенны метки, дБi."
@@ -79,6 +148,17 @@ class RFIDInternalParams(BaseModel):
     tag_sensitivity: confloat(ge=-30, le=0) = Field(
         -18.0, description="Чувствительность метки, дБм."
     )
+    polarization_loss: float = Field(
+        -3.0, description="Потери, связанные с разными поляризациями"
+                          "антенн считывателя и метки, дБ."
+    )
+    collect_power_statistics: bool = Field(
+        False, description="Сохранять ли данные о мощностях сигналов"
+    )
+
+
+class ChannelParams(BaseModel):
+    """Параметры RFID канала."""
     frequency_hz: confloat(ge=820e6, le=950e6) = Field(
         860e6, description="Несущая частота считывателя, Гц."
     )
@@ -86,13 +166,22 @@ class RFIDInternalParams(BaseModel):
         15.0, description="Диэлектрическая проницаемость стены."
     )
     conductivity: float = Field(0.03, description="Проводимость стены.")
-    polarization_loss: float = Field(
-        -3.0, description="Потери, связанные с разными поляризациями"
-                          "антенн считывателя и метки, дБ."
-    )
+
     ber_distribution: Literal['rayleigh', 'awgn'] = Field(
         "rayleigh", description="Тип распределения помех при расчёте BER."
     )
+    # FIXME: переделать под переменную 'наличие стены, где const - отсутствие'
+    ground_reflection_type: Literal['reflection', 'const'] = Field(
+        "reflection", description="Тип отражения от стены."
+    )
+    use_doppler: bool = Field(True, description="Учитывать ли эффект Доплера.")
+
+
+class ReaderPowerParams(BaseModel):
+    """
+    Параметры периодической работы считывателя.
+    """
+    reader_switch_power: bool = True
     reader_power_on_duration: confloat(ge=1.0, le=60.0) = Field(
         2.0, description="Продолжительность активного периода"
                          "работы считывателя, сек."
@@ -100,19 +189,73 @@ class RFIDInternalParams(BaseModel):
     reader_power_off_duration: confloat(ge=0.0, le=10.0) = Field(
         0.1, description="Пауза между включениями считывателя, сек."
     )
-    # reader_antenna_switching_interval: float = Field(
-    #     10.0, description="Интервал переключения антенн."
-    # )
-    # reader_always_start_with_first_antenna: bool = Field(False, description="Всегда ли начинать с антенны №1.")
-    ground_reflection_type: Literal['reflection', 'const'] = Field(
-        "reflection", description="Тип отражения от стены."
-    ) # FIXME: переделать под переменную 'наличие стены, где const - отсутствие'
-    use_doppler: bool = Field(True, description="Учитывать ли эффект Доплера.")
-    epc_bitlen: conint(ge=8, le=256) = Field(
-        96, description="Длина EPC-кода метки, бит."
+
+    def get_power_control_mode(
+        self, reader_switch_power: bool | None = None
+    ) -> Reader.PowerControlMode:
+        """
+        Возвращает режим управления питанием считывателя.
+
+        Если флаг reader_switch_power равен True, считыватель работает
+        в периодическом режиме (включается и выключается с заданным
+        интервалом). Если False — работает непрерывно. Значение по умолчанию
+        берётся из параметра self.reader_switch_power.
+        """
+        x = (reader_switch_power if reader_switch_power is not None
+             else self.reader_switch_power)
+        return (Reader.PowerControlMode.PERIODIC if x
+                else Reader.PowerControlMode.ALWAYS_ON)
+
+
+class InventoryScenarioParams(BaseModel):
+    """Настройки сценария (алгоритма) опроса меток считывателем."""
+    read_tid_bank: bool = Field(
+        True, description='Нужно ли дополнительно читать банк данных TID после'
+                          'идентификации метки (чтения EPCID метки)'
+    )
+    sel: std.SelFlag = std.SelFlag.ALL  # флаг Sel (не используется в модели)
+    session: std.Session = Field(
+        std.Session.S0, description="Номер сессии, в которой идет опрос"
+    )
+    target: std.InventoryFlag = Field(
+        std.InventoryFlag.A,
+        description=(
+            "Флаг сессии (поле Target команды Query), по которому идет опрос"
+            "меток. Ответ передают только метки с совпадающим флагом."
+            "После каждого ответа на ACK метка инвертирует свой флаг сессии"
+            "(A → B или B → A). Если в следующем раунде считыватель"
+            "запрашивает тот же Target, метка не участвует в опросе."
+        )
+    )
+    target_strategy: Literal["const", "switch"] = Field(
+        "switch",
+        description="Стратегия выбора флага сессии. 'const' — фиксированный"
+                    "Target, 'switch' — чередование каждые"
+                    "rounds_per_target раундов значения поля Target."
     )
     rounds_per_target: conint(ge=1, le=1000) = Field(
         1, description="Число раундов перед сменой флага Target."
+    )
+
+
+class TagParams(BaseModel):
+    """
+    Настройки параметров RFID метки.
+    Параметры s<n>_persistence определяют, через сколько времени без питания
+    метка сбросит в A хранящийся флаг сессии. Для сессии S0 такого параметра
+    нет, так как по стандарту EPC Class 1 Gen.2 метка должна сбросить в A
+    флаг сессии S0 сразу после потери питания.
+    """
+    dr: std.DivideRatio = Field(
+        std.DivideRatio.DR_8, description="Коэффициент DR (8 или 64/3)"
+    )
+    epc_prefix: str = Field("AAAA", description="Префикс EPC-кода метки.")
+    tid_prefix: str = Field("AAAA", description="Префикс TID-кода метки.")
+    trext: bool = Field(
+        True, description="Использовать ли в ответах расширенную преамбулу"
+    )
+    epc_bitlen: conint(ge=8, le=256) = Field(
+        96, description="Длина EPC-кода метки, бит."
     )
     s1_persistence: float = Field(
         2.0, description="Как долго метка помнит своё состояние после"
@@ -126,28 +269,47 @@ class RFIDInternalParams(BaseModel):
         2.0, description="Как долго метка помнит своё состояние после"
                          "завершения сеанса считывания в сессии S3, сек."
     )
-    update_interval: confloat(gt=0.05, le=0.05) = Field(
-        0.01, description="Интервал обновления координат, сек."
+    tag_altitude: float = Field(
+        0.0, description="В модели БПЛА метка всегда лежит на земле"
     )
-    travel_distance: confloat(ge=1.0, le=100.0) = Field(
-        20.0, description="Путь метки от генерации до удаления, м."
+    generation_interval: tuple[Callable[..., float], Any] = Field(
+        default=(lambda: 1.0,),
+        description=(
+            "Функция и её параметры, определяющие интервал появления новой"
+            "метки. Если функция не требует аргументов, используется кортеж"
+            "с одним элементом: (функция,). Если функция принимает аргументы,"
+            "они перечисляются следом: (функция, arg1, arg2, ...)."
+            "Например: (numpy.random.exponential, 42.0) — интервал"
+            "с экспоненциальным распределением со средним 42."
+        )
     )
-    initial_distance_to_reader: confloat(ge=0.1, le=20.0) = Field(
-        10.0, description="Начальное расстояние до считывателя, м."
+
+    @property
+    def tid_bitlen(self) -> int:
+        """Количество бит, считываемых с метки, при чтении банка памяти."""
+        return self.get_tid_bitlen(self.tid_word_size)
+
+    def get_tid_bitlen(self, tid_word_size: int) -> int:
+        return tid_word_size * 16
+
+
+class RFIDInternalParams(BaseModel):
+    """
+    Внутренние параметры по умолчанию для модели RFID. Эти параметры задаются
+    разработчиком модели и обычно не изменяются пользователем напрямую.
+    """
+    model_name: str = 'RFID'
+    reader_params: ReaderParams = Field(default_factory=ReaderParams)
+    geometry_params: GeometryParams = Field(default_factory=GeometryParams)
+    energy_params: EnergyParams = Field(default_factory=EnergyParams)
+    channel_params: ChannelParams = Field(default_factory=ChannelParams)
+    reader_power_params: ReaderPowerParams = Field(
+        default_factory=ReaderPowerParams
     )
-    reader_antenna_direction: tuple[int, int, int] = Field(
-        (0, 0, -1), description="Направление антенны считывателя"
-                                "в 3D-пространстве."
+    inventory_scenario_params: InventoryScenarioParams = Field(
+        default_factory=InventoryScenarioParams
     )
-    tag_antenna_direction: tuple[int, int, int] = Field(
-        (0, 0, 1), description="Направление антенны метки в 3D-пространстве."
-    )
-    rtcal_tari_mul: confloat(gt=2.5, le=3.0) = Field(
-        3.0, description="Множитель RTcal (RTcal = rtcal_tari_mul * Tari).")
-    trcal_rtcal_mul: confloat(gt=1.1, le=3) = Field(
-        2.5, description="Множитель TRcal (TRcal = trcal_rtcal_mul * RTcal).")
-    temp: Literal['NOMINAL', 'EXTENDED'] = Field(
-        "NOMINAL", description="Температурный диапазон.")
+    tag_params: TagParams = Field(default_factory=TagParams)
 
 
 default_params = RFIDDefaults()

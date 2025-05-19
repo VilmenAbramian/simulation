@@ -3,7 +3,7 @@ import multiprocessing
 from time import time_ns
 
 import pysim.models.rfid.configurator as configurator
-from pysim.models.rfid.constants import default_params
+from pysim.models.rfid.constants import KMPH_TO_MPS_MUL, default_params, inner_params
 import pysim.models.rfid.epcstd as std
 from pysim.models.rfid.processing import result_processing
 import pysim.sim.simulator as sim
@@ -17,7 +17,7 @@ def cli():
 @cli.command('start')
 @click.option(
         '-s', '--speed', multiple=True,
-    default=(default_params.speed_kmph,),
+    default=(default_params.speed,),
     help='Vehicle speed, kmph. You can provide multiple values, e.g. '
          '`-s 10 -s 20 -s 80` for parallel computation.',
     show_default=True,
@@ -81,7 +81,7 @@ def cli_run(**kwargs):
     Задать параметры модели.
     '''
     kwargs, variadic = check_vars_for_multiprocessing(**kwargs)
-    print(f'Running {configurator.MODEL_NAME} model')
+    print(f'Запуск {inner_params.model_name} модели')
 
     if variadic is None:
         result = prepare_simulation(kwargs)
@@ -165,7 +165,7 @@ def prepare_simulation(kwargs, show_params=False):
     except ValueError:
         pass
     model = configurator.create_model(
-        speed=(kwargs['speed'] * configurator.KMPH_TO_MPS_MUL),
+        speed=(kwargs['speed'] * KMPH_TO_MPS_MUL),
         encoding=encoding,
         tari=float(kwargs['tari']) * 1e-6,
         tid_word_size=kwargs['tid_word_size'],

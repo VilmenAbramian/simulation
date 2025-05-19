@@ -682,9 +682,9 @@ class Reader:
     read_tid_words_num = None
 
     # Antenna settings (more precisely they must be set up individually)
-    always_start_with_first_antenna = True
+    always_start_with_first_antenna = True # Для БПЛА не используется
     antenna_switch_event_id = None
-    antenna_switch_interval = None
+    antenna_switch_interval = None # В модели БПЛА не используется
 
     def __init__(self, kernel=None):
         self.kernel = kernel
@@ -1335,7 +1335,7 @@ class Generator:
     Все объекты меток создаются с помощью
     объектов Generator.
     '''
-    pos0 = None  # should be a 3-dim np.ndarray
+    initial_position: np.ndarray = None  # Начальная позиция метки (в 3D-пространстве)
     velocity = 10.0 / 3.6  # meters per second
     direction = np.asarray([0, 1, 0])  # should be a 3-dim np.array
     tag_antenna_direction = None
@@ -1389,7 +1389,7 @@ class Generator:
         tag.tid = self.tid_prefix + self._tid_suffix
         self._epc_suffix = inc_hex_string(self._epc_suffix)
         self._tid_suffix = inc_hex_string(self._tid_suffix)
-        tag.pos = np.array(self.pos0, copy=True)
+        tag.pos = np.array(self.initial_position, copy=True)
         tag.velocity = self.velocity
         tag.direction = np.array(self.direction, copy=True)
         tag.antenna.gain = self.antenna_gain

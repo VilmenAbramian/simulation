@@ -1,333 +1,134 @@
-from dataclasses import dataclass, field
-import numpy as np
 from tabulate import tabulate
+import numpy as np
 
-import pysim.models.rfid.epcstd as std
-import pysim.models.rfid.handlers as handlers
+from pysim.models.rfid.constants import default_params, inner_params
 from pysim.models.rfid.objects import Reader, Model, Antenna, Generator, Medium
+import pysim.models.rfid.handlers as handlers
 import pysim.sim.simulator as sim
 
 
-MODEL_NAME = 'RFID'
-KMPH_TO_MPS_MUL = 1.0 / 3.6
-
-
-@dataclass
-class Settings:
+def create_model(**click_params) -> Model:
     """
-    Настройки модели.
+    Собирает и возвращает имитационную модель RFID на основе
+    заданных параметров.
 
-    При вызове create_model() можно передать готовый объект
-    Settings() (например, заполненный в результате чтения JSON или строки
-    из CSV-файла). По-умолчанию, используются значения параметров, которые
-    настроены тут.
+    Функция создает объект Model и инициализирует его компоненты:
+    - считыватель (Reader),
+    - антенну считывателя (Antenna),
+    - среду распространения сигнала (Medium),
+    - генератор меток (Generator).
 
-    Также при вызове create_model() можно переопределить некоторые параметры.
-    В этом случае у аргументов create_model() приоритет над значениями,
-    которые хранятся в объекте класса Settings.
+    Приоритет параметров:
+    1. Значения, переданные через `click_params` (например, из CLI).
+    2. Значения по умолчанию из `RFIDDefaults` и `RFIDInternalParams`.
+
+    Аргументы:
+        **click_params: Переопределяемые параметры модели, такие как:
+            - num_tags (int): число меток в симуляции;
+            - tari (float): длительность импульса Tari;
+            - encoding (str): тип кодирования ответа метки;
+            - power (float): максимальная мощность передатчика, дБм;
+            - tid_word_size (int): размер банка памяти для чтения;
+            - useadjust (bool): включить или выключить QueryAdjust;
+            - delta (float): шаг корректировки параметра Q;
+            - speed (float): скорость считывателя, км/ч;
+            - reader_offset, tag_offset, altitude: пространственные параметры
+              (в метрах);
+
+    Возвращает:
+        Model: полностью настроенная модель RFID.
     """
-    # --- Настройки кодировки команд считывателя (PIE) ---
-    delim: float = 12.5e-6  # длительность символа-разделителя (константа), сек
-    # длительность Tari, сек. (6.25, 12.5, 18.75, 25 мкс)
-    tari: float = 6.25e-6
-    rtcal_tari_mul: float = 3.0  # множитель RTcal, см. get_rtcal()
-    trcal_rtcal_mul: float = 2.5  # множитель TRcal, см. get_trcal()
-    temp: std.TempRange = std.TempRange.NOMINAL  # температурный диапазон
-
-    @property
-    def rtcal(self):
-        return self.get_rtcal(self.tari)
-
-    def get_rtcal(self, tari):
-        return tari * self.rtcal_tari_mul
-
-    @property
-    def trcal(self):
-        return self.get_trcal(self.rtcal)
-
-    def get_trcal(self, rtcal):
-        return rtcal * self.trcal_rtcal_mul
-
-    # --- Геометрия и траектория движения ---
-    speed: float = 30 * KMPH_TO_MPS_MUL       # скорость метки, м/с
-    initial_distance_to_reader: float = 10.0  # как далеко метка от ридера, м
-    travel_distance: float = 20.0  # как далеко метка летит до уничтожения, м
-
-    reader_antenna_x: float = 5.0  # расстояние от ридера до стены по оси OX, м
-    reader_antenna_z: float = 5.0  # высота дрона (ридера) по оси OZ, м
-    tag_antenna_x: float = 5.0     # расстояние от метки до стены по оси OX, м
-    tag_antenna_z: float = 0.0     # высота антенны метки по оси OZ, м
-
-    # Направление, куда смотрит антенна ридера:
-    reader_antenna_direction: np.ndarray = field(
-        default_factory=lambda: np.asarray([0, 0, -1])
-    )
-
-    # Направление, куда смотрит антенна метки:
-    tag_antenna_direction: np.ndarray = field(
-        default_factory=lambda: np.asarray([0, 0, 1])
-    )
-
-    # Как часто обновлять координаты (модельные часы):
-    update_interval: float = 0.01
-
-    # --- Энергетические параметры ---
-    reader_power: float = 31.5  # мощность трансмиттера считывателя, дБм
-    reader_antenna_gain: float = 6.0  # усиление антенны считывателя, дБ
-    reader_cable_loss: float = -2.0   # потери в антенном кабеле ридера, дБ
-    tag_antenna_gain: float = 3.0     # усиление антенны метки, дБ
-    tag_modulation_loss: float = -12.0  # потери на модуляции на метке, дБ
-    tag_sensitivity: float = -18.0  # чувствительность (чтения) метки, дБ
-
-    # Шумы внутри считывателя от трансмиттера постоянного сигнала (то, что
-    # просачивается на ресивер) и от источника питания, дБ.
-    reader_noise: float = -80.0
-
-    # --- Настройки модели распространения сигнала ---
-    ber_distribution: str = 'rayleigh'  # модель BER: 'rayleigh' or 'awgn'
-    frequency: float = 860 * 1e6   # несущая частота ридера, МГц
-    permittivity: float = 15.0  # диэлектрическая проницаемость стены
-    conductivity: float = 0.03  # проводимость материала стены
-    polarization_loss: float = -3.0  # дБ
-
-    # Способ расчета коэффициента отражения ('reflection', 'const')
-    # - Если задано значение 'reflection', то коэффициент отражения будет
-    #   рассчитываться в зависимости от свойств материала, угла падения и
-    #   поляризации сигнала;
-    # - Если задано значение 'const', то коэффициент равен единице.
-    ground_reflection_type: str = 'reflection'
-    use_doppler: bool = True  # учитывать ли эффект Доплера
-
-    # --- Управление питанием считывателя ---
-    # должен ли ридер периодически отключаться
-    reader_switch_power: bool = True
-    reader_power_on_duration: float = 2.0  # сколько считыватель включен, сек
-    reader_power_off_duration: float = 0.1  # сколько считыватель выключен, сек
-
-    # Интервал переключения антенн считывателя.
-    # В текущей модели не используется, так как у ридера только одна антенна.
-    reader_antenna_switching_interval: float = 10
-
-    # Следует ли начинать работу всегда с антенны под номером 1.
-    # В текущей модели не используется, так как у ридера только одна антенна.
-    reader_always_start_with_first_antenna: bool = False
-
-    # --- Настройки раунда инвентаризации ---
-    read_tid_bank: bool = True  # нужно ли читать банк данных
-
-    # Сколько машинных слов данных запрашивает ридер.
-    # Считаем, что в метке размер банка данных всегда не меньше, чем число
-    # запрашиваемых слов.
-    tid_word_size: int = 8
-
-    encoding: std.TagEncoding = std.TagEncoding.M4  # метод кодирования ответов
-    dr: std.DivideRatio = std.DivideRatio.DR_8  # коэффициент DR (8 или 64/3)
-    sel: std.SelFlag = std.SelFlag.ALL  # флаг Sel (не используется в модели)
-    session: std.Session = std.Session.S0  # номер сессии, в которой идет опрос
-    trext: bool = True  # использовать ли в ответах расширенную преамбулу
-
-    # --- Настройки QueryAdjust ---
-    q: int = 5  # значение параметра Q в начале
-    # (если есть значение по умолчанию в click, то не используется)
-    use_query_adjust: bool = True
-    # (если есть значение по умолчанию в click, то не используется)
-    # коэффициент, на который изменяется значение q
-    adjust_delta: float = 0.1
-    q_fp: float = q
-
-    # Значение поля Target команды Query, то есть флаг сессии, по которому
-    # идет опрос меток. Ответ будут передавать только те метки, которые хранят
-    # флаг сессии, совпадающий с target. После каждого ответа на команду ACK
-    # метка инвертирует свой флаг сессии с A на B и наоборот.
-    # Если метка передала свой EPCID в ответ на ACK, и в следующем раунде
-    # ридер запрашивает тот же флаг Target, метка не будет
-    # участвовать в раунде.
-    #
-    # Параметр target используется, если target_strategy = 'const'.
-    # Если target_strategy = 'switch', ридер будет чередовать значения Target
-    # и менять его с A на B и обратно каждые rounds_per_target раундов.
-    target: std.InventoryFlag = std.InventoryFlag.A
-
-    # Стратегия выбора флага сессии. Возможные значения 'switch' и 'const'.
-    # - 'const': опрос всегда ведется по значению параметра target
-    # - 'switch': ридер чередует опрос по флагу A и B, и меняет значение
-    #   каждые rounds_per_target раундов.
-    target_strategy: str = 'switch'  # Опрашиваем поочередно по Target=A,B
-
-    # Если target_strategy = 'swtich', то это поле показывает, как часто
-    # ридер меняет флаг опроса (Target).
-    rounds_per_target: int = 1
-
-    # --- Настройки памяти метки ---
-    epc_bitlen: int = 96  # Длина идентификатора EPCID в битах
-
-    @property
-    def tid_bitlen(self):
-        # Длина данных в битах, хранящиеся на метке. Вычисляем, так, чтобы
-        # это число было не меньше, чем запрашивает ридер в команде Read.
-        return self.get_tid_bitlen(self.tid_word_size)
-
-    def get_tid_bitlen(self, tid_word_size):
-        return tid_word_size * 16
-
-    # Следующие поля определяют, через сколько времени без питания метка
-    # сбросит в A хранящийся флаг сессии. Для сессии S0 такого параметра нет,
-    # так как по стандарту EPC Class 1 Gen.2 метка должна сбросить в A
-    # флаг сессии S0 сразу после потери питания.
-
-    s1_persistence: float = 2.0  # сколько хранить флаг в сессии S1, сек.
-    s2_persistence: float = 2.0  # сколько хранить флаг в сессии S2, сек.
-    s3_persistence: float = 2.0  # сколько хранить флаг в сессии S3, сек.
-
-    # --- Настройки генератора ---
-
-    # Функция и ее параметры, возвращающая интервал, через который появится
-    # новая метка. Если параметров у функции нет, то это просто кортеж с одним
-    # элементом - функцией без аргументов.
-    # Если у функции есть N обязательных параметров, то их значения должны
-    # быть указаны в 1, 2, ..., N элементах кортежа.
-    # Например, если в качестве функции используется
-    # `numpy.random.exponential`, то в качестве аргумента
-    # можно передать среднее: (exponential, 42.0).
-    generation_interval: tuple = (lambda: 1.0, )
-
-    # Количество генерируемых меток (если есть значение
-    # по умолчанию в click, то не используется)
-    num_tags: int = 6_000
-
-    # --- Настройки статистики ---
-    # Сохранять ли данные о мощностях сигналов
-    collect_power_statistics: bool = False
-
-    def get_power_control_mode(self, reader_switch_power=None):
-        x = (reader_switch_power if reader_switch_power is not None
-             else self.reader_switch_power)
-        return (Reader.PowerControlMode.PERIODIC if x else
-                Reader.PowerControlMode.ALWAYS_ON)
-
-
-def create_model(settings=None, verbose=False, **kwargs) -> Model:
-    '''Run simulation.
-
-    Possible kwargs (if value not given, use from settings):
-    - speed: float
-    - encoding: int
-    - tari: float
-    - tid_word_size: int
-    - reader_offset: float
-    - tag_offset: float
-    - altitude: float
-    - power: float
-    - num_tags: int
-    - sim_time_limit: float
-    - real_time_limit: float
-    - log_level: sim.Logger.Level
-    '''
-
-    if settings is None:
-        settings = Settings()
-
-    # 0) Building the model
+    # 1) Создать объект модели
     model = Model()
-    model.max_tags_num = kwargs.get('num_tags', settings.num_tags)
-    model.update_interval = settings.update_interval
-    model.statistics.use_power_statistics = settings.collect_power_statistics
+    model.max_tags_num = click_params.get('num_tags', default_params.num_tags)
+    model.update_interval = inner_params.geometry_params.update_interval
+    model.statistics.use_power_statistics =(
+        inner_params.energy_params.collect_power_statistics
+    )
 
-    # 1) Building the reader
-
+    # 2) Создать объект считывателя
     reader = Reader()
     model.reader = reader
-
-    reader.tari = kwargs.get('tari', settings.tari)
-    reader.tag_encoding = kwargs.get('encoding', settings.encoding)
-    reader.rtcal = settings.get_rtcal(reader.tari)
-    reader.trcal = settings.get_trcal(reader.rtcal)
-    reader.delim = settings.delim
-    reader.temp = settings.temp
-    reader.session = settings.session
-    reader.target = settings.target
-    reader.sel = settings.sel
-    reader.dr = settings.dr
-    reader.trext = settings.trext
-    reader.target_strategy = settings.target_strategy
-    reader.rounds_per_target = settings.rounds_per_target
-    reader.power_control_mode = settings.get_power_control_mode()
-    reader.max_power = kwargs.get('power', settings.reader_power)
-    reader.power_on_duration = settings.reader_power_on_duration
-    reader.power_off_duration = settings.reader_power_off_duration
-    reader.noise = settings.reader_noise
+    reader.tari = click_params.get('tari', default_params.tari)
+    reader.tag_encoding = click_params.get('encoding', default_params.encoding)
+    reader.rtcal = inner_params.reader_params.get_rtcal(reader.tari)
+    reader.trcal = inner_params.reader_params.get_trcal(reader.rtcal)
+    reader.delim = inner_params.reader_params.delim
+    reader.temp = inner_params.reader_params.temp
+    reader.session = inner_params.inventory_scenario_params.session
+    reader.target = inner_params.inventory_scenario_params.target
+    reader.sel = inner_params.inventory_scenario_params.sel
+    reader.dr = inner_params.tag_params.dr
+    reader.trext = inner_params.tag_params.trext
+    reader.target_strategy = inner_params.inventory_scenario_params.target_strategy
+    reader.rounds_per_target = inner_params.inventory_scenario_params.rounds_per_target
+    reader.power_control_mode = inner_params.reader_power_params.get_power_control_mode()
+    reader.max_power = click_params.get('power', default_params.power_dbm)
+    reader.power_on_duration = inner_params.reader_power_params.reader_power_on_duration
+    reader.power_off_duration = inner_params.reader_power_params.reader_power_off_duration
+    reader.noise = inner_params.energy_params.reader_noise
     reader.read_tid_words_num = (
-        kwargs.get('tid_word_size', settings.tid_word_size)
+        click_params.get('tid_word_size', default_params.tid_word_size)
     )
     reader.read_tid_bank = (
-        settings.read_tid_bank if reader.read_tid_words_num > 0 else False
+        inner_params.inventory_scenario_params.read_tid_bank if reader.read_tid_words_num > 0 else False
     )
-    reader.always_start_with_first_antenna = (
-        settings.reader_always_start_with_first_antenna
+    reader.q = inner_params.reader_params.q
+    reader.use_query_adjust = click_params.get(
+        'useadjust', default_params.useadjust
     )
-    reader.antenna_switch_interval = settings.reader_antenna_switching_interval
+    reader.adjust_delta = click_params.get('delta', default_params.delta)
+    reader.q_fp = inner_params.reader_params.q_fp
 
-    reader_antenna_x = kwargs.get('reader_offset', settings.reader_antenna_x)
-    reader_antenna_z = kwargs.get('altitude', settings.reader_antenna_z)
-    tag_antenna_x = kwargs.get('tag_offset', settings.tag_antenna_x)
-    tag_antenna_z = settings.tag_antenna_z
+    reader_antenna_x = click_params.get('reader_offset', default_params.reader_offset)
+    reader_antenna_z = click_params.get('altitude', default_params.altitude)
+    reader_antenna_y = 0
+    tag_antenna_x = click_params.get('tag_offset', default_params.tag_offset)
+    tag_antenna_z = inner_params.tag_params.tag_altitude
 
-    # --- Reader QueryAdjust settings ---
-    reader.q = settings.q
-    reader.use_query_adjust = kwargs.get(
-        'useadjust', settings.use_query_adjust
-    )
-    reader.adjust_delta = kwargs.get('delta', settings.adjust_delta)
-    reader.q_fp = settings.q_fp
-    # print(f'Использование QueryAdjust: {reader.use_query_adjust}')
-
-    # 2) Attaching antennas to reader
+    # 3) Антенны для считывателя
     ant = Antenna()
-    ant.pos = np.asarray([reader_antenna_x, 0, reader_antenna_z])
-    ant.direction_theta = settings.reader_antenna_direction
-    ant.gain = settings.reader_antenna_gain
-    ant.cable_loss = settings.reader_cable_loss
+    ant.pos = np.asarray([reader_antenna_x, reader_antenna_y, reader_antenna_z])
+    ant.direction_theta = inner_params.geometry_params.reader_antenna_direction
+    ant.gain = inner_params.energy_params.reader_antenna_gain
+    ant.cable_loss = inner_params.energy_params.reader_cable_loss
     reader.attach_antenna(ant)
 
-    # 3) Setting up medium
+    # 4) Среда распространения сигнала
     medium = Medium()
     model.medium = medium
+    medium.ber_distribution = inner_params.channel_params.ber_distribution
+    medium.ground_reflection_type = inner_params.channel_params.ground_reflection_type
+    medium.frequency = inner_params.channel_params.frequency_hz
+    medium.permittivity = inner_params.channel_params.permittivity
+    medium.conductivity = inner_params.channel_params.conductivity
+    medium.polarization_loss = inner_params.energy_params.polarization_loss
+    medium.use_doppler = inner_params.channel_params.use_doppler
 
-    medium.ber_distribution = settings.ber_distribution
-    medium.ground_reflection_type = settings.ground_reflection_type
-    medium.frequency = settings.frequency
-    medium.permittivity = settings.permittivity
-    medium.conductivity = settings.conductivity
-    medium.polarization_loss = settings.polarization_loss
-    medium.use_doppler = settings.use_doppler
-
-    # 4) Generator settings
+    # 5) Генерация меток
     generator = Generator()
     model.generators.append(generator)
-    generator.pos0 = np.asarray([
+    generator.initial_position = np.asarray([
         tag_antenna_x,
-        -settings.initial_distance_to_reader,
+        -inner_params.geometry_params.initial_distance_to_reader,
         tag_antenna_z
     ])
-    generator.velocity = kwargs.get('speed', settings.speed)
-    generator.direction = np.asarray([0, 1, 0])
-    generator.tag_antenna_direction = settings.tag_antenna_direction
-    generator.travel_distance = settings.travel_distance
-
-    generator.epc_prefix = 'A' * 4
-    generator.tid_prefix = 'A' * 4
-    generator.epc_bitlen = settings.epc_bitlen
-    generator.tid_bitlen = settings.get_tid_bitlen(reader.read_tid_words_num)
-
+    generator.velocity = click_params.get('speed', default_params.speed)
+    generator.direction = inner_params.geometry_params.movement_direction
+    generator.tag_antenna_direction = inner_params.geometry_params.tag_antenna_direction
+    generator.travel_distance = inner_params.geometry_params.travel_distance
+    generator.epc_prefix = inner_params.tag_params.epc_prefix
+    generator.tid_prefix = inner_params.tag_params.tid_prefix
+    generator.epc_bitlen = inner_params.tag_params.epc_bitlen
+    generator.tid_bitlen = inner_params.tag_params.get_tid_bitlen(reader.read_tid_words_num)
     generator.max_tags_generated = model.max_tags_num
-    generator.antenna_gain = settings.tag_antenna_gain
-    generator.modulation_loss = settings.tag_modulation_loss
-    generator.sensitivity = settings.tag_sensitivity
-
+    generator.antenna_gain = inner_params.energy_params.tag_antenna_gain
+    generator.modulation_loss = inner_params.energy_params.tag_modulation_loss
+    generator.sensitivity = inner_params.energy_params.tag_sensitivity
     generator.set_interval(
-        settings.generation_interval[0],
-        *settings.generation_interval[1:])
-
+        inner_params.tag_params.generation_interval[0], # Функция
+        *inner_params.tag_params.generation_interval[1:] # Её параметры
+    )
     return model
 
 
@@ -340,7 +141,7 @@ def run_model(
 ):
     sim_time, _, result = sim.run_simulation(
         sim.build_simulation(
-            MODEL_NAME,
+            inner_params.model_name,
             init=handlers.start_simulation,
             context=model,
             max_real_time=max_real_time,
@@ -403,7 +204,7 @@ def print_model_settings(model: Model, kernel: sim.Kernel):
         ('medium', 'polarization_loss', medium.polarization_loss),
         ('medium', 'use_doppler', medium.use_doppler),
         # --- Generator and tag ---
-        ('tag', 'pos0', generator.pos0),
+        ('tag', 'initial_position', generator.initial_position),
         ('tag', 'velocity', generator.velocity),
         ('tag', 'direction', generator.direction),
         ('tag', 'antenna_direction', generator.tag_antenna_direction),
