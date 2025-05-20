@@ -151,6 +151,9 @@ class GeometryParams(BaseModel):
     tag_antenna_direction: tuple[int, int, int] = Field(
         (0, 0, 1), description="Направление антенны метки в 3D-пространстве."
     )
+    speed_of_light: int = Field(
+        299_792_458, description="Скорость света, м/с"
+    )
     update_interval: confloat(gt=0.05, le=0.05) = Field(
         0.01, description="Интервал обновления координат"
                           "(квант времени модели), сек."
@@ -160,13 +163,16 @@ class GeometryParams(BaseModel):
 class EnergyParams(BaseModel):
     """Энергетические параметры моделируемой системы."""
     reader_antenna_gain: confloat(ge=0, le=13) = Field(
-        6.0, description="Усиление антенны считывателя, дБi."
+        8.0, description="Усиление антенны считывателя, дБi."
     )
     reader_cable_loss: confloat(ge=-8, le=0) = Field(
         -2.0, description="Потери в кабеле считывателя, дБ."
     )
     reader_noise: confloat(ge=-110, le=-60) = Field(
         -80.0, description="Шум в радиочастотной цепи считывателя, дБм."
+    )
+    reader_sensitivity: confloat(ge=-95, le=-75) = Field(
+        -80.0, description="Чувствительность радиоприёмника считывателя, дБм"
     )
     tag_antenna_gain: confloat(ge=0, le=10) = Field(
         3.0, description="Усиление антенны метки, дБi."
@@ -182,6 +188,10 @@ class EnergyParams(BaseModel):
         -3.0, description="Потери, связанные с разными поляризациями"
                           "антенн считывателя и метки, дБ."
     )
+    thermal_noise: confloat(ge=-125, le=-105) = Field(
+        -114, description="Мощность теплового шума в полосе 1МГц для"
+                          "температуры около 17C, дБм"
+    )
     collect_power_statistics: bool = Field(
         False, description="Сохранять ли данные о мощностях сигналов"
     )
@@ -196,7 +206,6 @@ class ChannelParams(BaseModel):
         15.0, description="Диэлектрическая проницаемость стены."
     )
     conductivity: float = Field(0.03, description="Проводимость стены.")
-
     ber_distribution: Literal['rayleigh', 'awgn'] = Field(
         "rayleigh", description="Тип распределения помех при расчёте BER."
     )
