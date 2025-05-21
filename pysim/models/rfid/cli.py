@@ -167,6 +167,7 @@ def prepare_simulation(kwargs, show_params=False):
         pass
     model = configurator.create_model(
         speed=(kwargs['speed'] * KMPH_TO_MPS_MUL),
+        # speed=(kwargs['speed']),
         encoding=encoding,
         tari=float(kwargs['tari']) * 1e-6,
         tid_word_size=kwargs['tid_word_size'],

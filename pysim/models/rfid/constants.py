@@ -38,7 +38,7 @@ class RFIDDefaults(BaseModel):
                           "(например, БПЛА или автомобиля) в км/ч."
     )
     reader_offset: confloat(ge=0, le=10) = Field(
-        3.0, description="Горизонтальное смещение считывателя от стены"
+        2.0, description="Горизонтальное смещение считывателя от стены"
                          "(в метрах), от которой отражается сигнал."
     )
     tag_offset: confloat(ge=0, le=10) = Field(
@@ -163,7 +163,7 @@ class GeometryParams(BaseModel):
 class EnergyParams(BaseModel):
     """Энергетические параметры моделируемой системы."""
     reader_antenna_gain: confloat(ge=0, le=13) = Field(
-        8.0, description="Усиление антенны считывателя, дБi."
+        6.0, description="Усиление антенны считывателя, дБi."
     )
     reader_cable_loss: confloat(ge=-8, le=0) = Field(
         -2.0, description="Потери в кабеле считывателя, дБ."
