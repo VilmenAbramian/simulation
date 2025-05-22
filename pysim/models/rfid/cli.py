@@ -3,7 +3,7 @@ import multiprocessing
 from time import time_ns
 
 import pysim.models.rfid.configurator as configurator
-from pysim.models.rfid.constants import (
+from pysim.models.rfid.params import (
     KMPH_TO_MPS_MUL, default_params, inner_params
 )
 from pysim.models.rfid.processing import result_processing

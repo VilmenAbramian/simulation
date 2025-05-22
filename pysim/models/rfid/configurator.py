@@ -1,8 +1,8 @@
 from tabulate import tabulate
 import numpy as np
 
-from pysim.models.rfid.constants import default_params, inner_params
 from pysim.models.rfid.objects import Reader, Model, Antenna, Generator, Medium
+from pysim.models.rfid.params import default_params, inner_params
 import pysim.models.rfid.handlers as handlers
 import pysim.sim.simulator as sim
 
