@@ -51,14 +51,10 @@ class RFIDDefaults(BaseModel):
         False, description="Флаг, указывающий на использование QueryAdjust"
                            "команды (автоматическая корректировка Q)."
     )
-    delta: confloat(gt=0.0) = Field(
-        0.5, description=(
-            "Коэффициент Δ для алгоритма QAdjust. Определяет чувствительность "
-            "считывателя к коллизиям и пустым слотам при адаптации параметра Q."
-            "Типичные значения: 0.1 < Δ < 0.5. Рекомендуется использовать"
-            "меньшие значения Δ при больших Q и большие Δ при малых Q."
-        )
+    q: conint(ge=0, le=15) = Field(
+        5, description='Значение параметра Q в начале моделирования'
     )
+
 
     @staticmethod
     def parse_tag_encoding(s: str) -> std.TagEncoding:
@@ -98,13 +94,20 @@ class ReaderParams(BaseModel):
     )
     temp: Literal['NOMINAL', 'EXTENDED'] = Field(
         "NOMINAL", description="Температурный диапазон.")
-    q: conint(ge=0, le=15) = Field(
-        5, description='Значение параметра Q в начале моделирования'
+    # --- Настройки для симуляции с коллизиями ---
+    delta: confloat(gt=0.0) = Field(
+        0.5, description=(
+            "Коэффициент Δ для алгоритма QAdjust. Определяет чувствительность "
+            "считывателя к коллизиям и пустым слотам при адаптации параметра Q."
+            "Типичные значения: 0.1 < Δ < 0.5. Рекомендуется использовать"
+            "меньшие значения Δ при больших Q и большие Δ при малых Q."
+        )
     )
     q_fp: confloat(ge=0.0, le=15.0) = Field(
-        q, description='Дробное значение Q для алгоритма'
+        RFIDDefaults().q, description='Дробное значение Q для алгоритма'
                        'коррекции Q в QueryAdjust'
     )
+    # -----------------------------------------------
     rtcal_tari_mul: confloat(gt=2.5, le=3.0) = Field(
         3.0, description="Множитель RTcal (RTcal = rtcal_tari_mul * Tari).")
     trcal_rtcal_mul: confloat(gt=1.1, le=3) = Field(
@@ -136,7 +139,7 @@ class ReaderParams(BaseModel):
 class GeometryParams(BaseModel):
     """Геометрические параметры RFID системы в 3-х мерном пространстве."""
     initial_distance_to_reader: confloat(ge=0.1, le=20.0) = Field(
-        10.0, description="Начальное расстояние до считывателя, м."
+        10.0, description="Начальное расстояние метки до считывателя, м."
     )
     movement_direction: tuple[float, float, float] = Field(
         (0, 1, 0), description='Единичный вектор направления движения.'
@@ -155,7 +158,7 @@ class GeometryParams(BaseModel):
         299_792_458, description="Скорость света, м/с"
     )
     update_interval: confloat(gt=0.05, le=0.05) = Field(
-        0.01, description="Интервал обновления координат"
+        0.01, description="Интервал обновления времени в симуляции"
                           "(квант времени модели), сек."
     )
 
@@ -172,7 +175,7 @@ class EnergyParams(BaseModel):
         -80.0, description="Шум в радиочастотной цепи считывателя, дБм."
     )
     reader_sensitivity: confloat(ge=-95, le=-75) = Field(
-        -80.0, description="Чувствительность радиоприёмника считывателя, дБм"
+        -80.0, description="Чувствительность радиоприёмника считывателя, дБм."
     )
     tag_antenna_gain: confloat(ge=0, le=10) = Field(
         3.0, description="Усиление антенны метки, дБi."
@@ -190,10 +193,11 @@ class EnergyParams(BaseModel):
     )
     thermal_noise: confloat(ge=-125, le=-105) = Field(
         -114, description="Мощность теплового шума в полосе 1МГц для"
-                          "температуры около 17C, дБм"
+                          "температуры около 17C, дБм."
     )
     collect_power_statistics: bool = Field(
-        False, description="Сохранять ли данные о мощностях сигналов"
+        False, description="Вести ли журнал _TagPowerRecord для отслеживания"
+                           "параметров канала в течении симуляции."
     )
 
 

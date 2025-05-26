@@ -1,3 +1,5 @@
+"""Обработчики событий для дискретно-событийной модели RFID."""
+
 import numpy as np
 
 import pysim.models.rfid.epcstd as std
@@ -5,29 +7,49 @@ from pysim.models.rfid.objects import Model, Reader, Tag, Transaction
 
 
 def start_simulation(kernel):
-    '''
-    Используется в качестве init для старта симуляции.
+    """
+    Инициализация и запуск симуляции.
+
     При старте планирует 3 события (сортировка по времени):
       1) Запуск считывателя
       2) Генерация новой метки
       3) Обновить местоположения объектов
-    '''
+
+    Args:
+        kernel: Ядро симуляции с контекстом модели.
+    """
     assert isinstance(kernel.context, Model)
-    ctx = kernel.context
-    ctx.reader.kernel = kernel
-    for generator in ctx.generators:
+    context = kernel.context
+    context.reader.kernel = kernel
+    for generator in context.generators:
         kernel.schedule(
             generator.interval,
             generate_tag, (generator, ),
-            msg='Генерация новой метки'
+            msg="Генерация новой метки"
         )
     kernel.schedule(
-        ctx.update_interval, update_positions, msg='Обновить расположение'
+        context.update_interval, update_positions, msg="Обновить расположение"
     )
-    kernel.call(turn_reader_on, (ctx.reader,), msg='Запуск считывателя')
+    kernel.call(turn_reader_on, (context.reader,), msg="Запуск считывателя")
 
 
-def _update_power(time, reader, tags, transaction, medium, statistics):
+def _update_power(
+        time: float, reader: Reader,
+        tags, transaction,
+        medium, statistics):
+    """Обновляет мощность сигнала для меток и считывателя.
+
+    В данном обработчике происходит запись информации об изменениях мощности
+    в беспроводном канале связи между считывателем и меткой.
+
+    Args:
+        time: Текущее время симуляции;
+        reader: Объект считывателя;
+        tags: Список меток;
+        transaction: Текущая транзакция (или None);
+        medium: Среда передачи сигнала;
+        statistics: Объект статистики;
+    """
     for tag in tags:
         power = medium.estimate_tag_rx_power(reader, tag, time)
         tag.set_power(time, power)
@@ -35,43 +57,57 @@ def _update_power(time, reader, tags, transaction, medium, statistics):
             time - tag.last_pos_update
         )
         tag.last_pos_update = time
-        # uncomment lines below for PL debug
-        # print(f'Estimated tag RX power: {power}')
-        # print(f'- tag:    pos={tag.antenna.pos}, '
-        #       f'direction={tag.antenna.direction_theta}')
-        # print(
-        #     f'- reader: pos={reader.antenna.pos}, '
-        #     f'direction={reader.antenna.direction_theta}'
-        # )
 
     if transaction is not None:
         for tag in transaction.tags:
             power = medium.estimate_reader_rx_power(reader, tag, time)
             transaction.reader_rx_power_map.update(tag, power)
 
-    # Writing statistics
+    # Запись статистики (по умолчанию use_power_statistics=False)
     if statistics is not None and statistics.use_power_statistics:
         for tag in tags:
-            statistics.get_tag_record(tag).write_power_record(
-                time, reader, medium)
+            tag_record = statistics.get_tag_record(tag)
+            if tag_record:
+                tag_record.write_power_record(time, reader, medium)
+            else:
+                raise ValueError(f"Попытка записи логов в"
+                                 f"несуществующий журнал метки: {tag.tag_id}")
 
 
-def _build_transaction(kernel, reader, reader_frame):
-    ctx = kernel.context
-    all_responses = ((tag, tag.receive(reader_frame)) for tag in ctx.tags)
+def _build_transaction(kernel, reader, reader_frame) -> Transaction:
+    """
+    Создаёт транзакцию на основе команды считывателя и ответов меток.
+
+    В данном обработчике происходит запись информации об очередном
+    раунде инвентаризации, в котором приняла участие метка
+
+    Args:
+        kernel: Ядро симуляции;
+        reader: Объект считывателя;
+        reader_frame: Команда считывателя.
+
+    Returns:
+        Transaction: Объект транзакции.
+    """
+    context = kernel.context
+    all_responses = ((tag, tag.receive(reader_frame)) for tag in context.tags)
     tag_frames = [(tag, frame) for (tag, frame) in all_responses
                   if frame is not None]
 
-    if ctx.tags:
-        if isinstance(reader_frame.command, std.Query):
-            stat = kernel.context.statistics
-            participating_tags = [tag for tag in ctx.tags if tag.state in
-                                  {Tag.State.ARBITRATE, Tag.State.REPLY}]
-            for tag in participating_tags:
-                stat.get_tag_record(tag).num_rounds_attained += 1
+    if context.tags and isinstance(reader_frame.command, std.Query):
+        statistics = kernel.context.statistics
+        participating_tags = [tag for tag in context.tags if tag.state in
+                              {Tag.State.ARBITRATE, Tag.State.REPLY}]
+        for tag in participating_tags:
+            tag_record = statistics.get_tag_record(tag)
+            if tag_record:
+                tag_record.num_rounds_attained += 1
+            else:
+                raise ValueError(f"Попытка записи логов в"
+                                 f"несуществующий журнал метки: {tag.tag_id}")
 
     now = kernel.time
-    return Transaction(ctx.medium, reader, reader_frame, tag_frames, now)
+    return Transaction(context.medium, reader, reader_frame, tag_frames, now)
 
 
 def turn_reader_on(kernel, reader):

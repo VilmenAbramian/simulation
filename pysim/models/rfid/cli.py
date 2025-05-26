@@ -1,6 +1,9 @@
+from time import perf_counter
+from typing import Any, Dict, Literal , Tuple
+
+from pydantic import BaseModel, Field
 import click
 import multiprocessing
-from time import time_ns
 
 import pysim.models.rfid.configurator as configurator
 from pysim.models.rfid.params import (
@@ -10,6 +13,22 @@ from pysim.models.rfid.processing import result_processing
 import pysim.sim.simulator as sim
 
 
+class SimulationResult(BaseModel):
+    """Результаты симуляции одной RFID модели."""
+    rounds_per_tag: float = Field(
+        ..., description="Среднее количество раундов на одну метку"
+    )
+    inventory_prob: float = Field(
+        ..., description="Вероятность успешной идентификации метки"
+    )
+    read_tid_prob: float = Field(
+        ..., description="Вероятность успешного чтения банка памяти USER"
+    )
+    execution_time: float = Field(
+        ..., description="Время выполнения симуляции (в секундах)"
+    )
+
+
 @click.group()
 def cli():
     pass
@@ -17,7 +36,7 @@ def cli():
 
 @cli.command('start')
 @click.option(
-        '-s', '--speed', multiple=True,
+    '-s', '--speed', multiple=True,
     default=(default_params.speed,),
     help='Vehicle speed, kmph. You can provide multiple values, e.g. '
          '`-s 10 -s 20 -s 80` for parallel computation.',
@@ -73,8 +92,8 @@ def cli():
     show_default=True, help='Use QueryAdjust command for correct Q'
 )
 @click.option(
-    '-d', '--delta', default=default_params.delta, show_default=True,
-    help='Coefficient for QueryAdjust algorithm'
+    '-q', '--q_value', default=default_params.q, show_default=True,
+    help='Q param for slot counting'
 )
 def cli_run(**kwargs):
     '''
@@ -99,8 +118,8 @@ def check_vars_for_multiprocessing(**kwargs):
     Если несколько параметров заданы со множеством значений, это ошибка.
     '''
     var_arg_names = (
-        'speed', 'tid_word_size', 'altitude', 'reader_offset',
-        'tag_offset', 'power'
+        "speed", "tid_word_size", "altitude", "reader_offset",
+        "tag_offset", "power", "q"
     )
     variadic = None
     for arg_name in var_arg_names:
@@ -136,7 +155,7 @@ def prepare_multiple_simulation(variadic, **kwargs):
         'num_tags': kwargs['num_tags'],
         'verbose': False,
         'useadjust': kwargs.get('useadjust', False),
-        'delta': kwargs.get('delta', 0.5),
+        'q': kwargs.get('q'),
     } for _ in enumerate(variadic_values)]
 
     # Теперь заменим значения варьируемого аргумента, чтобы в каждом
@@ -150,47 +169,55 @@ def prepare_multiple_simulation(variadic, **kwargs):
     return pool.map(prepare_simulation, args_list)
 
 
-def prepare_simulation(kwargs, show_params=False):
+def prepare_simulation(
+        params: Dict[str, Any],
+        show_params: bool = False
+) -> SimulationResult:
+    """
+    Запускает одну имитационную симуляцию RFID-модели с заданными параметрами.
+
+    Args:
+        params: Словарь параметров симуляции из списка params.RFIDDefaults;
+        show_params: Если True, выводит параметры запуска в консоль.
+
+    Returns:
+        Результаты моделирования в Pydantic схеме
+    """
     if show_params:
-        print(f'[+] Estimating speed = {kwargs["speed"]} kmph, '
-              f'Tari = {kwargs["tari"]} us, '
-              f'M = {kwargs["encoding"]}, '
-              f'tid_size = {kwargs["tid_word_size"]} words, '
-              f'reader_offset = {kwargs["reader_offset"]} m, '
-              f'tag_offset = {kwargs["tag_offset"]} m, '
-              f'altitude = {kwargs["altitude"]} m, power = {kwargs["power"]} dBm, '
-              f'num_tags = {kwargs["num_tags"]}')
-    t_start_ns = time_ns()
-    try:
-        encoding = default_params.parse_tag_encoding(kwargs['encoding'])
-    except ValueError:
-        pass
+        print(f'[+] Estimating speed = {params["speed"]} kmph, '
+              f'Tari = {params["tari"]} us, '
+              f'M = {params["encoding"]}, '
+              f'tid_size = {params["tid_word_size"]} words, '
+              f'reader_offset = {params["reader_offset"]} m, '
+              f'tag_offset = {params["tag_offset"]} m, '
+              f'altitude = {params["altitude"]} m,'
+              f'power = {params["power"]} dBm, '
+              f'num_tags = {params["num_tags"]}')
+    encoding = default_params.parse_tag_encoding(params['encoding'])
     model = configurator.create_model(
-        speed=(kwargs['speed'] * KMPH_TO_MPS_MUL),
-        # speed=(kwargs['speed']),
+        speed=(params['speed'] * KMPH_TO_MPS_MUL),
         encoding=encoding,
-        tari=float(kwargs['tari']) * 1e-6,
-        tid_word_size=kwargs['tid_word_size'],
-        reader_offset=kwargs['reader_offset'],
-        tag_offset=kwargs['tag_offset'],
-        altitude=kwargs['altitude'],
-        power=kwargs['power'],
-        num_tags=kwargs['num_tags'],
-        verbose=kwargs['verbose'],
-        useadjust=kwargs['useadjust'],
-        delta=kwargs['delta']
+        tari=float(params['tari']) * 1e-6,
+        tid_word_size=params['tid_word_size'],
+        reader_offset=params['reader_offset'],
+        tag_offset=params['tag_offset'],
+        altitude=params['altitude'],
+        power=params['power'],
+        num_tags=params['num_tags'],
+        verbose=params['verbose'],
+        useadjust=params['useadjust'],
+        q=params['q']
     )
+    t_start = perf_counter()
     configurator.run_model(model, sim.ModelLoggerConfig())
-    t_end_ns = time_ns()
-    result = {
-        'rounds_per_tag': model.statistics.average_rounds_per_tag(),
-        'inventory_prob': model.statistics.inventory_probability(),
-        'read_tid_prob': model.statistics.read_tid_probability()
-    }
-    # print(
-    #     'Статистика: ', model.statistics.average_changing_q()
-    # )
-    return (result, ((t_end_ns - t_start_ns) / 1_000_000_000))
+    t_end = perf_counter()
+
+    return SimulationResult(
+        rounds_per_tag = model.statistics.average_rounds_per_tag(),
+        inventory_prob = model.statistics.inventory_probability(),
+        read_tid_prob = model.statistics.read_tid_probability(),
+        execution_time = t_end - t_start
+    )
 
 
 if __name__ == '__main__':

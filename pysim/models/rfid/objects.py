@@ -884,12 +884,12 @@ class Reader:
 # TAG
 #############################################################################
 class Tag:
-    '''
+    """
     В отличие от класса Reader, в котором state-машина
     вынесена в отдельные структуры, здесь state-машина
     и все её методы и переходы находятся прямо внутри класса Tag,
     что облегчает процесс написания кода, но усложняет его понимание.
-    '''
+    """
 
     class State(enum.Enum):
         OFF = 0
@@ -1198,9 +1198,9 @@ class Tag:
             #     f'Изменение q метки {self._tag_id}. '
             #     f'Старое значение: {self.q}'
             # )
-            self.logger.critical(
-                f'Состояние метки {self._tag_id} ДО: {self.describe()}'
-            )
+            # self.logger.critical(
+            #     f'Состояние метки {self._tag_id} ДО: {self.describe()}'
+            # )
             self._set_state(Tag.State.ARBITRATE)
             updn = qadjust.updn
             if self.q + updn >= 0 or self.q + updn <= 15:
@@ -1212,9 +1212,9 @@ class Tag:
                 self._set_state(Tag.State.REPLY)
                 self._rn = np.random.randint(0, 0x10000)
                 return std.TagFrame(self._preamble, std.QueryReply(self._rn))
-            self.logger.critical(
-                f'Состояние метки {self._tag_id} ПОСЛЕ: {self.describe()}'
-            )
+            # self.logger.critical(
+            #     f'Состояние метки {self._tag_id} ПОСЛЕ: {self.describe()}'
+            # )
             # print(
             #     f'Изменение q метки {self._tag_id}. Новое значение: {self.q}'
             # )
@@ -1673,7 +1673,12 @@ class Transaction():
 
 
 #############################################################################
-# Statistics
+# Сбор и обработка статистики.
+#
+# В следующих классах определены различные журналы, отслеживающие в ходе
+# симуляции интересующие параметры. Также в них проводится математическая
+# обработка полученных данных. Результаты, полученные здесь, являются выходными
+# данными имитационной модели.
 #############################################################################
 MIN_POWER_DBM = -120  # dBm - use this value to replace None where needed
 
@@ -1695,6 +1700,10 @@ class _TagReadRecord:
 
 
 class _TagPowerRecord:
+    """
+    Журнал для отслеживания параметров беспроводного канала связи
+    между считывателем и меткой.
+    """
     def __init__(self):
         self.time = None
         self.field_lifetime = None
@@ -1770,12 +1779,16 @@ class _TagPowerRecord:
 
 
 class _TagRecord:
+    """
+    Журнал для отслеживания параметров метки в процессе симуляции.
+    """
     def __init__(self, tag):
         self._tag = tag
         # list of _TagReadRecord's
         self.inventory_history = []
-        self.num_rounds_attained = 0
-        self.num_qadjust_attained = 0
+        self.num_rounds_attained = 0 # Количество раундов, в которых метка приняла участие (меняется в handlers)
+        self.num_qadjust_attained = 0 # Количество раз, когда метка изменила Q из-за QAdjust (меняется в objects)
+        self.collision_slots = 0 # Количество коллизионных слотов, которые были у метки (не используется). Можно ли записывать кортеж (Round, round_num_tags, Q)
         # list of (pos, antenna, power@tag, power@reader, BER):
         self.power_mapping = []
         self._tag_read_record = None
@@ -1838,46 +1851,64 @@ class _TagRecord:
 
 
 class Statistics:
-    num_tags_created = 0
+    """
+    Менеджер журналов для записи статистики взаимодействий меток
+    и считывателя в симуляции RFID.
+
+    Также данный класс реализует логику математического
+    анализа полученных результатов.
+    """
+
+    # --- Логика менеджера журналов меток ---
+
+    num_tags_created: int = 0
 
     def __init__(self):
-        self.tags_history = []
-        self.use_power_statistics = True
-        self._current_tag_records = {}
+        self.tags_history: list[_TagRecord] = [] # Журналы отработавших меток
+        self.use_power_statistics: bool = True
+        self._current_tag_records: dict[Tag, _TagRecord] = {}
+        self.slot_end_listener_id: int | None = None
 
-        self.slot_end_listener_id = None
-
-    def create_tag_record(self, tag):
+    def create_tag_record(self, tag: Tag) -> _TagRecord:
+        """Создать новый журнал для метки."""
         record = _TagRecord(tag)
         self._current_tag_records[tag] = record
         return record
 
-    def get_tag_record(self, tag):
+    def get_tag_record(self, tag: Tag) -> _TagRecord | None:
+        """Вернуть журнал для конкретной метки."""
         return self._current_tag_records.get(tag, None)
 
-    def close_tag_record(self, tag):
+    def close_tag_record(self, tag: Tag) -> None:
         record = self._current_tag_records.pop(tag)
         self.tags_history.append(record)
 
-    def average_rounds_per_tag(self):
+    # --- Логика обработки результатов моделирования ---
+
+    def average_rounds_per_tag(self) -> float:
         nums = [tr.num_rounds_attained for tr in self.tags_history]
         return np.average(nums)
 
-    def inventory_probability(self):
+    def inventory_probability(self) -> float:
         recs = [tr for tr in self.tags_history if tr.inventory_history]
         return len(recs) / len(self.tags_history)
 
-    def read_tid_probability(self):
+    def read_tid_probability(self) -> float:
         recs = [tr for tr in self.tags_history if
                 len([trd for trd in tr.inventory_history if trd.read_tid]) > 0]
         return len(recs) / len(self.tags_history)
 
-    def average_changing_q(self):
+    def average_changing_q(self) -> list[int]:
         return [tag.num_qadjust_attained for tag in self.tags_history]
 
-    def to_long_string(self):
-        return """Statistics {{
-num_tags_created = {},
-tags_history = {},
-}}""".format(self.num_tags_created,
-             "\n\t".join(rec.to_long_string() for rec in self.tags_history))
+    def to_long_string(self) -> str:
+        tag_descriptions = "\n\t".join(
+            rec.to_long_string() for rec in self.tags_history
+        )
+        return (
+            f"Statistics {{\n"
+            f"    num_tags_created = {self.num_tags_created},\n"
+            f"    tags_history = [\n\t{tag_descriptions}\n"
+            f"    ]\n"
+            f"}}"
+        )

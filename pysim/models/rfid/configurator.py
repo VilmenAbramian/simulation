@@ -1,13 +1,16 @@
 from tabulate import tabulate
 import numpy as np
 
+from pysim.models.rfid.handlers import start_simulation
 from pysim.models.rfid.objects import Reader, Model, Antenna, Generator, Medium
 from pysim.models.rfid.params import default_params, inner_params
-import pysim.models.rfid.handlers as handlers
 import pysim.sim.simulator as sim
 
 
-def create_model(print_params = False, **click_params) -> Model:
+def create_model(
+        print_params = False,
+        **click_params
+) -> Model:
     """
     Собирает и возвращает имитационную модель RFID на основе
     заданных параметров.
@@ -35,6 +38,7 @@ def create_model(print_params = False, **click_params) -> Model:
         - speed (float): скорость считывателя, км/ч;
         - reader_offset, tag_offset, altitude: пространственные параметры
           (в метрах);
+        - q (int): тестирование изменения Q
 
     Возвращает:
         Model: полностью настроенная модель RFID.
@@ -74,11 +78,11 @@ def create_model(print_params = False, **click_params) -> Model:
     reader.read_tid_bank = (
         inner_params.inventory_scenario_params.read_tid_bank if reader.read_tid_words_num > 0 else False
     )
-    reader.q = inner_params.reader_params.q
+    reader.q = click_params.get('q', default_params.q)
     reader.use_query_adjust = click_params.get(
         'useadjust', default_params.useadjust
     )
-    reader.adjust_delta = click_params.get('delta', default_params.delta)
+    reader.adjust_delta = inner_params.reader_params.delta
     reader.q_fp = inner_params.reader_params.q_fp
 
     reader_antenna_x = click_params.get('reader_offset', default_params.reader_offset)
@@ -161,8 +165,8 @@ def run_model(
     sim_time, _, result = sim.run_simulation(
         sim.build_simulation(
             inner_params.model_name,
-            init=handlers.start_simulation,
-            context=model,
+            init=start_simulation, # Первое запланированное событие
+            context=model, # В качестве контекста используется объект модели
             max_real_time=max_real_time,
             max_sim_time=max_sim_time,
             max_num_events=max_num_events,
