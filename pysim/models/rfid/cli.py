@@ -24,6 +24,9 @@ class SimulationResult(BaseModel):
     read_tid_prob: float = Field(
         ..., description="Вероятность успешного чтения банка памяти USER"
     )
+    avg_collisions: float = Field(
+        ..., description="Среднее количество коллизий для одной метки"
+    )
     execution_time: float = Field(
         ..., description="Время выполнения симуляции (в секундах)"
     )
@@ -133,35 +136,41 @@ def check_vars_for_multiprocessing(**kwargs):
     return kwargs, variadic
 
 
-def prepare_multiple_simulation(variadic, **kwargs):
-    '''
+def prepare_multiple_simulation(
+        variadic,
+        additional_params = None,
+        **kwargs):
+    """
     Какой-то параметр варьируется. Запускаем параллельно
     расчеты через пул рабочих.
     Убираем дубликаты и сортируем по возрастанию
     значения аргумента, по которому варьируемся.
-    '''
+    """
     variadic_values = sorted(set(kwargs[variadic]))
 
     # Построим массив из копий параметров
     args_list = [{
-        'speed': kwargs['speed'],
-        'tari': kwargs['tari'],
-        'encoding': kwargs['encoding'],
-        'tid_word_size': kwargs['tid_word_size'],
-        'reader_offset': kwargs['reader_offset'],
-        'tag_offset': kwargs['tag_offset'],
-        'altitude': kwargs['altitude'],
-        'power': kwargs['power'],
-        'num_tags': kwargs['num_tags'],
-        'verbose': False,
-        'useadjust': kwargs.get('useadjust', False),
-        'q': kwargs.get('q'),
+        'params': {
+            'speed': kwargs['speed'],
+            'tari': kwargs['tari'],
+            'encoding': kwargs['encoding'],
+            'tid_word_size': kwargs['tid_word_size'],
+            'reader_offset': kwargs['reader_offset'],
+            'tag_offset': kwargs['tag_offset'],
+            'altitude': kwargs['altitude'],
+            'power': kwargs['power'],
+            'num_tags': kwargs['num_tags'],
+            'verbose': False,
+            'useadjust': kwargs.get('useadjust', False),
+            'q': kwargs.get('q'),
+        },
+        "additional_params": additional_params
     } for _ in enumerate(variadic_values)]
 
     # Теперь заменим значения варьируемого аргумента, чтобы в каждом
     # элементе args хранилось только одно значение вместо всего набора.
     for i, value in enumerate(variadic_values):
-        args_list[i][variadic] = value
+        args_list[i]["params"][variadic] = value
 
     pool = multiprocessing.Pool(
         kwargs.get('jobs', multiprocessing.cpu_count())
@@ -177,8 +186,12 @@ def prepare_simulation(
     Запускает одну имитационную симуляцию RFID-модели с заданными параметрами.
 
     Args:
-        params: Словарь параметров симуляции из списка params.RFIDDefaults;
-        show_params: Если True, выводит параметры запуска в консоль.
+        params: словарь параметров симуляции из списка params.RFIDDefaults.
+          Эти параметры пользователь может переопределить через
+          click интерфейс;
+        additional_params: словарь параметров симуляции, которые задаются
+          через блокноты с экспериментами;
+        show_params: если True, выводит параметры запуска в консоль.
 
     Returns:
         Результаты моделирования в Pydantic схеме
@@ -193,8 +206,12 @@ def prepare_simulation(
               f'altitude = {params["altitude"]} m,'
               f'power = {params["power"]} dBm, '
               f'num_tags = {params["num_tags"]}')
+
+    additional_params = params['additional_params']
+    params = params['params']
     encoding = default_params.parse_tag_encoding(params['encoding'])
     model = configurator.create_model(
+        additional_params=additional_params,
         speed=(params['speed'] * KMPH_TO_MPS_MUL),
         encoding=encoding,
         tari=float(params['tari']) * 1e-6,
@@ -216,6 +233,7 @@ def prepare_simulation(
         rounds_per_tag = model.statistics.average_rounds_per_tag(),
         inventory_prob = model.statistics.inventory_probability(),
         read_tid_prob = model.statistics.read_tid_probability(),
+        avg_collisions = model.statistics.average_collisions_per_tag(),
         execution_time = t_end - t_start
     )
 

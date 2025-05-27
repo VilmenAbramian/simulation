@@ -1,4 +1,5 @@
 from tabulate import tabulate
+from typing import Any, Dict
 import numpy as np
 
 from pysim.models.rfid.handlers import start_simulation
@@ -8,6 +9,7 @@ import pysim.sim.simulator as sim
 
 
 def create_model(
+        additional_params: Dict[str, Any] | None = None,
         print_params = False,
         **click_params
 ) -> Model:
@@ -16,9 +18,9 @@ def create_model(
     заданных параметров.
 
     Функция создает объект Model и инициализирует его компоненты:
-    - считыватель (Reader),
-    - антенну считывателя (Antenna),
-    - среду распространения сигнала (Medium),
+    - считыватель (Reader);
+    - антенну считывателя (Antenna);
+    - среду распространения сигнала (Medium);
     - генератор меток (Generator).
 
     Приоритет параметров:
@@ -26,6 +28,9 @@ def create_model(
     2. Значения по умолчанию из `RFIDDefaults` и `RFIDInternalParams`.
 
     Аргументы:
+      additional_params: словарь с параметрами модели, которые нельзя
+        задать через click-интерфейс. Используется для передачи некоторых
+        параметров из блокнота;
       print_params: Печатать или нет входные параметры модели
       **click_params: Переопределяемые параметры модели, такие как:
         - num_tags (int): число меток в симуляции;
@@ -43,6 +48,8 @@ def create_model(
     Возвращает:
         Model: полностью настроенная модель RFID.
     """
+    if additional_params is None:
+        additional_params = {}
     # 1) Создать объект модели
     model = Model()
     model.max_tags_num = click_params.get('num_tags', default_params.num_tags)
@@ -130,9 +137,12 @@ def create_model(
     generator.antenna_gain = inner_params.energy_params.tag_antenna_gain
     generator.modulation_loss = inner_params.energy_params.tag_modulation_loss
     generator.sensitivity = inner_params.energy_params.tag_sensitivity
+    generation_interval = additional_params.get(
+        "generation_interval", inner_params.tag_params.generation_interval
+    )
     generator.set_interval(
-        inner_params.tag_params.generation_interval[0], # Функция
-        *inner_params.tag_params.generation_interval[1:] # Её параметры
+        generation_interval[0], # Функция
+        *generation_interval[1:] # Её параметры
     )
 
     if print_params:

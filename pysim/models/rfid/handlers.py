@@ -292,15 +292,21 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
 
 
 def _multiple_tag_response(kernel, ctx, reader, transaction):
-    '''
+    """
     Обработка коллизии
-    '''
+    """
     cmd_frame = None
+    # Увеличиваем счётчик коллизий для каждой участвовавшей метки
+    for tag in transaction.tags:
+        tag_record = ctx.statistics.get_tag_record(tag)
+        if tag_record:
+            tag_record.collision_count += 1
+    # Работа QueryAdjust
     if reader.use_query_adjust and (
         reader.state == Reader.State.QUERY or
         reader.state == Reader.State.QREP
     ):
-        if reader.q >= 0 and reader.q < 15:
+        if 0 <= reader.q < 15:
             reader.q_fp = min(15, reader.q_fp+reader.adjust_delta)
             new_q = round(reader.q_fp)
             if abs(reader.q - new_q) == 1:

@@ -11,7 +11,7 @@ import os
 
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
-from typing import Callable
+from typing import Any, Callable, Dict
 import matplotlib.pyplot as plt
 
 from pysim.experiments.utility.graphs_style import savefig, setup_matplotlib
@@ -21,8 +21,8 @@ from pysim.models.rfid.params import default_params, inner_params
 setup_matplotlib()
 
 
-IMAGE_DIRECTORY = "rfid" # Директория для сохранения изображений
-JSON_DIRECTORY = "result_jsons/rfid/"
+IMAGE_DIRECTORY = "rfid/"
+JSON_DIRECTORY = "results/result_jsons/rfid/"
 SAVE_FIG = False         # Сохранять ли изображения
 SAVE_RESULTS = False     # Сохранять ли результаты в JSON
 USE_JSON = True          # Использовать ли результаты из JSON
@@ -33,6 +33,7 @@ def calculate_probs(
     variable_values: list,
     params_list: list[dict],
     key_fn: Callable[[dict], str],
+    additional_params: Dict[str, Any] | None = None,
     use_json: bool = USE_JSON,
     save_results: bool = SAVE_RESULTS,
     json_directory: str = JSON_DIRECTORY,
@@ -47,6 +48,8 @@ def calculate_probs(
         variable_values: список значений переменной variable (ось абсцисс);
         params_list: список параметров для разных кривых каждого сета моделирования;
         key_fn: функция, формирующая имя кривой по параметрам из params_list;
+        additional_params: задаваемые из кода параметры (их нельзя ввести из
+          click интерфейса);
         use_json: если True, то попытаться загрузить результаты из JSON;
         save_results: если True, сохранить результаты в JSON;
         json_directory: директория сохранения результатов в JSON;
@@ -56,15 +59,21 @@ def calculate_probs(
         results: словарь, где ключ — имя кривой, значение — список вероятностей.
     """
     directory = json_directory + file_name
+    collision_counts = {}
     if use_json and os.path.exists(directory):
         with open(directory, 'r') as f:
             results = json.load(f)
     else:
         results = {}
         for params in tqdm(params_list, desc=f"Моделирование по переменной {variable}"):
-            sim_results = prepare_multiple_simulation(variable, **{variable: variable_values}, **params)
+            sim_results = prepare_multiple_simulation(
+                variable, additional_params,
+                **{variable: variable_values}, **params
+            )
             key = key_fn(params)
             results[key] = [res.read_tid_prob for res in sim_results]
+            collision_counts[key] = [res.avg_collisions for res in sim_results]
+            print(f"Collisions: {collision_counts}")
 
         if save_results:
             os.makedirs(os.path.dirname(directory), exist_ok=True)

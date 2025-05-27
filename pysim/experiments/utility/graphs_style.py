@@ -10,8 +10,8 @@ class GraphConsts:
     """
     Класс для хранения констант оформления графиков.
     """
-    CMAP_NAME = 'inferno'             # Цветовая схема для графиков
-    IMAGE_BASE_DIR = 'result_images'         # Папка для сохранения изображений
+    CMAP_NAME = 'inferno' # Цветовая схема для графиков
+    IMAGE_BASE_DIR = 'results/result_images' # Папка для сохранения изображений
     IMAGE_EXTENSIONS = ('pdf', 'png') # Расширения файлов для сохранения
     FONT_SIZE = 16
     FIGSIZE = (8, 5)

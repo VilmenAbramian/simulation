@@ -1,8 +1,11 @@
 import functools
+from typing import Any
+
 import numpy as np
 import enum
 import itertools
 
+from numpy import floating
 
 import pysim.models.rfid.epcstd as std
 import pysim.models.rfid.channel as chan
@@ -1788,7 +1791,7 @@ class _TagRecord:
         self.inventory_history = []
         self.num_rounds_attained = 0 # Количество раундов, в которых метка приняла участие (меняется в handlers)
         self.num_qadjust_attained = 0 # Количество раз, когда метка изменила Q из-за QAdjust (меняется в objects)
-        self.collision_slots = 0 # Количество коллизионных слотов, которые были у метки (не используется). Можно ли записывать кортеж (Round, round_num_tags, Q)
+        self.collision_count = 0  # Количество коллизий, в которых участвовала метка
         # list of (pos, antenna, power@tag, power@reader, BER):
         self.power_mapping = []
         self._tag_read_record = None
@@ -1885,7 +1888,7 @@ class Statistics:
 
     # --- Логика обработки результатов моделирования ---
 
-    def average_rounds_per_tag(self) -> float:
+    def average_rounds_per_tag(self) -> floating:
         nums = [tr.num_rounds_attained for tr in self.tags_history]
         return np.average(nums)
 
@@ -1900,6 +1903,13 @@ class Statistics:
 
     def average_changing_q(self) -> list[int]:
         return [tag.num_qadjust_attained for tag in self.tags_history]
+
+    def average_collisions_per_tag(self) -> floating:
+        """
+        Вычислить среднее число коллизий на метку по завершённой симуляции.
+        """
+        collisions = [rec.collision_count for rec in self.tags_history]
+        return np.mean(collisions)
 
     def to_long_string(self) -> str:
         tag_descriptions = "\n\t".join(
