@@ -1905,9 +1905,7 @@ class Statistics:
         return [tag.num_qadjust_attained for tag in self.tags_history]
 
     def average_collisions_per_tag(self) -> floating:
-        """
-        Вычислить среднее число коллизий на метку по завершённой симуляции.
-        """
+        """Вычислить среднее число коллизий на метку."""
         collisions = [rec.collision_count for rec in self.tags_history]
         return np.mean(collisions)
 

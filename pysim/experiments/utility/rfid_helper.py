@@ -37,7 +37,8 @@ def calculate_probs(
     use_json: bool = USE_JSON,
     save_results: bool = SAVE_RESULTS,
     json_directory: str = JSON_DIRECTORY,
-    file_name: str = "probs"
+    file_name: str = "probs",
+    manual_key: str | None = None,
 ) -> dict[str, list[float]]:
     """
     Запуск нескольких сетов моделирования и получение зависимостей
@@ -60,6 +61,7 @@ def calculate_probs(
     """
     directory = json_directory + file_name
     collision_counts = {}
+    rounds_count = {}
     if use_json and os.path.exists(directory):
         with open(directory, 'r') as f:
             results = json.load(f)
@@ -70,10 +72,12 @@ def calculate_probs(
                 variable, additional_params,
                 **{variable: variable_values}, **params
             )
-            key = key_fn(params)
+            key = manual_key if manual_key is not None else key_fn(params)
             results[key] = [res.read_tid_prob for res in sim_results]
             collision_counts[key] = [res.avg_collisions for res in sim_results]
+            rounds_count[key] = [res.rounds_per_tag for res in sim_results]
             print(f"Collisions: {collision_counts}")
+            print(f"Rounds: {rounds_count}")
 
         if save_results:
             os.makedirs(os.path.dirname(directory), exist_ok=True)
@@ -145,3 +149,8 @@ def plot_probs(
 
     if save_fig:
         savefig(name=image_name, directory=image_directory)
+
+
+def generation_interval(time: float) -> float:
+    """Равномерное распределение меток с заданным временем time"""
+    return time

@@ -138,6 +138,9 @@ class ReaderParams(BaseModel):
 
 class GeometryParams(BaseModel):
     """Геометрические параметры RFID системы в 3-х мерном пространстве."""
+    dimension_of_space: int = Field(
+        3, description="Размерность пространства моделирования."
+    )
     initial_distance_to_reader: confloat(ge=0.1, le=20.0) = Field(
         10.0, description="Начальное расстояние метки до считывателя, м."
     )
@@ -218,6 +221,15 @@ class ChannelParams(BaseModel):
         "reflection", description="Тип отражения от стены."
     )
     use_doppler: bool = Field(True, description="Учитывать ли эффект Доплера.")
+    vertical_polarization: float = Field(
+        0.0, description="Вертикальная поляризация антенны."
+    )
+    horizontal_polarization: float = Field(
+        1.0, description="Горизонтальная поляризация антенны."
+    )
+    circular_polarization: float = Field(
+        0.5, description="Круговая поляризация антенны"
+    )
 
 
 class ReaderPowerParams(BaseModel):

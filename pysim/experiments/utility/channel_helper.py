@@ -1,5 +1,55 @@
 from typing import Optional, Sequence, Tuple
 
+import numpy as np
+
+from pysim.models.rfid import channel
+from pysim.models.rfid.params import (
+    default_params, inner_params
+)
+
+
+WAVELEN = inner_params.geometry_params.speed_of_light / inner_params.channel_params.frequency_hz
+READER_POS = np.array((5, 0, 5))
+READER_POLARIZATION = inner_params.channel_params.circular_polarization
+TAG_POLARIZATION = inner_params.channel_params.horizontal_polarization
+
+
+def get_pathloss(y, pol, speed, t):
+    return channel.pathloss_model(
+        time=t,
+        wavelen=WAVELEN,
+        # Параметры считывателя: ---------------------------
+        tx_pos=np.array((READER_POS[0], y, READER_POS[2])), # Координата y изменяется
+        tx_antenna_dir=inner_params.geometry_params.reader_antenna_direction,
+        tx_rp=channel.rp_dipole,
+        tx_velocity=np.array((0, channel.kmph2mps(speed), 0)), # Движение только по оси OY
+        # Параметры метки: ---------------------------------
+        rx_pos=np.array((5.0, 0, 0)),
+        rx_antenna_dir=inner_params.geometry_params.tag_antenna_direction,
+        rx_rp=channel.rp_dipole,
+        rx_velocity=np.zeros(inner_params.geometry_params.dimension_of_space),
+        # Параметры отражения: -----------------------------
+        tx_polarization=pol,
+        ground_reflection=channel.reflection,
+        conductivity=inner_params.channel_params.conductivity,
+        permittivity=inner_params.channel_params.permittivity,
+        # ---------------------------------------------------
+        log=True
+    )
+
+
+def get_tag_rx(y: float, speed: float, t: float, power: float = default_params.power_dbm) -> float:
+    """
+    Вычислить мощность сигнала, принятого меткой (в dBm).
+
+    Скорость должна быть в км/ч
+    """
+    path_loss = get_pathloss(y, READER_POLARIZATION, speed, t)
+    pol_loss = 0 if READER_POLARIZATION == TAG_POLARIZATION else -3.0
+    gain = inner_params.energy_params.reader_antenna_gain + inner_params.energy_params.tag_antenna_gain
+    return power + path_loss + pol_loss + gain + inner_params.energy_params.reader_cable_loss
+
+
 def find_zones(
         x: Sequence[float], y: Sequence[float],
         bound: float, use_upper: bool = True
