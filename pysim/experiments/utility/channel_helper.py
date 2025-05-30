@@ -8,23 +8,39 @@ from pysim.models.rfid.params import (
 )
 
 
-WAVELEN = inner_params.geometry_params.speed_of_light / inner_params.channel_params.frequency_hz
-READER_POS = np.array((5, 0, 5))
-READER_POLARIZATION = inner_params.channel_params.circular_polarization
-TAG_POLARIZATION = inner_params.channel_params.horizontal_polarization
+READER_POS = np.array((default_params.reader_offset, 0, default_params.altitude))
+TAG_POS = np.array((default_params.tag_offset, 0, inner_params.tag_params.tag_altitude))
 
 
-def get_pathloss(y, pol, speed, t):
+def get_pathloss(
+    y: float, pol: float, speed: float = default_params.speed, t: float = 0.1
+) -> float:
+    """
+    Расчёт затухания в двухлучевом канале (с отражением от стены).
+    Значения затухания будут разными для каналов от считывателя к метке
+    и обратно только из-за поляризации, так как от нее зависит
+    коэффициент отражения. Все остальное - симметрично.
+
+    Args:
+        y: координата считывателя вдоль оси OY
+        pol: поляризация сигнала (принимает значения: 0, 0.5, 1)
+        speed: скорость считывателя вдоль оси OY, км/ч
+        t: время с момента начала передачи
+
+    Returns:
+        затухание в dB
+    """
     return channel.pathloss_model(
         time=t,
-        wavelen=WAVELEN,
+        wavelen=(inner_params.geometry_params.speed_of_light /
+                 inner_params.channel_params.frequency_hz),
         # Параметры считывателя: ---------------------------
         tx_pos=np.array((READER_POS[0], y, READER_POS[2])), # Координата y изменяется
         tx_antenna_dir=inner_params.geometry_params.reader_antenna_direction,
         tx_rp=channel.rp_dipole,
         tx_velocity=np.array((0, channel.kmph2mps(speed), 0)), # Движение только по оси OY
         # Параметры метки: ---------------------------------
-        rx_pos=np.array((5.0, 0, 0)),
+        rx_pos=TAG_POS,
         rx_antenna_dir=inner_params.geometry_params.tag_antenna_direction,
         rx_rp=channel.rp_dipole,
         rx_velocity=np.zeros(inner_params.geometry_params.dimension_of_space),
@@ -38,21 +54,42 @@ def get_pathloss(y, pol, speed, t):
     )
 
 
-def get_tag_rx(y: float, speed: float, t: float, power: float = default_params.power_dbm) -> float:
+def get_tag_rx(
+        y: float,
+        speed: float,
+        t: float,
+        reader_pol: float = inner_params.channel_params.reader_default_polarization,
+        tag_pol:float = inner_params.channel_params.tag_default_polarization,
+        power: float = default_params.power_dbm
+) -> float:
     """
     Вычислить мощность сигнала, принятого меткой (в dBm).
 
     Скорость должна быть в км/ч
+
+    Args:
+        y: положение считывателя по оси OY;
+        speed: скорость считывателя, км/ч
+        t: время, сек;
+        reader_pol: поляризация антенны считывателя;
+        tag_pol: поляризация антенны метки;
+        power: мощность передатчика считывателя.
     """
-    path_loss = get_pathloss(y, READER_POLARIZATION, speed, t)
-    pol_loss = 0 if READER_POLARIZATION == TAG_POLARIZATION else -3.0
-    gain = inner_params.energy_params.reader_antenna_gain + inner_params.energy_params.tag_antenna_gain
-    return power + path_loss + pol_loss + gain + inner_params.energy_params.reader_cable_loss
+    path_loss = get_pathloss(y, reader_pol, speed, t)
+    pol_loss = (
+        0 if reader_pol==tag_pol else inner_params.energy_params.polarization_loss
+    )
+    gain = (inner_params.energy_params.reader_antenna_gain +
+            inner_params.energy_params.tag_antenna_gain)
+    return (power + path_loss + pol_loss + gain +
+            inner_params.energy_params.reader_cable_loss)
 
 
 def find_zones(
-        x: Sequence[float], y: Sequence[float],
-        bound: float, use_upper: bool = True
+        x: Sequence[float],
+        y: Sequence[float],
+        bound: float = inner_params.energy_params.tag_sensitivity,
+        use_upper: bool = True
 ) -> Sequence[Tuple[float, float]]:
     """
     Найти интервалы на X, внутри которых значение Y выше или ниже лимита.
@@ -67,7 +104,7 @@ def find_zones(
     Args:
         x (sequence of float): последовательность аргументов
         y (sequence of float): последовательность значений
-        bound (float): граничное значение
+        bound (float): граничное значение (чувствительность метки)
         use_upper (bool): если True, то ищем области, в которых значение выше
 
     Returns:

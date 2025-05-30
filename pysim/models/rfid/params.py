@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel, Field, confloat, conint
 from typing import Any, Callable, Literal
 
@@ -6,10 +7,17 @@ from pysim.models.rfid.objects import Reader
 
 KMPH_TO_MPS_MUL = 1.0 / 3.6
 
+
+class Polarization(float, Enum):
+    VERTICAL = 0.0
+    HORIZONTAL = 1.0
+    CIRCULAR = 0.5
+
+
 class RFIDDefaults(BaseModel):
     """
     Значения по умолчанию для параметров, которые могут
-    быть изменены пользователем через консольный click интерфейс.
+    быть изменены пользователем через консольный click-интерфейс.
 
     Для моделирования графиков в дипломе использовалось num_tags = 6000
     """
@@ -141,6 +149,10 @@ class GeometryParams(BaseModel):
     dimension_of_space: int = Field(
         3, description="Размерность пространства моделирования."
     )
+    grid_step: conint(ge=50, le=1000) = Field(
+        200, description="Разрешение сетки для расчёта зоны активности метки."
+                         "Также используется для других графиков оценки канала"
+    )
     initial_distance_to_reader: confloat(ge=0.1, le=20.0) = Field(
         10.0, description="Начальное расстояние метки до считывателя, м."
     )
@@ -222,15 +234,20 @@ class ChannelParams(BaseModel):
     )
     use_doppler: bool = Field(True, description="Учитывать ли эффект Доплера.")
     vertical_polarization: float = Field(
-        0.0, description="Вертикальная поляризация антенны."
+        Polarization.VERTICAL.value, description="Вертикальная поляризация антенны."
     )
     horizontal_polarization: float = Field(
-        1.0, description="Горизонтальная поляризация антенны."
+        Polarization.HORIZONTAL.value, description="Горизонтальная поляризация антенны."
     )
     circular_polarization: float = Field(
-        0.5, description="Круговая поляризация антенны"
+        Polarization.CIRCULAR.value, description="Круговая поляризация антенны"
     )
-
+    reader_default_polarization: float = Field(
+        Polarization.CIRCULAR.value, description="Поляризация антенны считывателя по умолчанию"
+    )
+    tag_default_polarization: float = Field(
+        Polarization.HORIZONTAL.value, description="Поляризация антенны метки по умолчанию"
+    )
 
 class ReaderPowerParams(BaseModel):
     """

@@ -138,7 +138,6 @@ def check_vars_for_multiprocessing(**kwargs):
 
 def prepare_multiple_simulation(
         variadic,
-        additional_params = None,
         **kwargs):
     """
     Какой-то параметр варьируется. Запускаем параллельно
@@ -150,27 +149,25 @@ def prepare_multiple_simulation(
 
     # Построим массив из копий параметров
     args_list = [{
-        'params': {
-            'speed': kwargs['speed'],
-            'tari': kwargs['tari'],
-            'encoding': kwargs['encoding'],
-            'tid_word_size': kwargs['tid_word_size'],
-            'reader_offset': kwargs['reader_offset'],
-            'tag_offset': kwargs['tag_offset'],
-            'altitude': kwargs['altitude'],
-            'power': kwargs['power'],
-            'num_tags': kwargs['num_tags'],
-            'verbose': False,
-            'useadjust': kwargs.get('useadjust', False),
-            'q': kwargs.get('q'),
-        },
-        "additional_params": additional_params
+        'speed': kwargs['speed'],
+        'tari': kwargs['tari'],
+        'encoding': kwargs['encoding'],
+        'tid_word_size': kwargs['tid_word_size'],
+        'reader_offset': kwargs['reader_offset'],
+        'tag_offset': kwargs['tag_offset'],
+        'altitude': kwargs['altitude'],
+        'power': kwargs['power'],
+        'num_tags': kwargs['num_tags'],
+        'verbose': False,
+        'useadjust': kwargs.get('useadjust', False),
+        'q': kwargs.get('q'),
+        "generation_interval": kwargs.get("generation_interval")
     } for _ in enumerate(variadic_values)]
 
     # Теперь заменим значения варьируемого аргумента, чтобы в каждом
     # элементе args хранилось только одно значение вместо всего набора.
     for i, value in enumerate(variadic_values):
-        args_list[i]["params"][variadic] = value
+        args_list[i][variadic] = value
 
     pool = multiprocessing.Pool(
         kwargs.get('jobs', multiprocessing.cpu_count())
@@ -189,8 +186,6 @@ def prepare_simulation(
         params: словарь параметров симуляции из списка params.RFIDDefaults.
           Эти параметры пользователь может переопределить через
           click интерфейс;
-        additional_params: словарь параметров симуляции, которые задаются
-          через блокноты с экспериментами;
         show_params: если True, выводит параметры запуска в консоль.
 
     Returns:
@@ -206,12 +201,8 @@ def prepare_simulation(
               f'altitude = {params["altitude"]} m,'
               f'power = {params["power"]} dBm, '
               f'num_tags = {params["num_tags"]}')
-
-    additional_params = params['additional_params']
-    params = params['params']
     encoding = default_params.parse_tag_encoding(params['encoding'])
     model = configurator.create_model(
-        additional_params=additional_params,
         speed=(params['speed'] * KMPH_TO_MPS_MUL),
         encoding=encoding,
         tari=float(params['tari']) * 1e-6,
@@ -223,7 +214,8 @@ def prepare_simulation(
         num_tags=params['num_tags'],
         verbose=params['verbose'],
         useadjust=params['useadjust'],
-        q=params['q']
+        q=params['q'],
+        generation_interval=params['generation_interval'],
     )
     t_start = perf_counter()
     configurator.run_model(model, sim.ModelLoggerConfig())

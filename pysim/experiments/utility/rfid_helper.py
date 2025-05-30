@@ -33,12 +33,10 @@ def calculate_probs(
     variable_values: list,
     params_list: list[dict],
     key_fn: Callable[[dict], str],
-    additional_params: Dict[str, Any] | None = None,
     use_json: bool = USE_JSON,
     save_results: bool = SAVE_RESULTS,
     json_directory: str = JSON_DIRECTORY,
     file_name: str = "probs",
-    manual_key: str | None = None,
 ) -> dict[str, list[float]]:
     """
     Запуск нескольких сетов моделирования и получение зависимостей
@@ -49,8 +47,6 @@ def calculate_probs(
         variable_values: список значений переменной variable (ось абсцисс);
         params_list: список параметров для разных кривых каждого сета моделирования;
         key_fn: функция, формирующая имя кривой по параметрам из params_list;
-        additional_params: задаваемые из кода параметры (их нельзя ввести из
-          click интерфейса);
         use_json: если True, то попытаться загрузить результаты из JSON;
         save_results: если True, сохранить результаты в JSON;
         json_directory: директория сохранения результатов в JSON;
@@ -69,15 +65,14 @@ def calculate_probs(
         results = {}
         for params in tqdm(params_list, desc=f"Моделирование по переменной {variable}"):
             sim_results = prepare_multiple_simulation(
-                variable, additional_params,
-                **{variable: variable_values}, **params
+                variable, **{variable: variable_values}, **params
             )
-            key = manual_key if manual_key is not None else key_fn(params)
+            key = key_fn(params)
             results[key] = [res.read_tid_prob for res in sim_results]
             collision_counts[key] = [res.avg_collisions for res in sim_results]
             rounds_count[key] = [res.rounds_per_tag for res in sim_results]
-            print(f"Collisions: {collision_counts}")
-            print(f"Rounds: {rounds_count}")
+            # print(f"Collisions: {collision_counts}")
+            # print(f"Rounds: {rounds_count}")
 
         if save_results:
             os.makedirs(os.path.dirname(directory), exist_ok=True)
