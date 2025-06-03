@@ -2,8 +2,9 @@
 
 import numpy as np
 
-import pysim.models.rfid.epcstd as std
+from pysim.models.rfid.adjust_algs import *
 from pysim.models.rfid.objects import Model, Reader, Tag, Transaction
+import pysim.models.rfid.epcstd as std
 
 
 def start_simulation(kernel):
@@ -215,29 +216,15 @@ def update_positions(kernel):
 
 
 def _no_tag_response(kernel, ctx, reader):
-    '''
+    """
     Обработка отсутствия ответа метки после
     завершения транзакции считывателя
-    '''
+    """
     cmd_frame = None
     # Если используется команда QueryAdjust И
     # считыватель в состоянии Query или QueryRep
-    if reader.use_query_adjust and (
-        reader.state == Reader.State.QUERY or
-        reader.state == Reader.State.QREP
-    ):
-        if reader.q > 0 and reader.q <= 15:
-            reader.q_fp = max(0, reader.q_fp-reader.adjust_delta)
-            new_q = round(reader.q_fp)
-            if abs(reader.q - new_q) == 1:
-                kernel.logger.error(
-                    f'Считыватель уменьшил Q с {reader.q} до {new_q}'
-                )
-                reader.q = new_q  # обновляем q в считывателе
-                # Отправить команду QueryAdjust
-                reader.updn = -1
-                cmd_frame = reader.set_state(Reader.State.QAdjust)
-                reader.updn = 0
+
+    cmd_frame = apply_query_adjust(kernel, reader, direction=-1)
     if cmd_frame is None:
         cmd_frame = ctx.reader.timeout()
     return cmd_frame
@@ -292,35 +279,37 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
 
 
 def _multiple_tag_response(kernel, ctx, reader, transaction):
-    """
-    Обработка коллизии
-    """
-    cmd_frame = None
-    # Увеличиваем счётчик коллизий для каждой участвовавшей метки
+    """Обработка коллизии"""
     for tag in transaction.tags:
         tag_record = ctx.statistics.get_tag_record(tag)
         if tag_record:
             tag_record.collision_count += 1
-    # Работа QueryAdjust
-    if reader.use_query_adjust and (
-        reader.state == Reader.State.QUERY or
-        reader.state == Reader.State.QREP
-    ):
-        if 0 <= reader.q < 15:
-            reader.q_fp = min(15, reader.q_fp+reader.adjust_delta)
-            new_q = round(reader.q_fp)
-            if abs(reader.q - new_q) == 1:
-                kernel.logger.error(
-                    f'Считыватель увеличил Q с {reader.q} до {new_q}'
-                )
-                reader.q = new_q  # обновляем q в считывателе
-                # Отправить команду QueryAdjust
-                reader.updn = 1
+
+    cmd_frame = apply_query_adjust(kernel, reader, direction=+1)
+    return cmd_frame if cmd_frame is not None else ctx.reader.timeout()
+
+
+def apply_query_adjust(kernel, reader, direction: int):
+    """
+    Универсальное применение алгоритма QueryAdjust.
+    direction = +1 для увеличения Q (коллизия), -1 для уменьшения Q (успешный ответ).
+    """
+    if reader.use_query_adjust and reader.state in (Reader.State.QUERY, Reader.State.QREP):
+        if 0 <= reader.q <= 15:
+            strategy = getattr(reader, "query_adjust_strategy", QueryAdjustStrategy.DYNAMIC)
+            adjust_fn = QUERY_ADJUST_FUNCTIONS.get(strategy, symmetric_query_adjust)
+            reader.q_fp = adjust_fn(reader.q_fp, reader.q, direction)
+            # ##############################
+            new_q = min(15, max(0, round(reader.q_fp)))
+            if abs(reader.q - new_q) > 1:
+                direction_str = "увеличил" if direction > 0 else "уменьшил"
+                kernel.logger.error(f'Считыватель {direction_str} Q с {reader.q} до {new_q}')
+                reader.q = new_q
+                reader.updn = direction
                 cmd_frame = reader.set_state(Reader.State.QAdjust)
                 reader.updn = 0
-    if cmd_frame is None:
-        cmd_frame = ctx.reader.timeout()
-    return cmd_frame
+                return cmd_frame
+    return None
 
 
 def finish_transaction(kernel, transaction):
