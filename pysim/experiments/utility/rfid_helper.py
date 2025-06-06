@@ -22,7 +22,7 @@ setup_matplotlib()
 
 
 IMAGE_DIRECTORY = "rfid/"
-JSON_DIRECTORY = "results/result_jsons/rfid/"
+JSON_DIRECTORY = "../results/result_jsons/rfid/"
 SAVE_FIG = False         # Сохранять ли изображения
 SAVE_RESULTS = False     # Сохранять ли результаты в JSON
 USE_JSON = True          # Использовать ли результаты из JSON

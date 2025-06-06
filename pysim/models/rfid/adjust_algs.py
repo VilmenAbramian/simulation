@@ -4,11 +4,19 @@ import math
 from enum import Enum
 
 class QueryAdjustStrategy(Enum):
-    SYMMETRIC = "symmetric"
+    STATIC = "static"
     DYNAMIC = "dynamic"
 
-def symmetric_query_adjust(q_fp, q, delta):
-    return min(15, q_fp + delta)
+def static_query_adjust(q_fp, direction, q):
+    if q == 0:
+        q = 0.8
+    delta = 0.3
+    if direction < 0:
+        return max(0, q_fp - delta)
+    elif direction > 0:
+        return min(15, q_fp + delta)
+    else:
+        return q_fp
 
 def dynamic_query_adjust(q_fp, q, delta):
     """
@@ -21,6 +29,6 @@ def dynamic_query_adjust(q_fp, q, delta):
     return min(15, max(0, q_fp + math.copysign(magnitude, delta)))
 
 QUERY_ADJUST_FUNCTIONS = {
-    QueryAdjustStrategy.SYMMETRIC: symmetric_query_adjust,
+    QueryAdjustStrategy.STATIC: static_query_adjust,
     QueryAdjustStrategy.DYNAMIC: dynamic_query_adjust,
 }

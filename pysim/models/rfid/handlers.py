@@ -217,13 +217,8 @@ def update_positions(kernel):
 
 def _no_tag_response(kernel, ctx, reader):
     """
-    Обработка отсутствия ответа метки после
-    завершения транзакции считывателя
+    Обработка отсутствия ответа метки после завершения транзакции считывателя
     """
-    cmd_frame = None
-    # Если используется команда QueryAdjust И
-    # считыватель в состоянии Query или QueryRep
-
     cmd_frame = apply_query_adjust(kernel, reader, direction=-1)
     if cmd_frame is None:
         cmd_frame = ctx.reader.timeout()
@@ -285,30 +280,37 @@ def _multiple_tag_response(kernel, ctx, reader, transaction):
         if tag_record:
             tag_record.collision_count += 1
 
-    cmd_frame = apply_query_adjust(kernel, reader, direction=+1)
+    cmd_frame = apply_query_adjust(kernel, reader, direction=1)
     return cmd_frame if cmd_frame is not None else ctx.reader.timeout()
 
 
 def apply_query_adjust(kernel, reader, direction: int):
     """
-    Универсальное применение алгоритма QueryAdjust.
-    direction = +1 для увеличения Q (коллизия), -1 для уменьшения Q (успешный ответ).
+    Применение алгоритма QueryAdjust.
+
+    direction = +1 для увеличения Q (коллизия);
+    direction = -1 для уменьшения Q (пустой слот).
     """
-    if reader.use_query_adjust and reader.state in (Reader.State.QUERY, Reader.State.QREP):
-        if 0 <= reader.q <= 15:
-            strategy = getattr(reader, "query_adjust_strategy", QueryAdjustStrategy.DYNAMIC)
-            adjust_fn = QUERY_ADJUST_FUNCTIONS.get(strategy, symmetric_query_adjust)
-            reader.q_fp = adjust_fn(reader.q_fp, reader.q, direction)
-            # ##############################
-            new_q = min(15, max(0, round(reader.q_fp)))
-            if abs(reader.q - new_q) > 1:
-                direction_str = "увеличил" if direction > 0 else "уменьшил"
-                kernel.logger.error(f'Считыватель {direction_str} Q с {reader.q} до {new_q}')
-                reader.q = new_q
-                reader.updn = direction
-                cmd_frame = reader.set_state(Reader.State.QAdjust)
-                reader.updn = 0
-                return cmd_frame
+    if (
+        reader.use_query_adjust and
+        reader.state in (Reader.State.QUERY, Reader.State.QREP) and
+        0 <= reader.q <= 15
+    ):
+
+        strategy =  QueryAdjustStrategy.STATIC
+        adjust_fn = QUERY_ADJUST_FUNCTIONS.get(strategy, static_query_adjust)
+        reader.q_fp = adjust_fn(reader.q_fp, direction, reader.q)
+        kernel.logger.error(f"Q с плавающей точкой: {reader.q_fp}")
+        new_q = round(reader.q_fp)
+
+        if abs(reader.q - new_q) == 1:
+            direction_str = "увеличил" if direction > 0 else "уменьшил"
+            kernel.logger.error(f'Считыватель {direction_str} Q с {reader.q} до {new_q}')
+            reader.q = new_q
+            reader.updn = direction
+            cmd_frame = reader.set_state(Reader.State.QAdjust)
+            reader.updn = 0
+            return cmd_frame
     return None
 
 

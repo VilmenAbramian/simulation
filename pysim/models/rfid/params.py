@@ -154,7 +154,7 @@ class GeometryParams(BaseModel):
                          "Также используется для других графиков оценки канала"
     )
     initial_distance_to_reader: confloat(ge=0.1, le=20.0) = Field(
-        10.0, description="Начальное расстояние метки до считывателя, м."
+        5.0, description="Начальное расстояние метки до считывателя, м."
     )
     movement_direction: tuple[float, float, float] = Field(
         (0, 1, 0), description='Единичный вектор направления движения.'

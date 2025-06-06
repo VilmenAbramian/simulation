@@ -70,6 +70,7 @@ def create_model(
     reader.dr = inner_params.tag_params.dr
     reader.trext = inner_params.tag_params.trext
     reader.target_strategy = inner_params.inventory_scenario_params.target_strategy
+    # reader.target_strategy ="const"
     reader.rounds_per_target = inner_params.inventory_scenario_params.rounds_per_target
     reader.power_control_mode = inner_params.reader_power_params.get_power_control_mode()
     reader.max_power = manual_params.get('power', default_params.power_dbm)
@@ -87,7 +88,8 @@ def create_model(
         'useadjust', default_params.useadjust
     )
     reader.adjust_delta = inner_params.reader_params.delta
-    reader.q_fp = inner_params.reader_params.q_fp
+    # reader.q_fp = inner_params.reader_params.q_fp
+    reader.q_fp = manual_params.get('q', default_params.q)
 
     reader_antenna_x = manual_params.get('reader_offset', default_params.reader_offset)
     reader_antenna_z = manual_params.get('altitude', default_params.altitude)
