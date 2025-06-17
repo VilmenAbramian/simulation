@@ -6,10 +6,17 @@ from pysim.models.rfid import channel
 from pysim.models.rfid.params import (
     default_params, inner_params
 )
+import pysim.models.rfid.epcstd as epc
 
 
 READER_POS = np.array((default_params.reader_offset, 0, default_params.altitude))
 TAG_POS = np.array((default_params.tag_offset, 0, inner_params.tag_params.tag_altitude))
+
+def get_noise(reader_noise, thermal_noise):
+    return channel.to_log(
+        value=(channel.from_log(reader_noise, dbm=True) + channel.from_log(thermal_noise, dbm=True)),
+        dbm=True
+    )
 
 
 def get_pathloss(
@@ -83,6 +90,56 @@ def get_tag_rx(
             inner_params.energy_params.tag_antenna_gain)
     return (power + path_loss + pol_loss + gain +
             inner_params.energy_params.reader_cable_loss)
+
+
+def get_tag_tx(
+        power: float,
+        tag_backscatter_loss = inner_params.energy_params.tag_modulation_loss
+) -> float:
+    """Вычислить мощность сигнала, отраженного меткой (в dBm)."""
+    return power + tag_backscatter_loss
+
+
+def get_reader_rx(
+        y: float,
+        speed: float,
+        t: float,
+        power: float,
+        tag_pol = inner_params.channel_params.tag_default_polarization,
+        reader_pol = inner_params.channel_params.reader_default_polarization,
+        reader_gain = inner_params.energy_params.reader_antenna_gain,
+        tag_gain = inner_params.energy_params.tag_antenna_gain ,
+        reader_cable_loss = inner_params.energy_params.reader_cable_loss
+) -> float:
+    """
+    Вычислить мощность сигнала, принятого считывателем (в dBm).
+
+    Скорость должна быть в км/ч
+    """
+    path_loss = get_pathloss(y, tag_pol, speed, t)
+    pol_loss = 0 if reader_pol == tag_pol else inner_params.energy_params.polarization_loss
+    gain = reader_gain + tag_gain
+    return power + path_loss + pol_loss + gain + reader_cable_loss
+
+
+def get_snr(
+        rx: float,
+        m: int,
+        trcal: float,
+        reader_noise:float = inner_params.energy_params.reader_noise,
+        thermal_noise: float = inner_params.energy_params.thermal_noise,
+        trext: bool = False,
+        dr: epc.DivideRatio = inner_params.tag_params.dr,
+) -> float:
+    """Вычислить SNR на бит с поправкой на синхронизацию."""
+    snr = channel.snr(power=rx, noise=get_noise(reader_noise, thermal_noise))
+    preamble = epc.get_preamble(m, trcal, trext, dr)
+    return channel.snr_full(
+        snr=snr,
+        miller=m,
+        symbol=(1 / epc.get_blf(dr, trcal)),
+        preamble=preamble
+    )
 
 
 def find_zones(
