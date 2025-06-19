@@ -58,6 +58,7 @@ def calculate_probs(
     directory = json_directory + file_name
     collision_counts = {}
     rounds_count = {}
+    times_count = {}
     if use_json and os.path.exists(directory):
         with open(directory, 'r') as f:
             results = json.load(f)
@@ -71,6 +72,7 @@ def calculate_probs(
             results[key] = [res.read_tid_prob for res in sim_results]
             collision_counts[key] = [res.avg_collisions for res in sim_results]
             rounds_count[key] = [res.rounds_per_tag for res in sim_results]
+            times_count[key] = [res.read_tid_time for res in sim_results]
             # print(f"Collisions: {collision_counts}")
             # print(f"Rounds: {rounds_count}")
 
@@ -78,7 +80,7 @@ def calculate_probs(
             os.makedirs(os.path.dirname(directory), exist_ok=True)
             with open(directory, 'w') as f:
                 json.dump(results, f, indent=2)
-    return results
+    return results, times_count
 
 
 def plot_probs(

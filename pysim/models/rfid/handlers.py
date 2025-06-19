@@ -226,17 +226,19 @@ def _no_tag_response(kernel, ctx, reader):
 
 
 def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
-    '''
+    """
     Обработка единственного ответа от метки после
     завершения транзакции считывателя
-    '''
+    """
     if isinstance(frame.reply, std.AckReply):
         tag_read_record = (
             ctx.statistics.get_tag_record(tag)
-            .new_tag_read_record(reader, reader.inventory_round.index))
+            .new_tag_read_record(reader, reader.inventory_round.index)
+        )
         tag_read_record.tag_pos = np.array(tag.pos, copy=True)
         tag_read_record.reader_antenna_pos = np.array(
-            reader.antenna.pos, copy=True)
+            reader.antenna.pos, copy=True
+        )
         tag_read_record.ber = ber
         tag_read_record.snr = snr
 
@@ -244,12 +246,14 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
         def on_slot_end(round_index, slot_index, reader, tag, statistics):
             statistics.get_tag_record(tag).close_tag_read_record()
             reader.slot_finish_listeners.remove(
-                statistics.slot_end_listener_id)
+                statistics.slot_end_listener_id
+            )
 
-        ctx.statistics.slot_end_listener_id = \
+        ctx.statistics.slot_end_listener_id = (
             ctx.reader.slot_finish_listeners.add(
                 on_slot_end, reader=reader, tag=tag,
                 statistics=ctx.statistics)
+        )
 
         kernel.logger.info(
             '---> Received tag data: EPC={}, received power={} from tag {}'
@@ -263,6 +267,12 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
     if isinstance(frame.reply, std.ReadReply):
         tag_read_record = ctx.statistics.get_tag_record(tag).tag_read_record
         tag_read_record.read_tid = True
+        tag_read_record.identification_time = (
+            kernel.time -
+            ctx.statistics.get_tag_record(tag).last_identified_time
+        )
+        # print(f"Время, требуемое для идентификации составило: {tag_read_record.identification_time}")
+        ctx.statistics.get_tag_record(tag).last_identified_time = kernel.time
 
         kernel.logger.info(
             '---> Received TID: memory={}, received power={} from tag {}'

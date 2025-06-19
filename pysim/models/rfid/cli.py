@@ -24,6 +24,9 @@ class SimulationResult(BaseModel):
     read_tid_prob: float = Field(
         ..., description="Вероятность успешного чтения банка памяти USER"
     )
+    read_tid_time: float = Field(
+        ..., description="Среднее время чтения банка памяти USER (в секундах)"
+    )
     avg_collisions: float = Field(
         ..., description="Среднее количество коллизий для одной метки"
     )
@@ -225,6 +228,7 @@ def prepare_simulation(
         rounds_per_tag = model.statistics.average_rounds_per_tag(),
         inventory_prob = model.statistics.inventory_probability(),
         read_tid_prob = model.statistics.read_tid_probability(),
+        read_tid_time = model.statistics.average_identification_time(),
         avg_collisions = model.statistics.average_collisions_per_tag(),
         execution_time = t_end - t_start
     )

@@ -923,7 +923,7 @@ class Tag:
     last_pos_update = None  # sec.
 
     # EPC Std. settings
-    epc = ''  # should be a hex-string
+    epc = ""  # should be a hex-string
     tid = None  # should be either None or hex-string
     user_mem = None  # should be either None or hex-string
     s1_persistence = 2.0  # sec.
@@ -1079,6 +1079,11 @@ class Tag:
 
     def _power_on(self, time, power):
         if self.state is Tag.State.OFF:
+            # Запись времени первого запуска метки
+            record = self.kernel.context.statistics.get_tag_record(self)
+            if record.last_identified_time is None:
+                record.last_identified_time = time
+            # print(f"Первое включение метки {self.tag_id}: {record.last_identified_time}")
             # Updating sessions
             interval = time - self._powered_off_time
             for session in self.sessions.keys():
@@ -1092,7 +1097,7 @@ class Tag:
             self._power_update_time = time
             self._power = power
             self.logger.info(
-                f'tag {self._tag_id} powered on: {self.describe()}'
+                f"tag {self._tag_id} powered on: {self.describe()}"
             )
             self._set_state(Tag.State.READY)
 
@@ -1163,10 +1168,10 @@ class Tag:
         self._blf = std.get_blf(command.dr, preamble.trcal)
         self.q = command.q
         self._slot_counter = np.random.randint(0, pow(2, self.q))
-        self.logger.warning(
-            f'Внимание! Метка {self._tag_id} выбрала '
-            f'номер слота: {self._slot_counter}'
-        )
+        # self.logger.warning(
+        #     f'Внимание! Метка {self._tag_id} выбрала '
+        #     f'номер слота: {self._slot_counter}'
+        # )
         self._preamble = std.create_tag_preamble(self.encoding, self.trext)
         if self._slot_counter == 0:
             self._set_state(Tag.State.REPLY)
@@ -1709,6 +1714,7 @@ class _TagReadRecord:
     ber = None
     snr = None
     read_tid = False
+    identification_time = None
 
     def __str__(self):
         return (f'(round={self.round_index}, ant={self.antenna_index},'
@@ -1807,6 +1813,8 @@ class _TagRecord:
         self.num_rounds_attained = 0 # Количество раундов, в которых метка приняла участие (меняется в handlers)
         self.num_qadjust_attained = 0 # Количество раз, когда метка изменила Q из-за QAdjust (меняется в objects)
         self.collision_count = 0  # Количество коллизий, в которых участвовала метка
+
+        self.last_identified_time = None
         # list of (pos, antenna, power@tag, power@reader, BER):
         self.power_mapping = []
         self._tag_read_record = None
@@ -1862,7 +1870,7 @@ class _TagRecord:
         num_rounds_attained = {},
         inventory_history = [{}],
         power_mapping = [{}],
-    }}""".format(
+        }}""".format(
             self._tag, self.num_rounds_attained,
             "\n\t\t\t".join(str(rec) for rec in self.inventory_history),
             "\n\t\t\t".join(str(rec) for rec in self.power_mapping))
@@ -1923,6 +1931,14 @@ class Statistics:
         """Вычислить среднее число коллизий на метку."""
         collisions = [rec.collision_count for rec in self.tags_history]
         return np.mean(collisions)
+
+    def average_identification_time(self) -> float:
+        times = []
+        for record in self.tags_history:
+            for read in record.inventory_history:
+                if read.identification_time is not None:
+                    times.append(read.identification_time)
+        return float(np.mean(times)) if times else -1.0
 
     def to_long_string(self) -> str:
         tag_descriptions = "\n\t".join(
