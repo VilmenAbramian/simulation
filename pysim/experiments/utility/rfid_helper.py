@@ -11,12 +11,18 @@ import os
 
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
-from typing import Any, Callable, Dict
+from typing import Callable, Dict, List, Any
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pysim.experiments.utility.graphs_style import savefig, setup_matplotlib
 from pysim.models.rfid.cli import prepare_multiple_simulation
-from pysim.models.rfid.params import default_params, inner_params
+from pysim.models.rfid.params import (
+    default_params, inner_params, KMPH_TO_MPS_MUL
+)
+from pysim.experiments.utility.channel_helper import(
+    find_zones, get_tag_rx
+)
 
 setup_matplotlib()
 
@@ -28,7 +34,7 @@ SAVE_RESULTS = False     # Сохранять ли результаты в JSON
 USE_JSON = True          # Использовать ли результаты из JSON
 
 
-def calculate_probs(
+def calculate_simulations(
     variable: str,
     variable_values: list,
     params_list: list[dict],
@@ -37,7 +43,7 @@ def calculate_probs(
     save_results: bool = SAVE_RESULTS,
     json_directory: str = JSON_DIRECTORY,
     file_name: str = "probs",
-) -> dict[str, list[float]]:
+) -> dict[str, dict[str, list[Any]]]:
     """
     Запуск нескольких сетов моделирования и получение зависимостей
     вероятности чтения от варьируемого параметра.
@@ -53,37 +59,40 @@ def calculate_probs(
         file_name: имя файла JSON.
 
     Returns:
-        results: словарь, где ключ — имя кривой, значение — список вероятностей.
+        read_user_probs: словарь, где ключ — имя кривой, значение — список вероятностей.
     """
+    results = {} # Сбор всех результатов моделирования
     directory = json_directory + file_name
-    collision_counts = {}
-    rounds_count = {}
-    times_count = {}
+    collision_counts = {} # Среднее количество коллизий
+    rounds_count = {} # Среднее количество раундов, в которых метка участвовала
+    times_count = {} # Среднее время для чтения одной метки
     if use_json and os.path.exists(directory):
-        with open(directory, 'r') as f:
+        with open(directory, "r") as f:
             results = json.load(f)
     else:
-        results = {}
+        read_user_probs = {}
         for params in tqdm(params_list, desc=f"Моделирование по переменной {variable}"):
             sim_results = prepare_multiple_simulation(
                 variable, **{variable: variable_values}, **params
             )
             key = key_fn(params)
-            results[key] = [res.read_tid_prob for res in sim_results]
+            read_user_probs[key] = [res.read_tid_prob for res in sim_results]
             collision_counts[key] = [res.avg_collisions for res in sim_results]
             rounds_count[key] = [res.rounds_per_tag for res in sim_results]
             times_count[key] = [res.read_tid_time for res in sim_results]
-            # print(f"Collisions: {collision_counts}")
-            # print(f"Rounds: {rounds_count}")
 
+        results["read_user_probs"] = read_user_probs
+        results["collision_counts"] = collision_counts
+        results["rounds_count"] = rounds_count
+        results["times_count"] = times_count
         if save_results:
             os.makedirs(os.path.dirname(directory), exist_ok=True)
-            with open(directory, 'w') as f:
+            with open(directory, "w") as f:
                 json.dump(results, f, indent=2)
-    return results, times_count
+    return results
 
 
-def plot_probs(
+def plot_simulations_results(
     results_list: list[dict[str, list[float]]],
     labels_list: list[str] | list[list[str]],
     titles: list[str],
@@ -146,6 +155,53 @@ def plot_probs(
 
     if save_fig:
         savefig(name=image_name, directory=image_directory)
+
+
+def estimate_generation_interval(
+    tags_amount: int,
+    reading_zone: float,
+    speed: float = default_params.speed
+) -> float:
+    """
+    Пересчитывает желаемое количество меток в зоне чтения в требуемый интервал генерации.
+
+    На количество меток в зоне чтения влияет размер зоны чтения (зависит от канала),
+    скорость движения и период генерации меток.
+
+    Args:
+        tags_amount: желаемое количество меток в зоне
+        reading_zone: суммарная длина зон, где метка включена (в метрах)
+        speed: скорость движения считывателя, км/ч
+
+    Returns:
+        Интервал генерации в секундах (временной промежуток между метками)
+    """
+    return reading_zone / (tags_amount * speed * KMPH_TO_MPS_MUL)
+
+
+def compute_reading_zone(
+        speed: float = default_params.speed,
+        power_dbm: float = default_params.power_dbm,
+) -> float:
+    """
+    Вычисляет суммарную длину зоны активности меток, то есть суммарную длину отрезков,
+    на которых принимаемая мощность сигнала от считывателя на метке превышает порог.
+
+    Args:
+        speed: скорость считывателя, км/ч
+        power_dbm: мощность передатчика считывателя, дБм
+
+    Returns:
+        Суммарная длина зон активации (в метрах)
+    """
+    ox_axis = np.linspace(
+        - inner_params.geometry_params.initial_distance_to_reader, # Начальная точка движения
+        inner_params.geometry_params.initial_distance_to_reader, # Конечная точка движения
+        inner_params.geometry_params.grid_step
+    )
+    tag_accepted_power = [get_tag_rx(x, speed=speed, t=0, power=power_dbm) for x in ox_axis]
+    tag_on_intervals = find_zones(ox_axis, tag_accepted_power, use_upper=True)
+    return sum(end - start for start, end in tag_on_intervals)
 
 
 def generation_interval(time: float) -> float:
