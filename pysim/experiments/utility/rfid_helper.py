@@ -18,7 +18,7 @@ import numpy as np
 from pysim.experiments.utility.graphs_style import savefig, setup_matplotlib
 from pysim.models.rfid.cli import prepare_multiple_simulation
 from pysim.models.rfid.params import (
-    default_params, inner_params, KMPH_TO_MPS_MUL
+    default_params, multipliers, inner_params
 )
 from pysim.experiments.utility.channel_helper import(
     find_zones, get_tag_rx
@@ -49,9 +49,11 @@ def calculate_simulations(
     вероятности чтения от варьируемого параметра.
 
     Args:
-        variable: имя переменной, в зависимости от которой исследуется вероятность;
+        variable: имя переменной, в зависимости от которой
+          исследуется вероятность;
         variable_values: список значений переменной variable (ось абсцисс);
-        params_list: список параметров для разных кривых каждого сета моделирования;
+        params_list: список параметров для разных кривых каждого
+          сета моделирования;
         key_fn: функция, формирующая имя кривой по параметрам из params_list;
         use_json: если True, то попытаться загрузить результаты из JSON;
         save_results: если True, сохранить результаты в JSON;
@@ -59,36 +61,57 @@ def calculate_simulations(
         file_name: имя файла JSON.
 
     Returns:
-        read_user_probs: словарь, где ключ — имя кривой, значение — список вероятностей.
+        read_user_probs: словарь, где ключ — имя кривой,
+          значение — список вероятностей.
+    Raises:
+        ValueError в случае попытки чтения несуществующих результатов из
+          json-файла
     """
-    results = {} # Сбор всех результатов моделирования
     directory = json_directory + file_name
+    results = {}  # Сбор всех результатов моделирования
+    rounds_count = {}
+    inventory_probs = {}
+    read_user_probs = {}
+    times_count = {}
     collision_counts = {} # Среднее количество коллизий
-    rounds_count = {} # Среднее количество раундов, в которых метка участвовала
-    times_count = {} # Среднее время для чтения одной метки
+    execution_times = {}
     if use_json and os.path.exists(directory):
         with open(directory, "r") as f:
-            results = json.load(f)
+            data = json.load(f)
+            if "Results" not in data:
+                raise ValueError(
+                    f"Файл {directory} не содержит блока 'Results'"
+                )
+            results = data["Results"]
     else:
-        read_user_probs = {}
-        for params in tqdm(params_list, desc=f"Моделирование по переменной {variable}"):
+        for params in tqdm(
+                params_list, desc=f"Моделирование по переменной {variable}"
+        ):
             sim_results = prepare_multiple_simulation(
                 variable, **{variable: variable_values}, **params
             )
             key = key_fn(params)
-            read_user_probs[key] = [res.read_tid_prob for res in sim_results]
-            collision_counts[key] = [res.avg_collisions for res in sim_results]
             rounds_count[key] = [res.rounds_per_tag for res in sim_results]
+            inventory_probs[key] = [res.inventory_prob for res in sim_results]
+            read_user_probs[key] = [res.read_tid_prob for res in sim_results]
             times_count[key] = [res.read_tid_time for res in sim_results]
+            collision_counts[key] = [res.avg_collisions for res in sim_results]
+            execution_times[key] = [res.execution_time for res in sim_results]
 
-        results["read_user_probs"] = read_user_probs
-        results["collision_counts"] = collision_counts
         results["rounds_count"] = rounds_count
+        results["inventory_probs"] = inventory_probs
+        results["read_user_probs"] = read_user_probs
         results["times_count"] = times_count
+        results["collision_counts"] = collision_counts
+        results["execution_times"] = execution_times
+
         if save_results:
             os.makedirs(os.path.dirname(directory), exist_ok=True)
             with open(directory, "w") as f:
-                json.dump(results, f, indent=2)
+                json.dump({
+                    "Input parameters list": params_list,
+                    "Results": results
+                }, f, indent=2)
     return results
 
 
@@ -176,7 +199,7 @@ def estimate_generation_interval(
     Returns:
         Интервал генерации в секундах (временной промежуток между метками)
     """
-    return reading_zone / (tags_amount * speed * KMPH_TO_MPS_MUL)
+    return reading_zone / (tags_amount * speed * multipliers.KMPH_TO_MPS)
 
 
 def compute_reading_zone(

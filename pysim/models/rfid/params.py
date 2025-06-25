@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from pydantic import BaseModel, Field, confloat, conint
 from typing import Any, Callable, Literal
@@ -5,7 +6,18 @@ from typing import Any, Callable, Literal
 import pysim.models.rfid.epcstd as std
 from pysim.models.rfid.objects import Reader
 
-KMPH_TO_MPS_MUL = 1.0 / 3.6
+
+def my_generation_interval(t: float) -> float:
+    return t
+
+
+@dataclass(frozen=True)
+class Multipliers:
+    """
+    Множители для перевода величин
+    """
+    KMPH_TO_MPS: float = 1.0 / 3.6        # Перевод из км/ч в м/с
+    MICROSEC_TO_SEC: float = 1e-6         # Перевод из микросекунд в секунды
 
 
 class Polarization(float, Enum):
@@ -82,6 +94,8 @@ class RFIDDefaults(BaseModel):
         Raises:
             ValueError: Если переданное значение не распознано.
         """
+        if isinstance(s, std.TagEncoding):
+            return s
         s = s.upper()
         if s in {'1', "FM0"}:
             return std.TagEncoding.FM0
@@ -249,6 +263,7 @@ class ChannelParams(BaseModel):
         Polarization.HORIZONTAL.value, description="Поляризация антенны метки по умолчанию"
     )
 
+
 class ReaderPowerParams(BaseModel):
     """
     Параметры периодической работы считывателя.
@@ -346,7 +361,7 @@ class TagParams(BaseModel):
         0.0, description="В модели БПЛА метка всегда лежит на земле"
     )
     generation_interval: tuple[Callable[..., float], Any] = Field(
-        default=(lambda: 1.0,),
+        default=(my_generation_interval, 1.0),
         description=(
             "Функция и её параметры, определяющие интервал появления новой"
             "метки. Если функция не требует аргументов, используется кортеж"
@@ -356,6 +371,7 @@ class TagParams(BaseModel):
             "с экспоненциальным распределением со средним 42."
         )
     )
+
 
     @property
     def tid_bitlen(self) -> int:
@@ -388,4 +404,5 @@ class RFIDInternalParams(BaseModel):
 
 
 default_params = RFIDDefaults()
+multipliers = Multipliers()
 inner_params = RFIDInternalParams()
