@@ -71,6 +71,10 @@ def build_external_params(
         "generation_interval": params.get(
             "generation_interval", inner_params.tag_params.generation_interval
         ),
+        "target_strategy": params.get(
+            "target_strategy",
+            inner_params.inventory_scenario_params.target_strategy
+        )
     }
     if parse_encoding:
         params_dict["speed"] = params_dict["speed"] * multipliers.KMPH_TO_MPS

@@ -34,6 +34,14 @@ SAVE_RESULTS = False     # Сохранять ли результаты в JSON
 USE_JSON = True          # Использовать ли результаты из JSON
 
 
+def convert_non_serializable(obj: Any) -> Any:
+    """
+    Преобразует не сериализуемые объекты (например, функции) в строки
+    для последующего сохранения в JSON.
+    """
+    return str(obj)
+
+
 def calculate_simulations(
     variable: str,
     variable_values: list,
@@ -111,7 +119,7 @@ def calculate_simulations(
                 json.dump({
                     "Input parameters list": params_list,
                     "Results": results
-                }, f, indent=2)
+                }, f, indent=2, default=convert_non_serializable)
     return results
 
 
