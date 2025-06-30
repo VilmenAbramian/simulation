@@ -1,33 +1,56 @@
+"""Обработчики событий для дискретно-событийной модели RFID."""
+
 import numpy as np
 
-import pysim.models.rfid.epcstd as std
+from pysim.models.rfid.adjust_algs import *
 from pysim.models.rfid.objects import Model, Reader, Tag, Transaction
+import pysim.models.rfid.epcstd as std
 
 
 def start_simulation(kernel):
-    '''
-    Используется в качестве init для старта симуляции.
+    """
+    Инициализация и запуск симуляции.
+
     При старте планирует 3 события (сортировка по времени):
       1) Запуск считывателя
       2) Генерация новой метки
       3) Обновить местоположения объектов
-    '''
+
+    Args:
+        kernel: Ядро симуляции с контекстом модели.
+    """
     assert isinstance(kernel.context, Model)
-    ctx = kernel.context
-    ctx.reader.kernel = kernel
-    for generator in ctx.generators:
+    context = kernel.context
+    context.reader.kernel = kernel
+    for generator in context.generators:
         kernel.schedule(
             generator.interval,
             generate_tag, (generator, ),
-            msg='Генерация новой метки'
+            msg="Генерация новой метки"
         )
     kernel.schedule(
-        ctx.update_interval, update_positions, msg='Обновить расположение'
+        context.update_interval, update_positions, msg="Обновить расположение"
     )
-    kernel.call(turn_reader_on, (ctx.reader,), msg='Запуск считывателя')
+    kernel.call(turn_reader_on, (context.reader,), msg="Запуск считывателя")
 
 
-def _update_power(time, reader, tags, transaction, medium, statistics):
+def _update_power(
+        time: float, reader: Reader,
+        tags, transaction,
+        medium, statistics):
+    """Обновляет мощность сигнала для меток и считывателя.
+
+    В данном обработчике происходит запись информации об изменениях мощности
+    в беспроводном канале связи между считывателем и меткой.
+
+    Args:
+        time: Текущее время симуляции;
+        reader: Объект считывателя;
+        tags: Список меток;
+        transaction: Текущая транзакция (или None);
+        medium: Среда передачи сигнала;
+        statistics: Объект статистики;
+    """
     for tag in tags:
         power = medium.estimate_tag_rx_power(reader, tag, time)
         tag.set_power(time, power)
@@ -35,43 +58,57 @@ def _update_power(time, reader, tags, transaction, medium, statistics):
             time - tag.last_pos_update
         )
         tag.last_pos_update = time
-        # uncomment lines below for PL debug
-        # print(f'Estimated tag RX power: {power}')
-        # print(f'- tag:    pos={tag.antenna.pos}, '
-        #       f'direction={tag.antenna.direction_theta}')
-        # print(
-        #     f'- reader: pos={reader.antenna.pos}, '
-        #     f'direction={reader.antenna.direction_theta}'
-        # )
 
     if transaction is not None:
         for tag in transaction.tags:
             power = medium.estimate_reader_rx_power(reader, tag, time)
             transaction.reader_rx_power_map.update(tag, power)
 
-    # Writing statistics
+    # Запись статистики (по умолчанию use_power_statistics=False)
     if statistics is not None and statistics.use_power_statistics:
         for tag in tags:
-            statistics.get_tag_record(tag).write_power_record(
-                time, reader, medium)
+            tag_record = statistics.get_tag_record(tag)
+            if tag_record:
+                tag_record.write_power_record(time, reader, medium)
+            else:
+                raise ValueError(f"Попытка записи логов в"
+                                 f"несуществующий журнал метки: {tag.tag_id}")
 
 
-def _build_transaction(kernel, reader, reader_frame):
-    ctx = kernel.context
-    all_responses = ((tag, tag.receive(reader_frame)) for tag in ctx.tags)
+def _build_transaction(kernel, reader, reader_frame) -> Transaction:
+    """
+    Создаёт транзакцию на основе команды считывателя и ответов меток.
+
+    В данном обработчике происходит запись информации об очередном
+    раунде инвентаризации, в котором приняла участие метка
+
+    Args:
+        kernel: Ядро симуляции;
+        reader: Объект считывателя;
+        reader_frame: Команда считывателя.
+
+    Returns:
+        Transaction: Объект транзакции.
+    """
+    context = kernel.context
+    all_responses = ((tag, tag.receive(reader_frame)) for tag in context.tags)
     tag_frames = [(tag, frame) for (tag, frame) in all_responses
                   if frame is not None]
 
-    if ctx.tags:
-        if isinstance(reader_frame.command, std.Query):
-            stat = kernel.context.statistics
-            participating_tags = [tag for tag in ctx.tags if tag.state in
-                                  {Tag.State.ARBITRATE, Tag.State.REPLY}]
-            for tag in participating_tags:
-                stat.get_tag_record(tag).num_rounds_attained += 1
+    if context.tags and isinstance(reader_frame.command, std.Query):
+        statistics = kernel.context.statistics
+        participating_tags = [tag for tag in context.tags if tag.state in
+                              {Tag.State.ARBITRATE, Tag.State.REPLY}]
+        for tag in participating_tags:
+            tag_record = statistics.get_tag_record(tag)
+            if tag_record:
+                tag_record.num_rounds_attained += 1
+            else:
+                raise ValueError(f"Попытка записи логов в"
+                                 f"несуществующий журнал метки: {tag.tag_id}")
 
     now = kernel.time
-    return Transaction(ctx.medium, reader, reader_frame, tag_frames, now)
+    return Transaction(context.medium, reader, reader_frame, tag_frames, now)
 
 
 def turn_reader_on(kernel, reader):
@@ -179,46 +216,29 @@ def update_positions(kernel):
 
 
 def _no_tag_response(kernel, ctx, reader):
-    '''
-    Обработка отсутствия ответа метки после
-    завершения транзакции считывателя
-    '''
-    cmd_frame = None
-    # Если используется команда QueryAdjust И
-    # считыватель в состоянии Query или QueryRep
-    if reader.use_query_adjust and (
-        reader.state == Reader.State.QUERY or
-        reader.state == Reader.State.QREP
-    ):
-        if reader.q > 0 and reader.q <= 15:
-            reader.q_fp = max(0, reader.q_fp-reader.adjust_delta)
-            new_q = round(reader.q_fp)
-            if abs(reader.q - new_q) == 1:
-                kernel.logger.error(
-                    f'Считыватель уменьшил Q с {reader.q} до {new_q}'
-                )
-                reader.q = new_q  # обновляем q в считывателе
-                # Отправить команду QueryAdjust
-                reader.updn = -1
-                cmd_frame = reader.set_state(Reader.State.QAdjust)
-                reader.updn = 0
+    """
+    Обработка отсутствия ответа метки после завершения транзакции считывателя
+    """
+    cmd_frame = apply_query_adjust(kernel, reader, direction=-1)
     if cmd_frame is None:
         cmd_frame = ctx.reader.timeout()
     return cmd_frame
 
 
 def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
-    '''
+    """
     Обработка единственного ответа от метки после
     завершения транзакции считывателя
-    '''
+    """
     if isinstance(frame.reply, std.AckReply):
         tag_read_record = (
             ctx.statistics.get_tag_record(tag)
-            .new_tag_read_record(reader, reader.inventory_round.index))
+            .new_tag_read_record(reader, reader.inventory_round.index)
+        )
         tag_read_record.tag_pos = np.array(tag.pos, copy=True)
         tag_read_record.reader_antenna_pos = np.array(
-            reader.antenna.pos, copy=True)
+            reader.antenna.pos, copy=True
+        )
         tag_read_record.ber = ber
         tag_read_record.snr = snr
 
@@ -226,12 +246,14 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
         def on_slot_end(round_index, slot_index, reader, tag, statistics):
             statistics.get_tag_record(tag).close_tag_read_record()
             reader.slot_finish_listeners.remove(
-                statistics.slot_end_listener_id)
+                statistics.slot_end_listener_id
+            )
 
-        ctx.statistics.slot_end_listener_id = \
+        ctx.statistics.slot_end_listener_id = (
             ctx.reader.slot_finish_listeners.add(
                 on_slot_end, reader=reader, tag=tag,
                 statistics=ctx.statistics)
+        )
 
         kernel.logger.info(
             '---> Received tag data: EPC={}, received power={} from tag {}'
@@ -245,6 +267,12 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
     if isinstance(frame.reply, std.ReadReply):
         tag_read_record = ctx.statistics.get_tag_record(tag).tag_read_record
         tag_read_record.read_tid = True
+        tag_read_record.identification_time = (
+            kernel.time -
+            ctx.statistics.get_tag_record(tag).last_identified_time
+        )
+        # print(f"Время, требуемое для идентификации составило: {tag_read_record.identification_time}")
+        ctx.statistics.get_tag_record(tag).last_identified_time = kernel.time
 
         kernel.logger.info(
             '---> Received TID: memory={}, received power={} from tag {}'
@@ -256,29 +284,44 @@ def _one_tag_response(kernel, transaction, ctx, reader, tag, frame, snr, ber):
 
 
 def _multiple_tag_response(kernel, ctx, reader, transaction):
-    '''
-    Обработка коллизии
-    '''
-    cmd_frame = None
-    if reader.use_query_adjust and (
-        reader.state == Reader.State.QUERY or
-        reader.state == Reader.State.QREP
+    """Обработка коллизии"""
+    for tag in transaction.tags:
+        tag_record = ctx.statistics.get_tag_record(tag)
+        if tag_record:
+            tag_record.collision_count += 1
+
+    cmd_frame = apply_query_adjust(kernel, reader, direction=1)
+    return cmd_frame if cmd_frame is not None else ctx.reader.timeout()
+
+
+def apply_query_adjust(kernel, reader, direction: int):
+    """
+    Применение алгоритма QueryAdjust.
+
+    direction = +1 для увеличения Q (коллизия);
+    direction = -1 для уменьшения Q (пустой слот).
+    """
+    if (
+        reader.use_query_adjust and
+        reader.state in (Reader.State.QUERY, Reader.State.QREP) and
+        0 <= reader.q <= 15
     ):
-        if reader.q >= 0 and reader.q < 15:
-            reader.q_fp = min(15, reader.q_fp+reader.adjust_delta)
-            new_q = round(reader.q_fp)
-            if abs(reader.q - new_q) == 1:
-                kernel.logger.error(
-                    f'Считыватель увеличил Q с {reader.q} до {new_q}'
-                )
-                reader.q = new_q  # обновляем q в считывателе
-                # Отправить команду QueryAdjust
-                reader.updn = 1
-                cmd_frame = reader.set_state(Reader.State.QAdjust)
-                reader.updn = 0
-    if cmd_frame is None:
-        cmd_frame = ctx.reader.timeout()
-    return cmd_frame
+
+        strategy =  QueryAdjustStrategy.STATIC
+        adjust_fn = QUERY_ADJUST_FUNCTIONS.get(strategy, static_query_adjust)
+        reader.q_fp = adjust_fn(reader.q_fp, direction, reader.q)
+        kernel.logger.error(f"Q с плавающей точкой: {reader.q_fp}")
+        new_q = round(reader.q_fp)
+
+        if abs(reader.q - new_q) == 1:
+            direction_str = "увеличил" if direction > 0 else "уменьшил"
+            kernel.logger.error(f'Считыватель {direction_str} Q с {reader.q} до {new_q}')
+            reader.q = new_q
+            reader.updn = direction
+            cmd_frame = reader.set_state(Reader.State.QAdjust)
+            reader.updn = 0
+            return cmd_frame
+    return None
 
 
 def finish_transaction(kernel, transaction):

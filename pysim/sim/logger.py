@@ -80,7 +80,7 @@ class ModelLoggerConfig:
     console_level: int = None
 
     # Имя лог-файла (без runId). Если не задан, логгирования в файл не будет.
-    file_name: str | None = None
+    file_name: str | None = ''
     
     # Уровень логгирования в файл, если не задан - использовать level
     file_level: int = 0
@@ -204,10 +204,10 @@ class ModelLogger:
                 )
             
             # Каждый запуск создает отдельный файл, поэтому режим = 'w'
-            f_handler = logging.FileHandler(file_name,  mode = 'w')
-            f_handler.setLevel(config.file_level or config.level)
-            f_handler.setFormatter(f_formatter)
-            self._logger.addHandler(f_handler)
+            # f_handler = logging.FileHandler(file_name,  mode = 'w')
+            # f_handler.setLevel(config.file_level or config.level)
+            # f_handler.setFormatter(f_formatter)
+            # self._logger.addHandler(f_handler)
 
         self._logger.propagate = False
         self._logger.setLevel(config.level)

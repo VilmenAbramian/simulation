@@ -248,12 +248,30 @@ class MemoryBank(Enum):
 
 
 class CommandCode(Enum):
-    QUERY = ('1000', 'Query')
-    QUERY_REP = ('00', 'QueryRep')
-    QUERY_ADJUST = ('1001', 'QueryAdjust')
-    ACK = ('01', 'ACK')
-    REQ_RN = ('11000001', 'Req_RN')
-    READ = ('11000010', 'Read')
+    """
+    Коды команд RFID-считывателя согласно стандарту EPC Gen2.
+
+    Этот перечисляемый тип содержит битовые представления всех основных команд,
+    которые могут быть отправлены считывателем RFID-меткам в процессе инвентаризации
+    и обмена данными. Значения соответствуют спецификации EPCglobal Class-1 Generation-2
+    UHF RFID (версии 2.0, 2013).
+
+    Атрибуты:
+        QUERY — Инициализация нового инвентаризационного раунда (код: "1000").
+        QUERY_REP — Повтор предыдущего раунда (QueryRep) (код: "00").
+        QUERY_ADJUST — Адаптивная корректировка параметра Q (код: "1001").
+        ACK — Подтверждение слота (Acknowledgement) (код: "01").
+        REQ_RN — Запрос случайного номера RN16 (код: "11000001").
+        READ — Чтение данных из памяти метки (код: "11000010").
+
+    Используется как основа при формировании команд в симуляции.
+    """
+    QUERY = ("1000", "Query")
+    QUERY_REP = ("00", "QueryRep")
+    QUERY_ADJUST = ("1001", "QueryAdjust")
+    ACK = ("01", "ACK")
+    REQ_RN = ("11000001", "Req_RN")
+    READ = ("11000010", "Read")
 
     # noinspection PyInitNewSignature
     def __init__(self, code, string):
@@ -366,19 +384,30 @@ def encode_ebv(value, first_block=True):
                encode_ebv(value % 128, first_block=first_block)
 
 
-def encode_updn(value):
-    '''
-    Преобразовать значение UpDown в битовый код
-    для команды QueryAdjust
-    '''
+def encode_updn(value: int) -> str:
+    """
+    Закодировать параметр изменения Q (UpDn) в 3-битный формат для
+    команды QueryAdjust.
+
+    Согласно спецификации EPC Gen2:
+        - 1   → '110' (увеличить Q),
+        - 0   → '000' (оставить Q без изменений),
+        - -1  → '011' (уменьшить Q).
+    Args:
+        value (int): Направление изменения Q, одно из {1, 0, -1}.
+    Returns:
+        str: Трёхбитная строка, представляющая команду изменения Q.
+    Raises:
+        ValueError: Если передано некорректное значение.
+    """
     if value == 1:
-        return '110'
+        return "110"
     elif value == 0:
-        return '000'
+        return "000"
     elif value == -1:
-        return '011'
+        return "011"
     else:
-        raise ValueError(f'Несуществующее значение updn: {value}!')
+        raise ValueError(f"Несуществующее значение updn: {value}!")
 
 
 #
@@ -424,9 +453,10 @@ class Query(Command):
                 encode_int(self.crc, 5))
 
     def __str__(self):
-        return "{o.code}{{DR({o.dr}),{o.m},TRext({trext}),{o.sel}," \
-               "{o.session},{o.target},Q({o.q}),CRC(0x{o.crc:02X})}}" \
-               "".format(o=self, trext=(1 if self.trext else 0))
+        return (f"{self.code}{{DR({self.dr}),{self.m},"
+                f"TRext({1 if self.trext else 0}),Sel({self.sel}),"
+                f"Session({self.session}),Target({self.target}),Q({self.q}),"
+                f"CRC(0x{self.crc:02X})}}")
 
 
 class QueryRep(Command):
@@ -438,20 +468,50 @@ class QueryRep(Command):
         return self.code.code + self.session.code
 
     def __str__(self):
-        return "{o.code}{{{o.session}}}".format(o=self)
+        return f"{self.code}{{{self.session}}}"
 
 
 class QueryAdjust(Command):
+    """
+    Команда EPC Gen2 `QueryAdjust`, используемая для динамического изменения
+    параметра Q во время инвентаризации.
+
+    В отличие от команды `Query`, которая запускает новый раунд с
+    фиксированным Q, `QueryAdjust` позволяет адаптировать размер окна слотов
+    без прерывания текущего раунда.
+
+    Аргументы:
+        session (Session): Сессия протокола (S0–S3).
+        updn (int): Направление изменения Q:
+            -1 → уменьшить Q,
+             0 → оставить Q без изменений,
+            +1 → увеличить Q.
+    """
     def __init__(self, session=None, updn=0):
         super().__init__(CommandCode.QUERY_ADJUST)
         self.session = session if session is not None else stdParams.session
         self.updn = updn
 
-    def encode(self):
+    def encode(self) -> str:
+        """
+        Кодирует команду `QueryAdjust` в бинарную строку согласно
+        стандарту EPC Gen2.
+
+        Формат команды:
+            - 4 бита: код команды ('1001')
+            - 2 бита: код сессии (например, '01' для S1)
+            - 3 бита: направление изменения Q (UpDn),
+            закодированное функцией `encode_updn`
+        Пример:
+            Для session=S1 и updn=+1 → результат будет "100101110"
+        Возвращает:
+            str: Битовая строка длиной 9 бит.
+        """
         return self.code.code + self.session.code + encode_updn(self.updn)
 
     def __str__(self):
-        return f'{self.code}{self.session}{encode_updn(self.updn)}'
+        return (f"{self.code},session:{self.session},"
+                f"UpDn:{encode_updn(self.updn)}")
 
 
 class Ack(Command):

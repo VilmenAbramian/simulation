@@ -1,15 +1,35 @@
+from dataclasses import dataclass
+from enum import Enum
 from pydantic import BaseModel, Field, confloat, conint
 from typing import Any, Callable, Literal
 
 import pysim.models.rfid.epcstd as std
 from pysim.models.rfid.objects import Reader
 
-KMPH_TO_MPS_MUL = 1.0 / 3.6
+
+def my_generation_interval(t: float) -> float:
+    return t
+
+
+@dataclass(frozen=True)
+class Multipliers:
+    """
+    Множители для перевода величин
+    """
+    KMPH_TO_MPS: float = 1.0 / 3.6        # Перевод из км/ч в м/с
+    MICROSEC_TO_SEC: float = 1e-6         # Перевод из микросекунд в секунды
+
+
+class Polarization(float, Enum):
+    VERTICAL = 0.0
+    HORIZONTAL = 1.0
+    CIRCULAR = 0.5
+
 
 class RFIDDefaults(BaseModel):
     """
     Значения по умолчанию для параметров, которые могут
-    быть изменены пользователем через консольный click интерфейс.
+    быть изменены пользователем через консольный click-интерфейс.
 
     Для моделирования графиков в дипломе использовалось num_tags = 6000
     """
@@ -51,14 +71,10 @@ class RFIDDefaults(BaseModel):
         False, description="Флаг, указывающий на использование QueryAdjust"
                            "команды (автоматическая корректировка Q)."
     )
-    delta: confloat(gt=0.0) = Field(
-        0.5, description=(
-            "Коэффициент Δ для алгоритма QAdjust. Определяет чувствительность "
-            "считывателя к коллизиям и пустым слотам при адаптации параметра Q."
-            "Типичные значения: 0.1 < Δ < 0.5. Рекомендуется использовать"
-            "меньшие значения Δ при больших Q и большие Δ при малых Q."
-        )
+    q: conint(ge=0, le=15) = Field(
+        5, description='Значение параметра Q в начале моделирования'
     )
+
 
     @staticmethod
     def parse_tag_encoding(s: str) -> std.TagEncoding:
@@ -78,6 +94,8 @@ class RFIDDefaults(BaseModel):
         Raises:
             ValueError: Если переданное значение не распознано.
         """
+        if isinstance(s, std.TagEncoding):
+            return s
         s = s.upper()
         if s in {'1', "FM0"}:
             return std.TagEncoding.FM0
@@ -98,13 +116,20 @@ class ReaderParams(BaseModel):
     )
     temp: Literal['NOMINAL', 'EXTENDED'] = Field(
         "NOMINAL", description="Температурный диапазон.")
-    q: conint(ge=0, le=15) = Field(
-        5, description='Значение параметра Q в начале моделирования'
+    # --- Настройки для симуляции с коллизиями ---
+    delta: confloat(gt=0.0) = Field(
+        0.5, description=(
+            "Коэффициент Δ для алгоритма QAdjust. Определяет чувствительность "
+            "считывателя к коллизиям и пустым слотам при адаптации параметра Q."
+            "Типичные значения: 0.1 < Δ < 0.5. Рекомендуется использовать"
+            "меньшие значения Δ при больших Q и большие Δ при малых Q."
+        )
     )
     q_fp: confloat(ge=0.0, le=15.0) = Field(
-        q, description='Дробное значение Q для алгоритма'
+        RFIDDefaults().q, description='Дробное значение Q для алгоритма'
                        'коррекции Q в QueryAdjust'
     )
+    # -----------------------------------------------
     rtcal_tari_mul: confloat(gt=2.5, le=3.0) = Field(
         3.0, description="Множитель RTcal (RTcal = rtcal_tari_mul * Tari).")
     trcal_rtcal_mul: confloat(gt=1.1, le=3) = Field(
@@ -135,8 +160,15 @@ class ReaderParams(BaseModel):
 
 class GeometryParams(BaseModel):
     """Геометрические параметры RFID системы в 3-х мерном пространстве."""
+    dimension_of_space: int = Field(
+        3, description="Размерность пространства моделирования."
+    )
+    grid_step: conint(ge=50, le=1000) = Field(
+        200, description="Разрешение сетки для расчёта зоны активности метки."
+                         "Также используется для других графиков оценки канала"
+    )
     initial_distance_to_reader: confloat(ge=0.1, le=20.0) = Field(
-        10.0, description="Начальное расстояние до считывателя, м."
+        5.0, description="Начальное расстояние метки до считывателя, м."
     )
     movement_direction: tuple[float, float, float] = Field(
         (0, 1, 0), description='Единичный вектор направления движения.'
@@ -155,7 +187,7 @@ class GeometryParams(BaseModel):
         299_792_458, description="Скорость света, м/с"
     )
     update_interval: confloat(gt=0.05, le=0.05) = Field(
-        0.01, description="Интервал обновления координат"
+        0.01, description="Интервал обновления времени в симуляции"
                           "(квант времени модели), сек."
     )
 
@@ -172,7 +204,7 @@ class EnergyParams(BaseModel):
         -80.0, description="Шум в радиочастотной цепи считывателя, дБм."
     )
     reader_sensitivity: confloat(ge=-95, le=-75) = Field(
-        -80.0, description="Чувствительность радиоприёмника считывателя, дБм"
+        -80.0, description="Чувствительность радиоприёмника считывателя, дБм."
     )
     tag_antenna_gain: confloat(ge=0, le=10) = Field(
         3.0, description="Усиление антенны метки, дБi."
@@ -190,10 +222,11 @@ class EnergyParams(BaseModel):
     )
     thermal_noise: confloat(ge=-125, le=-105) = Field(
         -114, description="Мощность теплового шума в полосе 1МГц для"
-                          "температуры около 17C, дБм"
+                          "температуры около 17C, дБм."
     )
     collect_power_statistics: bool = Field(
-        False, description="Сохранять ли данные о мощностях сигналов"
+        False, description="Вести ли журнал _TagPowerRecord для отслеживания"
+                           "параметров канала в течении симуляции."
     )
 
 
@@ -214,6 +247,21 @@ class ChannelParams(BaseModel):
         "reflection", description="Тип отражения от стены."
     )
     use_doppler: bool = Field(True, description="Учитывать ли эффект Доплера.")
+    vertical_polarization: float = Field(
+        Polarization.VERTICAL.value, description="Вертикальная поляризация антенны."
+    )
+    horizontal_polarization: float = Field(
+        Polarization.HORIZONTAL.value, description="Горизонтальная поляризация антенны."
+    )
+    circular_polarization: float = Field(
+        Polarization.CIRCULAR.value, description="Круговая поляризация антенны"
+    )
+    reader_default_polarization: float = Field(
+        Polarization.CIRCULAR.value, description="Поляризация антенны считывателя по умолчанию"
+    )
+    tag_default_polarization: float = Field(
+        Polarization.HORIZONTAL.value, description="Поляризация антенны метки по умолчанию"
+    )
 
 
 class ReaderPowerParams(BaseModel):
@@ -313,7 +361,7 @@ class TagParams(BaseModel):
         0.0, description="В модели БПЛА метка всегда лежит на земле"
     )
     generation_interval: tuple[Callable[..., float], Any] = Field(
-        default=(lambda: 1.0,),
+        default=(my_generation_interval, 1.0),
         description=(
             "Функция и её параметры, определяющие интервал появления новой"
             "метки. Если функция не требует аргументов, используется кортеж"
@@ -323,6 +371,7 @@ class TagParams(BaseModel):
             "с экспоненциальным распределением со средним 42."
         )
     )
+
 
     @property
     def tid_bitlen(self) -> int:
@@ -355,4 +404,5 @@ class RFIDInternalParams(BaseModel):
 
 
 default_params = RFIDDefaults()
+multipliers = Multipliers()
 inner_params = RFIDInternalParams()

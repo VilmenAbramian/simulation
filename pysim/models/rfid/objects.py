@@ -1,8 +1,11 @@
 import functools
+from typing import Any
+
 import numpy as np
 import enum
 import itertools
 
+from numpy import floating
 
 import pysim.models.rfid.epcstd as std
 import pysim.models.rfid.channel as chan
@@ -239,8 +242,9 @@ class _ReaderQUERY(_ReaderState):
         if reader.target_strategy == 'switch':
             if reader.num_rounds_before_target_switch <= 0:
                 reader.target = reader.target.invert()
-                reader.num_rounds_before_target_switch = \
+                reader.num_rounds_before_target_switch = (
                     reader.rounds_per_target
+                )
             else:
                 reader.num_rounds_before_target_switch -= 1
 
@@ -258,6 +262,7 @@ class _ReaderQUERY(_ReaderState):
 
     def handle_timeout(self, reader):
         slot = reader.next_slot()
+        reader.kernel.logger.debug(f"Текущее состояние: {reader.state}. Следующим состоянием будет: {slot.first_state}")
         return reader.set_state(slot.first_state)
 
     def handle_query_reply(self, reader, frame):
@@ -300,6 +305,7 @@ class _ReaderQREP(_ReaderState):
 
     def handle_timeout(self, reader):
         slot = reader.next_slot()
+        reader.kernel.logger.debug(f"Текущее состояние: {reader.state}. Следующим состоянием будет: {slot.first_state}")
         return reader.set_state(slot.first_state)
 
     def handle_query_reply(self, reader, frame):
@@ -347,6 +353,7 @@ class _ReaderAdjust(_ReaderState):
 
     def handle_timeout(self, reader):
         slot = reader.next_slot()
+        reader.kernel.logger.debug(f"Текущее состояние: {reader.state}. Следующим состоянием будет: {slot.first_state}")
         return reader.set_state(slot.first_state)
 
     def handle_query_reply(self, reader, frame):
@@ -573,7 +580,11 @@ class _ReaderRound:
         self._index = index
 
         def slots_gen():
-            yield _ReaderSlot(self, 0, Reader.State.QUERY)
+            """Вот сюда добавить проверку QAdjust и значения Q"""
+            if reader.state == Reader.State.QAdjust and reader.q != 0:
+                yield _ReaderSlot(self, 0, Reader.State.QREP)
+            else:
+                yield _ReaderSlot(self, 0, Reader.State.QUERY)
             for i in range(1, round(pow(2, reader.q))):
                 yield _ReaderSlot(self, i, Reader.State.QREP)
 
@@ -660,7 +671,7 @@ class Reader:
     temp = std.TempRange.NOMINAL
 
     # Round settings
-    q = 2
+    # q = 2
     tag_encoding = None
     trext = False
     dr = std.DivideRatio.DR_8
@@ -690,7 +701,6 @@ class Reader:
         self.kernel = kernel
         self._state = Reader.State.OFF
         self._slot_index = 0
-        self.updn = 0  # Слагаемое для корректировки Q
 
         # Antennas
         self._antennas = []
@@ -702,11 +712,13 @@ class Reader:
         # Rounds managers
         self._round = None
         self._round_index = itertools.count()
+        self._last_round_index = None # Сюда запоминаем значение из _round_index для QAdjust
 
         # QueryAdjust settings
         self.use_query_adjust: bool = None
         self.adjust_delta: float = None
         self.q_fp: float = None
+        self.updn = 0
 
         # Power-related fields
         self._power = None
@@ -730,7 +742,7 @@ class Reader:
 
     def set_state(self, new_state):
         self.kernel.logger.debug(
-            f'reader state changed: {self.state} --> {new_state}'
+            f"reader state changed: {self.state} --> {new_state}"
         )
         self._state_change_listeners.call(self.state, new_state)
         self._state = new_state
@@ -770,10 +782,10 @@ class Reader:
         return std.ReaderSync(self.tari, self.rtcal, self.delim)
 
     def receive(self, tag_frame):
-        '''
-        Метод, отвечающий на сообщения метки в зависимости от состояния,
-        в котором находится считыватель
-        '''
+        """
+        Ответ считывателя на сообщения метки в зависимости от состояния,
+        в котором он находится
+        """
         assert isinstance(tag_frame, std.TagFrame)
         reply = tag_frame.reply
         if isinstance(reply, std.QueryReply):
@@ -850,15 +862,21 @@ class Reader:
 
     def next_slot(self):
         if self._round is None:
-            self._round = _ReaderRound(self, next(self._round_index))
+            self._last_round_index = next(self._round_index)
+            self._round = _ReaderRound(self, self._last_round_index)
             self._round.on_start(self)
             slot = self._round.next_slot()
         else:
             try:
+                # Проверка на использование QueryAdjust
+                if self._state == Reader.State.QAdjust:
+                    self._round = _ReaderRound(self, self._last_round_index)
+                    self._round.on_start(self)
                 slot = self._round.next_slot()
             except StopIteration:
                 self._round.on_finish(self)
-                self._round = _ReaderRound(self, next(self._round_index))
+                self._last_round_index = next(self._round_index)
+                self._round = _ReaderRound(self, self._last_round_index)
                 self._round.on_start(self)
                 slot = self._round.next_slot()
         return slot
@@ -884,12 +902,12 @@ class Reader:
 # TAG
 #############################################################################
 class Tag:
-    '''
+    """
     В отличие от класса Reader, в котором state-машина
     вынесена в отдельные структуры, здесь state-машина
     и все её методы и переходы находятся прямо внутри класса Tag,
     что облегчает процесс написания кода, но усложняет его понимание.
-    '''
+    """
 
     class State(enum.Enum):
         OFF = 0
@@ -905,7 +923,7 @@ class Tag:
     last_pos_update = None  # sec.
 
     # EPC Std. settings
-    epc = ''  # should be a hex-string
+    epc = ""  # should be a hex-string
     tid = None  # should be either None or hex-string
     user_mem = None  # should be either None or hex-string
     s1_persistence = 2.0  # sec.
@@ -1061,6 +1079,11 @@ class Tag:
 
     def _power_on(self, time, power):
         if self.state is Tag.State.OFF:
+            # Запись времени первого запуска метки
+            record = self.kernel.context.statistics.get_tag_record(self)
+            if record.last_identified_time is None:
+                record.last_identified_time = time
+            # print(f"Первое включение метки {self.tag_id}: {record.last_identified_time}")
             # Updating sessions
             interval = time - self._powered_off_time
             for session in self.sessions.keys():
@@ -1074,7 +1097,7 @@ class Tag:
             self._power_update_time = time
             self._power = power
             self.logger.info(
-                f'tag {self._tag_id} powered on: {self.describe()}'
+                f"tag {self._tag_id} powered on: {self.describe()}"
             )
             self._set_state(Tag.State.READY)
 
@@ -1145,10 +1168,10 @@ class Tag:
         self._blf = std.get_blf(command.dr, preamble.trcal)
         self.q = command.q
         self._slot_counter = np.random.randint(0, pow(2, self.q))
-        self.logger.warning(
-            f'Внимание! Метка {self._tag_id} выбрала '
-            f'номер слота: {self._slot_counter}'
-        )
+        # self.logger.warning(
+        #     f'Внимание! Метка {self._tag_id} выбрала '
+        #     f'номер слота: {self._slot_counter}'
+        # )
         self._preamble = std.create_tag_preamble(self.encoding, self.trext)
         if self._slot_counter == 0:
             self._set_state(Tag.State.REPLY)
@@ -1198,9 +1221,9 @@ class Tag:
             #     f'Изменение q метки {self._tag_id}. '
             #     f'Старое значение: {self.q}'
             # )
-            self.logger.critical(
-                f'Состояние метки {self._tag_id} ДО: {self.describe()}'
-            )
+            # self.logger.critical(
+            #     f'Состояние метки {self._tag_id} ДО: {self.describe()}'
+            # )
             self._set_state(Tag.State.ARBITRATE)
             updn = qadjust.updn
             if self.q + updn >= 0 or self.q + updn <= 15:
@@ -1212,9 +1235,9 @@ class Tag:
                 self._set_state(Tag.State.REPLY)
                 self._rn = np.random.randint(0, 0x10000)
                 return std.TagFrame(self._preamble, std.QueryReply(self._rn))
-            self.logger.critical(
-                f'Состояние метки {self._tag_id} ПОСЛЕ: {self.describe()}'
-            )
+            # self.logger.critical(
+            #     f'Состояние метки {self._tag_id} ПОСЛЕ: {self.describe()}'
+            # )
             # print(
             #     f'Изменение q метки {self._tag_id}. Новое значение: {self.q}'
             # )
@@ -1673,7 +1696,12 @@ class Transaction():
 
 
 #############################################################################
-# Statistics
+# Сбор и обработка статистики.
+#
+# В следующих классах определены различные журналы, отслеживающие в ходе
+# симуляции интересующие параметры. Также в них проводится математическая
+# обработка полученных данных. Результаты, полученные здесь, являются выходными
+# данными имитационной модели.
 #############################################################################
 MIN_POWER_DBM = -120  # dBm - use this value to replace None where needed
 
@@ -1686,6 +1714,7 @@ class _TagReadRecord:
     ber = None
     snr = None
     read_tid = False
+    identification_time = None
 
     def __str__(self):
         return (f'(round={self.round_index}, ant={self.antenna_index},'
@@ -1695,6 +1724,10 @@ class _TagReadRecord:
 
 
 class _TagPowerRecord:
+    """
+    Журнал для отслеживания параметров беспроводного канала связи
+    между считывателем и меткой.
+    """
     def __init__(self):
         self.time = None
         self.field_lifetime = None
@@ -1770,12 +1803,18 @@ class _TagPowerRecord:
 
 
 class _TagRecord:
+    """
+    Журнал для отслеживания параметров метки в процессе симуляции.
+    """
     def __init__(self, tag):
         self._tag = tag
         # list of _TagReadRecord's
         self.inventory_history = []
-        self.num_rounds_attained = 0
-        self.num_qadjust_attained = 0
+        self.num_rounds_attained = 0 # Количество раундов, в которых метка приняла участие (меняется в handlers)
+        self.num_qadjust_attained = 0 # Количество раз, когда метка изменила Q из-за QAdjust (меняется в objects)
+        self.collision_count = 0  # Количество коллизий, в которых участвовала метка
+
+        self.last_identified_time = None
         # list of (pos, antenna, power@tag, power@reader, BER):
         self.power_mapping = []
         self._tag_read_record = None
@@ -1831,53 +1870,84 @@ class _TagRecord:
         num_rounds_attained = {},
         inventory_history = [{}],
         power_mapping = [{}],
-    }}""".format(
+        }}""".format(
             self._tag, self.num_rounds_attained,
             "\n\t\t\t".join(str(rec) for rec in self.inventory_history),
             "\n\t\t\t".join(str(rec) for rec in self.power_mapping))
 
 
 class Statistics:
-    num_tags_created = 0
+    """
+    Менеджер журналов для записи статистики взаимодействий меток
+    и считывателя в симуляции RFID.
+
+    Также данный класс реализует логику математического
+    анализа полученных результатов.
+    """
+
+    # --- Логика менеджера журналов меток ---
+
+    num_tags_created: int = 0
 
     def __init__(self):
-        self.tags_history = []
-        self.use_power_statistics = True
-        self._current_tag_records = {}
+        self.tags_history: list[_TagRecord] = [] # Журналы отработавших меток
+        self.use_power_statistics: bool = True
+        self._current_tag_records: dict[Tag, _TagRecord] = {}
+        self.slot_end_listener_id: int | None = None
 
-        self.slot_end_listener_id = None
-
-    def create_tag_record(self, tag):
+    def create_tag_record(self, tag: Tag) -> _TagRecord:
+        """Создать новый журнал для метки."""
         record = _TagRecord(tag)
         self._current_tag_records[tag] = record
         return record
 
-    def get_tag_record(self, tag):
+    def get_tag_record(self, tag: Tag) -> _TagRecord | None:
+        """Вернуть журнал для конкретной метки."""
         return self._current_tag_records.get(tag, None)
 
-    def close_tag_record(self, tag):
+    def close_tag_record(self, tag: Tag) -> None:
         record = self._current_tag_records.pop(tag)
         self.tags_history.append(record)
 
-    def average_rounds_per_tag(self):
+    # --- Логика обработки результатов моделирования ---
+
+    def average_rounds_per_tag(self) -> floating:
         nums = [tr.num_rounds_attained for tr in self.tags_history]
         return np.average(nums)
 
-    def inventory_probability(self):
+    def inventory_probability(self) -> float:
         recs = [tr for tr in self.tags_history if tr.inventory_history]
         return len(recs) / len(self.tags_history)
 
-    def read_tid_probability(self):
+    def read_tid_probability(self) -> float:
         recs = [tr for tr in self.tags_history if
                 len([trd for trd in tr.inventory_history if trd.read_tid]) > 0]
         return len(recs) / len(self.tags_history)
 
-    def average_changing_q(self):
+    def average_changing_q(self) -> list[int]:
         return [tag.num_qadjust_attained for tag in self.tags_history]
 
-    def to_long_string(self):
-        return """Statistics {{
-num_tags_created = {},
-tags_history = {},
-}}""".format(self.num_tags_created,
-             "\n\t".join(rec.to_long_string() for rec in self.tags_history))
+    def average_collisions_per_tag(self) -> floating:
+        """Вычислить среднее число коллизий на метку."""
+        collisions = [rec.collision_count for rec in self.tags_history]
+        return np.mean(collisions)
+
+    def average_identification_time(self) -> float:
+        times = []
+        for record in self.tags_history:
+            for read in record.inventory_history:
+                if read.identification_time is not None:
+                    times.append(read.identification_time)
+        return float(np.mean(times)) if times else -1.0
+
+    def to_long_string(self) -> str:
+        tag_descriptions = "\n\t".join(
+            rec.to_long_string() for rec in self.tags_history
+        )
+        return (
+            f"Statistics {{\n"
+            f"    num_tags_created = {self.num_tags_created},\n"
+            f"    tags_history = [\n\t{tag_descriptions}\n"
+            f"    ]\n"
+            f"}}"
+        )
