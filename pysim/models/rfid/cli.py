@@ -144,7 +144,7 @@ def cli():
     show_default=True, help="Use QueryAdjust command for correct Q"
 )
 @click.option(
-    "-q", "--q_value", default=default_params.q, show_default=True,
+    "-q", "--q", multiple=True, default=(default_params.q,), show_default=True,
     help="Q param for slot counting"
 )
 def cli_run(**console_params):
