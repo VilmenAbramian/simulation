@@ -14,7 +14,11 @@ TAG_POS = np.array((default_params.tag_offset, 0, inner_params.tag_params.tag_al
 
 def get_noise(reader_noise, thermal_noise):
     return channel.to_log(
-        value=(channel.from_log(reader_noise, dbm=True) + channel.from_log(thermal_noise, dbm=True)),
+        value=(
+            channel.from_log(
+                reader_noise, dbm=True
+            ) + channel.from_log(thermal_noise, dbm=True)
+        ),
         dbm=True
     )
 
