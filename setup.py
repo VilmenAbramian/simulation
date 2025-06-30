@@ -14,12 +14,14 @@ setup(
         "colorama==0.4.6",
         "pydantic==2.11.4",
         "numpy==2.2.5",
-        "matplotlib==3.10.1",
+        "matplotlib==3.10.1",  # Используется с PT Serif Caption (установить отдельно или через extras_require["fonts"])
         "scipy==1.15.2",
         "tabulate==0.9.0",
         "notebook",
         "ipykernel",
         "ipython",
+        "plotly",
+        "tqdm",
     ],
     tests_require=[
         "pytest",
@@ -30,4 +32,9 @@ setup(
         ],
     },
     python_requires=">=3.12",
+    extras_require={
+        "fonts": [
+            "font-ttf-pt-serif-caption; sys_platform == 'linux'"
+        ]
+    }
 )
