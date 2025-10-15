@@ -5,7 +5,7 @@ SEC2MILLISEC = 1000
 
 
 def create_matrix_1(*probabilities: tuple[int]) -> np.ndarray:
-    '''
+    """
     Кумулятивная матрица для 1 сценария вида:
     matrix = np.array([
         [1-p1, p1,  0, 0,  0],
@@ -14,7 +14,7 @@ def create_matrix_1(*probabilities: tuple[int]) -> np.ndarray:
         [1-p4, 0,   0, 0,  p4],
         [0,    0,   0, 0,  1]
     ])
-    '''
+    """
     n = len(probabilities)
     matrix = np.zeros((n + 1, n + 1))
     for i in range(n):
@@ -25,7 +25,7 @@ def create_matrix_1(*probabilities: tuple[int]) -> np.ndarray:
 
 
 def create_matrix_2(*probabilities: tuple[int]) -> np.ndarray:
-    '''
+    """
     Кумулятивная матрица для 2 сценария вида:
     matrix = np.array([
         [1-p1, p1,    0,    0,     0],
@@ -34,7 +34,7 @@ def create_matrix_2(*probabilities: tuple[int]) -> np.ndarray:
         [0,    0,     0,    1-p4,  p4],
         [0,    0,     0,    0,     1]
     ])
-    '''
+    """
     n = len(probabilities)
     matrix = np.zeros((n + 1, n + 1))
     for i in range(n):
@@ -45,7 +45,7 @@ def create_matrix_2(*probabilities: tuple[int]) -> np.ndarray:
 
 
 def create_matrix_3(probabilities: list[list]) -> np.ndarray:
-    '''Кумулятивная матрица для 3 сценария'''
+    """Кумулятивная матрица для 3 сценария"""
     n = len(probabilities) + 1
     matrix = np.zeros((n, n))
     for i in range(n-1):
@@ -59,7 +59,7 @@ def create_input_probs(
         scenario: int,
         probs: list[list[list]]
         ) -> list[np.ndarray[tuple[int]]]:
-    '''
+    """
     Подготовить кумулятивные матрицы для
     запуска нескольких моделей Монте-Карло.
 
@@ -67,7 +67,7 @@ def create_input_probs(
         scenario: номемер сценария (1, 2, 3)
         probs: массив с массивами вероятностей перехода
         метки из одного состояния в другое
-    '''
+    """
 
     matrix_list = []
     for i in range(len(probs)):
