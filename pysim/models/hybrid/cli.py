@@ -2,6 +2,14 @@ import click
 from multiprocessing import Pool
 import multiprocessing
 
+from pysim.models.hybrid.handlers import initialize, finalize
+from pysim.models.hybrid.objects import Params, Result
+from pysim.sim.simulator import (
+    build_simulation,
+    run_simulation,
+    ModelLoggerConfig
+)
+
 
 MODEL_NAME = "Hybrid system simulation"
 PHOTO_DISTANCE = (30, 50) # meters
@@ -72,8 +80,43 @@ def cli_run(**kwargs):
         result = create_config(kwargs)
     else:
         result = run_multiple_simulation(variadic, **kwargs)
-    result_processing(kwargs, result, variadic)
+    print("Конец")
+    # result_processing(kwargs, result, variadic)
 
 
-if __name__ == '__main__':
+def create_config(*args):
+    kwargs = args[0]
+    return run_model(Params(
+        sign_prob=kwargs["sign_prob"],
+        num_prob=kwargs["num_prob"],
+        average_speed=kwargs["average_speed"],
+        transport_distance=kwargs["transport_distance"],
+        photo_distance=kwargs["photo_distance"],
+        rfid_distance = kwargs["rfid_distance"],
+        photo_error = kwargs["photo_error"],
+        rfid_error = kwargs["rfid_error"]
+    ), ModelLoggerConfig())
+
+def run_model(
+    config: Params,
+    logger_config: ModelLoggerConfig,
+    max_real_time: float | None = None,
+    max_sim_time: float | None = None,
+    max_num_events: int | None = None,
+) -> Result:
+    sim_time, _, result = run_simulation(
+        build_simulation(
+            MODEL_NAME,
+            init=initialize,
+            init_args=(config,),
+            fin=finalize,
+            max_real_time=max_real_time,
+            max_sim_time=max_sim_time,
+            max_num_events=max_num_events,
+            logger_config=logger_config
+        ))
+    return result
+
+
+if __name__ == "__main__":
     cli_run()
