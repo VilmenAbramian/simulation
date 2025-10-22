@@ -18,6 +18,8 @@ SPEED = (60 / 3.6, 100 / 3.6) # kilometers per hour
 DISTANCE_BETWEEN_TRANSPORTS = 10 # meters
 
 PHOTO_ERROR = 0.1
+NUMBER_PLATE_SYMBOLS_AMOUNT = 6
+symbol_error = 1 - (1 - PHOTO_ERROR) ** (1 / NUMBER_PLATE_SYMBOLS_AMOUNT)
 RFID_ERROR = 0.05
 CAR_ERROR = 0.1
 
@@ -34,39 +36,39 @@ def run_multiple_simulation(variadic, **kwargs):
 @click.option(
     "-pd", "--photo-distance", nargs=2, type=click.Tuple([float, float]),
     default=PHOTO_DISTANCE,
-    help="Зона видимости камеры в метрах???",
+    help="Зона видимости камеры в метрах",
     show_default=True
 )
 @click.option(
     "-rd", "--rfid-distance", nargs=2, type=click.Tuple([float, float]),
     default=RFID_DISTANCE,
-    help="Зона видимости RFID считывателя в метрах???",
+    help="Зона видимости RFID считывателя в метрах",
     show_default=True
 )
 @click.option(
     "-s", "--speed", nargs=2, type=click.Tuple([float, float]),
     default=SPEED,
-    help="Скорость движения в метрах в секунду???",
+    help="Диапазон скоростей движения машин в метрах в секунду",
     show_default=True
 )
 @click.option(
     "-d", "--transport-gap", default=DISTANCE_BETWEEN_TRANSPORTS,
-    help="Расстояние между ТС???",
+    help="Расстояние между машинами в метрах",
     show_default=True
 )
 @click.option(
-    "-pe", "--photo-error", default=PHOTO_ERROR,
-    help="Вероятность ошибки идентификации ТС камерой???",
+    "-pe", "--photo-error", default=symbol_error,
+    help="Вероятность ошибки идентификации номерной таблички камерой",
     show_default=True
 )
 @click.option(
     "-re", "--rfid-error", default=RFID_ERROR,
-    help="Вероятность ошибки идентификации ТС RFID системой???",
+    help="Вероятность ошибки идентификации ТС RFID системой",
     show_default=True
 )
 @click.option(
     "-ce", "--car-error", default=CAR_ERROR,
-    help="Что это???",
+    help="Вероятность ошибки идентификации модели машины камерой",
     show_default=True
 )
 def cli_run(**kwargs):
