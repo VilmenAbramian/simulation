@@ -93,11 +93,11 @@ def detect_car_by_camera(
     )
 
 
-def rfid_detection(
+def detect_car_by_rfid(
         time: float,
-        transit: CamDetection,
+        cam_detection: CamDetection,
         rfid_error: float,
 ) -> RfidDetection:
     if np.random.uniform() <= rfid_error:
         return RfidDetection(rfid_detection_time=time, rfid_num=None)
-    return RfidDetection(rfid_detection_time=time, rfid_num=transit.num)
+    return RfidDetection(rfid_detection_time=time, rfid_num=cam_detection.num)

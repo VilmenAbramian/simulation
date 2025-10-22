@@ -107,6 +107,10 @@ class Result(BaseModel):
     )
 
 
+_CamDetections = List[Tuple[CamDetection, int]]
+_RfidDetections = List[Tuple[RfidDetection, int]]
+
+
 class Model:
     """
     Используется в качестве контекста модели.
@@ -115,12 +119,16 @@ class Model:
     работы программы.
     """
     def __init__(self, params: Params, logger: ModelLogger):
-        self.params = params
-        self.results = Result(
+        self.params: Params = params
+        self.cam_detections: _CamDetections = []
+        self.error_cam_detections: _CamDetections = []
+        self.rfid_detections: _RfidDetections = []
+        self.results: Result = Result(
             clear_cam_detections=[],
             corrected_by_rfid_detections=[],
             failed_to_recognize=[]
         )
+        self.current_detection: int = 0
 
         logger.debug("Модель успешно инициализирована")
 
@@ -129,8 +137,3 @@ class _Event(Enum):
     PHOTO_TRANSIT = 0
     RFID_DETECTION = 1
     START_MERGE = 2
-
-
-_EventQueue = List[Tuple[float, _Event, Optional[int]]]
-_Transits = List[Tuple[CamDetection, int]]
-_RfidDetections = List[Tuple[RfidDetection, int]]
