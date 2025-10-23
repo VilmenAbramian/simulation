@@ -12,7 +12,7 @@ def initialize(sim: Simulator, config: Params) -> None:
     model = Model(params=config, logger=sim.logger) # Задать контекст модели
     sim.context = model
     sim.call(on_camera_detection, (sim,))
-    sim.call(on_start_merge, (sim,))
+    # sim.call(on_start_merge, (sim,))
 
 
 def finalize(sim: Simulator) -> Result:
@@ -22,9 +22,7 @@ def finalize(sim: Simulator) -> Result:
     assert isinstance(sim.context, Model)
     model: Model = sim.context
 
-    return Result(
-
-    )
+    return model.results
 
 
 def on_camera_detection(sim: Simulator, _) -> None:
@@ -37,8 +35,8 @@ def on_camera_detection(sim: Simulator, _) -> None:
         cur_time = sim.time,
         sign_prob=model.params.sign_prob,
         num_prob=model.params.num_prob,
-        speed=model.params.speed,
-        distance=model.params.distance,
+        speed=model.params.speed_range,
+        distance=model.params.photo_distance,
         photo_error=model.params.photo_error,
         car_error=model.params.car_error,
     )
@@ -49,27 +47,28 @@ def on_camera_detection(sim: Simulator, _) -> None:
         model.error_cam_detections.append((cam_detection, model.current_detection))
 
     # Идентифицируем эту же машину RFID системой
-    sim.schedule(
-        _get_rfid_detection_time(
-            cur_time = sim.time,
-            speed = cam_detection.speed,
-            photo_distance = cam_detection.photo_distance,
-            rfid_distance = model.params.rfid_distance,
-        ),
-        on_rfid_detection,
-        (sim, model.current_detection)
-    )
+    # sim.schedule(
+    #     _get_rfid_detection_time(
+    #         cur_time = sim.time,
+    #         speed = cam_detection.speed,
+    #         photo_distance = cam_detection.photo_distance,
+    #         rfid_distance = model.params.rfid_distance,
+    #     ),
+    #     on_rfid_detection,
+    #     (sim, model.current_detection)
+    # )
     model.current_detection += 1
-    # Фото идентифицируем следующую машину
-    sim.schedule(
-        _get_photo_time(
-            cur_time = sim.time,
-            speed = model.params.speed,
-            distance_between_transports = model.params.distance_between_transports,
-        ),
-        on_camera_detection,
-        (sim,)
-    )
+    # Фотоидентифицируем следующую машину
+    if model.current_detection <= model.params.num_plates:
+        sim.schedule(
+            _get_photo_time(
+                cur_time = sim.time,
+                speed = cam_detection.speed,
+                distance_between_transports = model.params.transport_distance,
+            ),
+            on_camera_detection,
+            (sim,)
+        )
 
 
 def on_rfid_detection(sim: Simulator, current_detection_id: int) -> None:

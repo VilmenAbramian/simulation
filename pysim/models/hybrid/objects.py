@@ -1,64 +1,71 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, confloat, conint
 from enum import Enum
 from typing import List, Tuple, Optional
 
 from pysim.sim.logger import ModelLogger
-
-# Вероятность появления буквенного символа в номерной табличке
-sign_prob = {
-    "A": 0.1,
-    "B": 0.1,
-    "C": 0.1,
-    "D": 0.1,
-    "E": 0.1,
-    "T": 0.1,
-    "P": 0.1,
-    "M": 0.1,
-    "K": 0.1,
-    "O": 0.1
-}
-
-# Вероятность появления цифры в номерной табличке
-num_prob = {
-    "0": 0.1,
-    "1": 0.1,
-    "2": 0.1,
-    "3": 0.1,
-    "4": 0.1,
-    "5": 0.1,
-    "6": 0.1,
-    "7": 0.1,
-    "8": 0.1,
-    "9": 0.1
-}
 
 
 class Params(BaseModel):
     """
     Входные параметры модели
     """
+    model_name: str = "Hybrid system"
+    num_plates: conint(ge=100, le=20000) = Field(
+        5000, description="Количество идентифицируемых автомобилей"
+    )
     sign_prob: dict[str, float] = Field(
-        ..., description="Вероятности появления буквенных символов"
+        default_factory=lambda: {
+            "A": 0.1, "B": 0.1, "C": 0.1, "D": 0.1, "E": 0.1,
+            "T": 0.1, "P": 0.1, "M": 0.1, "K": 0.1, "O": 0.1
+        },
+        description="Вероятности появления буквенных символов в"
+                    "номерной табличке"
     )
     num_prob: dict[str, float] = Field(
-        ..., description="Вероятности появления цифр"
+        default_factory=lambda: {
+            "0": 0.1, "1": 0.1, "2": 0.1, "3": 0.1, "4": 0.1,
+            "5": 0.1, "6": 0.1, "7": 0.1, "8": 0.1, "9": 0.1
+        },
+        description="Вероятности появления цифр в номерной табличке"
     )
-    average_speed: float = Field(..., description="Средняя скорость, м/с")
+    speed_range: tuple[float, float] = Field(
+        (60 / 3.6, 100 / 3.6),
+        description="Разброс возможных скоростей машин, м/с"
+    )
     transport_distance: float = Field(
-        ..., description="Расстояние между машинами"
+        10, description="Расстояние между машинами"
     )
-    photo_distance: float = Field(..., description="Расстояние фотофиксации")
-    rfid_distance: float = Field(
-        ..., description="Расстояние идентификации RFID системой"
+    photo_distance: tuple[float, float] = Field(
+        (30, 50), description="Разброс возможных расстояний фотофиксации"
+    )
+    rfid_distance: tuple[float, float] = Field(
+        (-5, 5),
+        description="Разброс возможных расстояний идентификации RFID системой"
+    )
+    number_plate_symbols_amount: int = Field(
+        6, description="Количество символов в номерной табличке"
     )
     photo_error: float = Field(
-        ..., description="Вероятность ошибочного определения"
-                         "одного символа номерной таблички"
+        0.1, description="Вероятность ошибки идентификации номерной таблички"
+                         "с помощью камеры"
     )
     rfid_error: float = Field(
-        ..., description="Вероятность идентификации номерной таблички"
+        0.05, description="Вероятность ошибки идентификации номерной таблички"
                          "RFID системой"
     )
+    car_error: float = Field(
+        0.1,
+        description="Вероятность ошибки идентификации модели машины камерой"
+    )
+    @property
+    def symbol_error(self) -> float:
+        """
+        Вероятность ошибки идентификации одного символа номерной таблички
+        камерой
+        """
+        return 1 - (1 - self.photo_error) ** (
+                1 / self.number_plate_symbols_amount
+        )
 
 
 class CamDetection(BaseModel):
