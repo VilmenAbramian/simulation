@@ -2,7 +2,6 @@ import click
 from multiprocessing import Pool
 import multiprocessing
 
-# from processing import result_processing
 from pysim.sim.simulator import (
     build_simulation,
     run_simulation,
@@ -12,7 +11,7 @@ from pysim.models.tag_time.objects import Config
 from pysim.models.tag_time.handlers import initialize, finalize
 
 
-MODEL_NAME = 'Monte-Carlo-simulation'
+MODEL_NAME = "Monte-Carlo-simulation"
 DEFAULT_PROBABILITY = ((0.9, 0.95, 0.93, 0.91),)
 DEFAULT_PROCESSING_TIME = ((1, 1, 1, 1),)
 DEFAULT_MAX_TRANSMISSIONS = 2000
@@ -22,11 +21,11 @@ SCENARIOS_TUPLE = (1, 2, 3)
 
 
 def check_vars(**kwargs):
-    '''
+    """
     Проверка корректности введённых аргументов и
     выбор режима работы симуляции (одиночный или
     несколько моделей одновременно)
-    '''
+    """
     if kwargs['scenario'] not in SCENARIOS_TUPLE:
         raise AttributeError('Недопустимый номер сценария!')
     if kwargs['scenario'] == 3 and kwargs['chunks_number'] < 1:
@@ -70,7 +69,7 @@ def check_vars(**kwargs):
 )
 @click.option(
     '-cn', '--chunks_number', default=DEFAULT_CHUNKS_NUMBER,
-    help='Количество "чанков", на которые разбито состояние Secured',
+    help='Количество частей, на которые разбито состояние Secured',
     show_default=True
 )
 @click.option(
@@ -79,10 +78,10 @@ def check_vars(**kwargs):
     show_default=True
 )
 def cli_run(**kwargs):
-    '''
+    """
     Точка входа модели.
     Задать параметры работы.
-    '''
+    """
     mode = check_vars(**kwargs)
     print(f'Running {MODEL_NAME} model. Scenario number {kwargs["scenario"]}')
     print('Входные параметры: ', kwargs)

@@ -297,8 +297,8 @@ class ReaderPowerParams(BaseModel):
 class InventoryScenarioParams(BaseModel):
     """Настройки сценария (алгоритма) опроса меток считывателем."""
     read_tid_bank: bool = Field(
-        True, description='Нужно ли дополнительно читать банк данных TID после'
-                          'идентификации метки (чтения EPCID метки)'
+        True, description="Нужно ли дополнительно читать банк данных TID после"
+                          "идентификации метки (чтения EPCID метки)"
     )
     sel: std.SelFlag = std.SelFlag.ALL  # флаг Sel (не используется в модели)
     session: std.Session = Field(
@@ -389,7 +389,7 @@ class RFIDInternalParams(BaseModel):
     Эти параметры задаются разработчиком модели и обычно
     не изменяются пользователем напрямую.
     """
-    model_name: str = 'RFID'
+    model_name: str = "RFID"
     reader_params: ReaderParams = Field(default_factory=ReaderParams)
     geometry_params: GeometryParams = Field(default_factory=GeometryParams)
     energy_params: EnergyParams = Field(default_factory=EnergyParams)

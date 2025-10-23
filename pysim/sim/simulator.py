@@ -31,7 +31,7 @@ class ExitReason(Enum):
 
 @dataclass
 class ExecutionStats:
-    '''
+    """
     Структура дынных для хранения результатов
     исполнения одного "прогона" симулятора
     Some args:
@@ -39,7 +39,7 @@ class ExecutionStats:
         time_elapsed - длительность симуляции в секундах
         last_handler - последний выполненный обработчик и его аргументы
         last_sim_time - для режима отладки: предыдущий момент времени
-    '''
+    """
     num_events_processed: int
     sim_time: float
     time_elapsed: float
@@ -122,7 +122,7 @@ class Simulator:
             args: Iterable[Any] = (),
             msg: str = ''
     ) -> EventId:
-        '''
+        """
         Запланировать событие на текущий момент времени.
 
         Вариант вызова `schedule()` с `delay = 0`.
@@ -139,7 +139,7 @@ class Simulator:
 
         Returns:
             EventId: идентификатор события, число больше 0
-        '''
+        """
         return self._kernel.schedule(0, handler, args, msg)
 
     def cancel(self, event_id: EventId) -> int:
@@ -183,26 +183,26 @@ class Simulator:
 
 
 class EventQueue:
-    '''
+    """
     Очередь событий, реализованная с помощью
     струкртуры данных "приоритетная куча (heapq)"
-    '''
+    """
     def __init__(self):
-        '''
+        """
         Args:
             _event_list - лист событий, который будет упорядочен,
                 как приоритетная минимальная куча
             _event_dict -  словарь, сопоставляющий задачи с записями в листе
             _next_id - уникальный порядковый номер события
             removed - Заполнитель для удалённого события (можно взамен использовать None)
-        '''
+        """
         self._event_list = []
         self._event_dict = {}
         self._next_id = itertools.count()
         # self.removed = '<removed-task>'
 
     def push(self, time, task):
-        '''
+        """
         Добавление нового события по правилам кучи
 
         Args:
@@ -216,7 +216,7 @@ class EventQueue:
         бинарного дерева. Здесь нет преобразования данных list по правилам кучи,
         потому что list изначально пуст и события в него добавляются сразу же
         исходя из правил кучи
-        '''
+        """
         event_id = next(self._next_id)  # Генерируем уникальный номер события
         event = [time, event_id, task]  # Формируем list события
         self._event_dict[event_id] = event
@@ -224,10 +224,10 @@ class EventQueue:
         return event_id
 
     def pop(self):
-        '''
+        """
         :raises:
             - KeyError: если очередь пуста
-        '''
+        """
         if self.empty:
             raise KeyError("Pop из пустой очереди событий!")
         (time, event_id, task) = heapq.heappop(self._event_list)
@@ -237,24 +237,24 @@ class EventQueue:
         return time, event_id, task
 
     def __len__(self):
-        '''
+        """
         Количество событий в очереди
-        '''
+        """
         return len(self._event_dict)
 
     def cancel(self, event_id):
-        '''
+        """
         Отмена запланированного события в будущем
-        '''
+        """
         if event_id in self._event_dict and event_id is not None:
             event = self._event_dict.pop(event_id)  # Удаляем запись о событии из словаря (но не из кучи)
             event[-1] = None
             return (event)
 
     def clear(self):
-        '''
+        """
         Очистка очереди событий
-        '''
+        """
         self._event_list.clear()
         self._event_dict.clear()
 
@@ -267,7 +267,7 @@ class EventQueue:
 
 
 class Kernel:
-    '''
+    """
     Some args:
         _sim_time - модельное время (в условных единицах)
         _t_start - Реальное время начала симуляции
@@ -275,7 +275,7 @@ class Kernel:
         _max_real_time - пользовательское максимальное реальное время симуляции
         _max_num_events - пользовательское максимальное количество обслуживаемых событий
         lhandler - последний исполненный обработчик
-    '''
+    """
     def __init__(self, model_name: str):
         # Настраиваем название модели и логгер
         self._model_name = model_name
@@ -336,13 +336,13 @@ class Kernel:
             args: Iterable[Any] = (),
             msg: str = ''
     ) -> EventId:
-        '''Планирование нового события'''
+        """Планирование нового события"""
         if delay is not None:
             return self._queue.push(self._sim_time + delay, (handler, args, msg))
         return None
 
     def cancel(self, event_id: EventId) -> int:
-        '''Отменить событие с идентификатором `event_id`'''
+        """Отменить событие с идентификатором `event_id`"""
         if event_id in self._queue._event_dict:
             self._queue.cancel(event_id)
             return 1
@@ -355,7 +355,7 @@ class Kernel:
         self.logger.debug(f'Симуляция остановлена с сообщением {msg}')
 
     def stop_conditions(self, msg: str = None) -> bool:
-        '''Возвращает True для остановки модели'''
+        """Возвращает True для остановки модели"""
         if self._max_sim_time is not None and self._sim_time > self._max_sim_time:
             self.stop_reason = ExitReason.REACHED_SIM_TIME_LIMIT
             return True

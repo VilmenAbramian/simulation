@@ -10,8 +10,8 @@ class Params(BaseModel):
     Входные параметры модели
     """
     model_name: str = "Hybrid system"
-    num_plates: conint(ge=100, le=20000) = Field(
-        5000, description="Количество идентифицируемых автомобилей"
+    num_plates: conint(ge=1, le=20000) = Field(
+        50, description="Количество идентифицируемых автомобилей"
     )
     sign_prob: dict[str, float] = Field(
         default_factory=lambda: {
@@ -50,7 +50,7 @@ class Params(BaseModel):
                          "с помощью камеры"
     )
     rfid_error: float = Field(
-        0.05, description="Вероятность ошибки идентификации номерной таблички"
+        0.5, description="Вероятность ошибки идентификации номерной таблички"
                          "RFID системой"
     )
     car_error: float = Field(
@@ -94,7 +94,7 @@ class RfidDetection(BaseModel):
     rfid_detection_time: float = Field(
         ..., description="Время идентификации RFID системой"
     )
-    rfid_num: Optional[float] = Field(
+    rfid_num: Optional[str] = Field(
         None, description="Идентифицированный номер RFID системой"
     )
 
