@@ -48,8 +48,8 @@ def detect_car_by_camera(
         cur_time: float,
         sign_prob: dict[str, float],
         num_prob: dict[str, float],
-        speed: list[float, float],
-        distance: list[float, float],
+        speed: tuple[float, float],
+        distance: tuple[float, float],
         photo_error: float,
         car_error: float,
 ) -> CamDetection:
@@ -57,7 +57,7 @@ def detect_car_by_camera(
     Распознавание номерной таблички с помощью камеры.
 
     Args:
-      - cur_time: текущее модельное время;
+      - cur_time: время вхождения машины в зону видимости камеры;
       - sign_prob: вероятность появления символа в номерной табличке;
       - num_prob: вероятность появления цифры в номерной табличке;
       - speed: минимальная и максимальная скорости, из которых выбирается
@@ -71,7 +71,8 @@ def detect_car_by_camera(
     """
     number_plate = generate_plate(sign_prob=sign_prob, num_prob=num_prob)
     _speed = np.random.uniform(low=speed[0], high=speed[1]) # Случайная скорость конкретной машины
-
+    _photo_distance = np.random.uniform(low=distance[0], high=distance[1])  # Случайное расстояние до конкретной машины
+    # print(f"Доп время: {_photo_distance/_speed}")
     num_val = []
     for value in list(number_plate):
         if np.random.uniform() <= photo_error:
@@ -80,12 +81,11 @@ def detect_car_by_camera(
             num_val.append(value)
     photo_number = "".join(num_val)
 
-    _photo_distance = np.random.uniform(low=distance[0], high=distance[1]) # Случайное расстояние до конкретной машины
     car_model_detected = np.random.uniform() > car_error
 
     return CamDetection(
         real_plate=number_plate,
-        photo_detection_time=cur_time,
+        photo_detection_time=cur_time+_photo_distance/_speed,
         photo_distance=_photo_distance,
         photo_num=photo_number,
         speed=_speed,

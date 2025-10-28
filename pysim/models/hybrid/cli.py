@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import multiprocessing
 
 from pysim.models.hybrid.handlers import initialize, finalize
-from pysim.models.hybrid.objects import Params, Result
+from pysim.models.hybrid.objects import Params
 from pysim.sim.simulator import (
     build_simulation,
     run_simulation,
@@ -75,7 +75,11 @@ def cli_run(**kwargs):
         result = create_config(kwargs)
     else:
         result = run_multiple_simulation(variadic, **kwargs)
-    print(len(result.clear_cam_detections)/kwargs["num_plates"])
+    cam_probs = len(result.clear_cam_detections)/kwargs["num_plates"]
+    rfid_1_probs = len(result.rfid_correction_without_collision) / kwargs["num_plates"]
+    print(f"Вероятность идентификации камерой: {cam_probs}")
+    print(f"Добавочная вероятность без коллизий: {rfid_1_probs}")
+    print(f"Суммарная вероятность: {cam_probs + rfid_1_probs}")
     # result_processing(kwargs, result, variadic)
 
 
@@ -100,7 +104,7 @@ def run_model(
     max_real_time: float | None = None,
     max_sim_time: float | None = None,
     max_num_events: int | None = None,
-) -> Result:
+):
     sim_time, _, result = run_simulation(
         build_simulation(
             Params().model_name,

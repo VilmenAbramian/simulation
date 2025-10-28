@@ -1,9 +1,7 @@
-from pysim.main import models_list
-from pysim.models.hybrid.objects import _CamDetections, _RfidDetections, CamDetection
-from pysim.models.hybrid.utils import check_probs
+# from pysim.models.hybrid.objects import _CamDetections, _RfidDetections, CamDetection
 
 
-def is_partial_match(photo_num: str, rfid_num: str) -> bool:
+def is_partial_match(photo_detections, rfid_detection):
     """
     Проверка на совпадение номерной таблички, частично распознанной камерой
     и полностью идентифицированной RFID системой.
@@ -14,46 +12,45 @@ def is_partial_match(photo_num: str, rfid_num: str) -> bool:
     вернёт True     вернёт True     вернёт False
 
     """
-    if len(photo_num) != len(rfid_num):
-        return False
-    return all(p == r or p == "*" for p, r in zip(photo_num, rfid_num))
+    return [
+        det for det in photo_detections
+        if len(det.photo_num) == len(rfid_detection.rfid_num)
+        and all(p == r or p == "*" for p, r in zip(det.photo_num, rfid_detection.rfid_num))
+    ]
 
 
 def compare_camera_and_rfid_detections(
-    error_cam_detections: _CamDetections,
-    rfid_detections: _RfidDetections,
-    model,
-) -> (list[CamDetection], list[CamDetection], list[CamDetection]):
+    error_cam_detections,
+    rfid_detection,
+    sim,
+):
     """
     Сравнение номерных табличек, полученных от камеры и RFID системы
 
     Args:
-      - cam_detections: распознанные номера с помощью камеры
-      - rfid_detections: распознанные номера с помощью RFID считывателя
+      - error_cam_detections: номера, распознанные камерой с ошибкой
+      - rfid_detections: номера, распознанные RFID системой без ошибок
     """
-    corrected_by_rfid = []
-    # failed_to_recognize = []
+    model = sim.context
 
-    for (rfid_detection, num_id) in rfid_detections:
-        if rfid_detection.rfid_num is not None:
+    _time = (
+            sum(model.params.photo_distance) + max(model.params.rfid_distance)
+    ) / min(model.params.speed_range)
+    corresponding_car_numbers = [
+        number for number in error_cam_detections
+        if number.photo_detection_time >= sim.time - _time
+    ]
+    # print("Времена идентификаций камерой")
+    # for number in error_cam_detections:
+    #     print(number.photo_detection_time)
 
-            _matched_detections = [
-                _detection for _detection in error_cam_detections
-                if is_partial_match(_detection[0].photo_num, rfid_detection.rfid_num)
-            ]
+    matching_numbers = []
+    if len(corresponding_car_numbers) > 0:
+        matching_numbers = is_partial_match(corresponding_car_numbers, rfid_detection)
+    if len(matching_numbers) == 1:
+        model.statistics.rfid_correction_without_collision.append(matching_numbers[0])
 
-            if len(_matched_detections) == 1:
-                corrected_by_rfid.append(_matched_detections[0])
-    model.results.corrected_by_rfid_detections.append(corrected_by_rfid)
+    # print(f"Номер RFID: {rfid_detection}")
+    # print(f"Номера машин: {matching_numbers}")
 
-            # elif len(_matched_transits) > 1:
-            #     for transit in _matched_transits:
-            #         if transit[0].car_model_detected:
-            #             _match = find_match_num_id(num_id=num_id, transits=_matched_transits)
-            #             corrected_by_rfid.append(_match)
-
-    # for transit in error_cam_detections:
-    #     if find_match_num_id(num_id=transit[1], transits=corrected_by_rfid) is None:
-    #         failed_to_recognize.append(transit)
-
-    return corrected_by_rfid
+    return None

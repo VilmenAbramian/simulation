@@ -10,8 +10,8 @@ class Params(BaseModel):
     Входные параметры модели
     """
     model_name: str = "Hybrid system"
-    num_plates: conint(ge=1, le=20000) = Field(
-        50, description="Количество идентифицируемых автомобилей"
+    num_plates: conint(ge=1, le=50000) = Field(
+        5000, description="Количество идентифицируемых автомобилей"
     )
     sign_prob: dict[str, float] = Field(
         default_factory=lambda: {
@@ -46,11 +46,11 @@ class Params(BaseModel):
         6, description="Количество символов в номерной табличке"
     )
     photo_error: float = Field(
-        0.1, description="Вероятность ошибки идентификации номерной таблички"
+        0.5, description="Вероятность ошибки идентификации номерной таблички"
                          "с помощью камеры"
     )
     rfid_error: float = Field(
-        0.5, description="Вероятность ошибки идентификации номерной таблички"
+        0.1, description="Вероятность ошибки идентификации номерной таблички"
                          "RFID системой"
     )
     car_error: float = Field(
@@ -99,18 +99,30 @@ class RfidDetection(BaseModel):
     )
 
 
-class Result(BaseModel):
+class Statistic(BaseModel):
     clear_cam_detections: list[CamDetection] = Field(
         ..., description="Список автомобилей, которые были полностью"
                          "идентифицированы камерой"
     )
-    corrected_by_rfid_detections: list[CamDetection] = Field(
+    error_cam_detections: list[CamDetection] = Field(
         ..., description="Список автомобилей, которые не удалось распознать"
-                         "камерой, но которые получилось уточнить с помощью"
-                         "RFID системы"
+                         "камерой"
     )
-    failed_to_recognize: list[CamDetection] = Field(
+    rfid_correction_without_collision: list[RfidDetection] = Field(
+        ..., description="Список автомобилей, которые удалось распознать"
+                         "RFID системой и которые не попали в коллизию"
+    )
+    error_rfid_detection: list[CamDetection] = Field(
+        ..., description="Список автомобилей, которые не удалось распознать ни"
+                         "камерой, не RFID системой"
+    )
+    rfid_correction_after_collision: list[RfidDetection] = Field(
+        ..., description="Список автомобилей, которые удалось распознать"
+                         "RFID системой и которые попали в коллизию"
+    )
+    rfid_unresolved_collision: list[RfidDetection] = Field(
         ..., description="Список автомобилей, которые не удалось распознать"
+                         "после попадания в коллизию"
     )
 
 
@@ -127,16 +139,15 @@ class Model:
     """
     def __init__(self, params: Params, logger: ModelLogger):
         self.params: Params = params
-        self.cam_detections: _CamDetections = []
-        self.error_cam_detections: _CamDetections = []
-        self.rfid_detections: _RfidDetections = []
-        self.results: Result = Result(
-            clear_cam_detections=[],
-            corrected_by_rfid_detections=[],
-            failed_to_recognize=[]
+        self.statistics: Statistic = Statistic(
+            clear_cam_detections = [],
+            error_cam_detections = [],
+            rfid_correction_without_collision = [],
+            error_rfid_detection = [],
+            rfid_correction_after_collision = [],
+            rfid_unresolved_collision = []
         )
         self.current_detection: int = 0
-
         logger.debug("Модель успешно инициализирована")
 
 
