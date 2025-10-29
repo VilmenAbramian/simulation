@@ -1,8 +1,12 @@
 from pydantic import BaseModel, Field, confloat, conint
-from enum import Enum
 from typing import List, Tuple, Optional
 
 from pysim.sim.logger import ModelLogger
+
+
+class Consts:
+    MIN_MODEL_TYPE = 1
+    MAX_MODEL_TYPE = 100
 
 
 class Params(BaseModel):
@@ -11,7 +15,7 @@ class Params(BaseModel):
     """
     model_name: str = "Hybrid system"
     num_plates: conint(ge=1, le=50000) = Field(
-        5000, description="Количество идентифицируемых автомобилей"
+        20000, description="Количество идентифицируемых автомобилей"
     )
     sign_prob: dict[str, float] = Field(
         default_factory=lambda: {
@@ -46,7 +50,7 @@ class Params(BaseModel):
         6, description="Количество символов в номерной табличке"
     )
     photo_error: float = Field(
-        0.5, description="Вероятность ошибки идентификации номерной таблички"
+        0.7, description="Вероятность ошибки идентификации номерной таблички"
                          "с помощью камеры"
     )
     rfid_error: float = Field(
@@ -54,7 +58,7 @@ class Params(BaseModel):
                          "RFID системой"
     )
     car_error: float = Field(
-        0.1,
+        0.3,
         description="Вероятность ошибки идентификации модели машины камерой"
     )
     @property
@@ -66,6 +70,15 @@ class Params(BaseModel):
         return 1 - (1 - self.photo_error) ** (
                 1 / self.number_plate_symbols_amount
         )
+
+
+class CarNumber(BaseModel):
+    plate: str = Field(
+        ..., description="Номерная табличка идентифицируемой машины"
+    )
+    car_model: Optional[int] = Field(
+        ..., description="Идентификатор определённой модели машины."
+    )
 
 
 class CamDetection(BaseModel):
@@ -85,8 +98,12 @@ class CamDetection(BaseModel):
         ..., description="Распознанная камерой информация с номера машины"
     )
     speed: float = Field(..., description="Скорость машины, м/с")
-    car_model_detected: bool = Field(
-        ..., description="Обнаружена ли модель машины"
+    real_car_model: int = Field(
+        ..., description="Настоящая модель машины"
+    )
+    car_model: Optional[int] = Field(
+        None, description="Идентификатор определённой модели машины."
+                         "Если None, то не распознана"
     )
 
 
@@ -96,6 +113,9 @@ class RfidDetection(BaseModel):
     )
     rfid_num: Optional[str] = Field(
         None, description="Идентифицированный номер RFID системой"
+    )
+    car_model: Optional[int] = Field(
+        None, description="Идентификатор определённой модели машины."
     )
 
 
@@ -120,14 +140,14 @@ class Statistic(BaseModel):
         ..., description="Список автомобилей, которые удалось распознать"
                          "RFID системой и которые попали в коллизию"
     )
+    error_correction_after_collision: list[RfidDetection] = Field(
+        ..., description="Список автомобилей, которые алгоритм разрешения"
+                         "коллизий сопоставил неверно"
+    )
     rfid_unresolved_collision: list[RfidDetection] = Field(
         ..., description="Список автомобилей, которые не удалось распознать"
                          "после попадания в коллизию"
     )
-
-
-_CamDetections = List[Tuple[CamDetection, int]]
-_RfidDetections = List[Tuple[RfidDetection, int]]
 
 
 class Model:
@@ -145,13 +165,9 @@ class Model:
             rfid_correction_without_collision = [],
             error_rfid_detection = [],
             rfid_correction_after_collision = [],
+            error_correction_after_collision = [],
             rfid_unresolved_collision = []
         )
         self.current_detection: int = 0
         logger.debug("Модель успешно инициализирована")
 
-
-class _Event(Enum):
-    PHOTO_TRANSIT = 0
-    RFID_DETECTION = 1
-    START_MERGE = 2

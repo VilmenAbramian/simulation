@@ -48,7 +48,6 @@ def on_camera_detection(sim: Simulator, _) -> None:
         # Идентифицируем эту же машину RFID системой
         sim.schedule(
             _get_rfid_detection_time(
-                cur_time = sim.time,
                 speed = cam_detection.speed,
                 photo_distance = cam_detection.photo_distance,
                 rfid_distance = model.params.rfid_distance,
@@ -59,10 +58,9 @@ def on_camera_detection(sim: Simulator, _) -> None:
     model.current_detection += 1
 
     # Фотоидентифицируем следующую машину
-    if model.current_detection <= model.params.num_plates:
+    if model.current_detection < model.params.num_plates:
         sim.schedule(
             _get_photo_time(
-                cur_time = sim.time,
                 speed = cam_detection.speed,
                 distance_between_transports = model.params.transport_distance,
             ),
@@ -105,9 +103,7 @@ def on_start_merge(sim: Simulator, rfid_detection) -> None:
     )
 
 
-
 def _get_photo_time(
-        cur_time: float,
         speed: float,
         distance_between_transports: float
 ) -> float:
@@ -120,7 +116,6 @@ def _get_photo_time(
 
 
 def _get_rfid_detection_time(
-        cur_time: float,
         speed: float,
         photo_distance: float,
         rfid_distance: [float, float],
@@ -129,7 +124,6 @@ def _get_rfid_detection_time(
     Расчёт времени в секундах до начала RFID идентификации.
 
     Args:
-        cur_time: время идентификации машины камерой
         speed: скорость идентифицируемой машины
         photo_distance: расстояние между камерой и идентифицированной ей
           машиной

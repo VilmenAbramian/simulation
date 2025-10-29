@@ -1,6 +1,8 @@
 import numpy as np
 
-from pysim.models.hybrid.objects import CamDetection, RfidDetection
+from pysim.models.hybrid.objects import (
+    CamDetection, CarNumber, Consts, RfidDetection
+)
 from pysim.models.hybrid.utils import check_probs
 
 
@@ -23,7 +25,7 @@ def generate_sign(probs: dict[str, float]) -> str:
 
 def generate_plate(
         sign_prob: dict[str, float], num_prob: dict[str, float]
-) -> str:
+) -> CarNumber:
     """
     Сгенерировать номерную табличку из случайных символов, взятых из словаря
     возможных символов.
@@ -41,7 +43,10 @@ def generate_plate(
     for _ in range(3): # Три случайные цифры
         plate_num += generate_sign(num_prob)
 
-    return plate_sign + plate_num + generate_sign(sign_prob) # + 1 случайная буква
+    return CarNumber(
+        plate = plate_sign + plate_num + generate_sign(sign_prob),
+        car_model = np.random.randint(Consts.MIN_MODEL_TYPE, Consts.MAX_MODEL_TYPE)
+    )
 
 
 def detect_car_by_camera(
@@ -69,10 +74,10 @@ def detect_car_by_camera(
       - car_error: вероятность ошибки идентификации модели машины (используется
           для разрешения коллизий).
     """
-    number_plate = generate_plate(sign_prob=sign_prob, num_prob=num_prob)
+    car = generate_plate(sign_prob=sign_prob, num_prob=num_prob)
+    number_plate = car.plate
     _speed = np.random.uniform(low=speed[0], high=speed[1]) # Случайная скорость конкретной машины
     _photo_distance = np.random.uniform(low=distance[0], high=distance[1])  # Случайное расстояние до конкретной машины
-    # print(f"Доп время: {_photo_distance/_speed}")
     num_val = []
     for value in list(number_plate):
         if np.random.uniform() <= photo_error:
@@ -81,7 +86,10 @@ def detect_car_by_camera(
             num_val.append(value)
     photo_number = "".join(num_val)
 
-    car_model_detected = np.random.uniform() > car_error
+    if np.random.uniform() > car_error:
+        car_model_detected = car.car_model
+    else:
+        car_model_detected = None
 
     return CamDetection(
         real_plate=number_plate,
@@ -89,7 +97,8 @@ def detect_car_by_camera(
         photo_distance=_photo_distance,
         photo_num=photo_number,
         speed=_speed,
-        car_model_detected=car_model_detected
+        real_car_model=car.car_model,
+        car_model=car_model_detected
     )
 
 
@@ -99,7 +108,11 @@ def detect_car_by_rfid(
         rfid_error: float,
 ) -> RfidDetection:
     if np.random.uniform() <= rfid_error:
-        return RfidDetection(rfid_detection_time=time, rfid_num=None)
+        return RfidDetection(
+            rfid_detection_time=time, rfid_num=None, car_model=None
+        )
     return RfidDetection(
-        rfid_detection_time=time, rfid_num=cam_detection.real_plate
+        rfid_detection_time=time,
+        rfid_num=cam_detection.real_plate,
+        car_model=cam_detection.real_car_model
     )
