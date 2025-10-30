@@ -150,6 +150,34 @@ class Statistic(BaseModel):
     )
 
 
+class Results(BaseModel):
+    """Результаты симуляции"""
+    cam_detect_prob: float = Field(
+        ..., description="Вероятность идентификации машины только камерой"
+    )
+    rfid_detect_without_collision_prob: float = Field(
+        ..., description="Вероятность уточнения неполных данных от камеры"
+                         "RFID системой в случае без коллизий"
+    )
+    rfid_detect_with_collision_prob: float = Field(
+        ..., description="Вероятность уточнения неполных данных от камеры"
+                         "RFID системой в случае с коллизиями"
+    )
+    total_prob: float = Field(
+        ..., description="Вероятность идентификации машины гибридной системой"
+    )
+    collision_amount_to_nums: float = Field(
+        ..., description="Отношение количества номеров, попавших в коллизию"
+                         "к суммарному количеству номеров"
+    )
+    error_collision_resolve_amount: float = Field(
+        ..., description="Количество неправильно разрешённых коллизий"
+    )
+    unresolved_collision_amount: float = Field(
+        ..., description="Количество неразрешённых коллизий"
+    )
+
+
 class Model:
     """
     Используется в качестве контекста модели.

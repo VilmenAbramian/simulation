@@ -1,10 +1,10 @@
 import click
 from multiprocessing import Pool
 import multiprocessing
-from pprint import pprint
 
 from pysim.models.hybrid.handlers import initialize, finalize
-from pysim.models.hybrid.objects import Params
+from pysim.models.hybrid.objects import Params, Results
+from pysim.models.hybrid.processing import formalize_results
 from pysim.sim.simulator import (
     build_simulation,
     run_simulation,
@@ -71,24 +71,13 @@ def cli_run(**kwargs):
     """
     # print(f"Входные параметры: {kwargs}")
     variadic = None
-    print(f'Running {Params().model_name} model')
+    print(f"Running {Params().model_name} model")
     if variadic is None:
-        result = create_config(kwargs)
+        model_result = create_config(kwargs)
     else:
-        result = run_multiple_simulation(variadic, **kwargs)
-    cam_probs = len(result.clear_cam_detections)/kwargs["num_plates"]
-    rfid_1_probs = len(result.rfid_correction_without_collision) / kwargs["num_plates"]
-    rfid_2_probs = len(result.rfid_correction_after_collision) / kwargs["num_plates"]
+        model_result = run_multiple_simulation(variadic, **kwargs)
 
-    print(f"Количество номеров, спасённых от коллизии: {len(result.rfid_correction_after_collision)}")
-    print(f"Неправльно разрешённых коллизий: {len(result.error_correction_after_collision)}")
-
-    print(f"Вероятность идентификации камерой: {cam_probs}")
-    print(f"Добавочная вероятность без коллизий: {rfid_1_probs}")
-    print(f"Добавочная вероятность с коллизиями: {rfid_2_probs}")
-    print(f"Суммарная вероятность: {cam_probs + rfid_1_probs + rfid_2_probs}")
-    # print(f"Всего идентифицировано номеров: {sim.context.current_detection}")
-    # result_processing(kwargs, result, variadic)
+    results = formalize_results(kwargs, model_result, print_res=True)
 
 
 def create_config(*args):
