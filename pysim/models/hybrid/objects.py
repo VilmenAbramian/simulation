@@ -36,7 +36,7 @@ class Params(BaseModel):
         (60 / 3.6, 100 / 3.6),
         description="Разброс возможных скоростей машин, м/с"
     )
-    transport_distance: float = Field(
+    transport_gap: float = Field(
         10, description="Расстояние между машинами"
     )
     photo_distance: tuple[float, float] = Field(

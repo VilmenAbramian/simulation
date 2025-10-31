@@ -62,7 +62,7 @@ def on_camera_detection(sim: Simulator, _) -> None:
         sim.schedule(
             _get_photo_time(
                 speed = cam_detection.speed,
-                distance_between_transports = model.params.transport_distance,
+                distance_between_transports = model.params.transport_gap,
             ),
             on_camera_detection,
             (sim,)

@@ -21,7 +21,7 @@ def check_vars_for_multiprocessing(**kwargs):
     Если несколько параметров заданы со множеством значений, это ошибка.
     """
     var_arg_names = ("photo_error", "rfid_error", "car_error",
-                     "speed", "transport_gap")
+                     "speed_range", "transport_gap")
     variadic = None
     for arg_name in var_arg_names:
         if len(kwargs[arg_name]) > 1:
@@ -73,13 +73,13 @@ def run_multiple_simulation(variadic, **kwargs)-> List[Results]:
     show_default=True
 )
 @click.option(
-    "-s", "--speed", nargs=2, type=click.Tuple([float, float]),
+    "-s", "--speed-range", nargs=2, type=click.Tuple([float, float]),
     default=(Params().speed_range, ), multiple=True,
     help="Диапазон скоростей движения машин в метрах в секунду",
     show_default=True
 )
 @click.option(
-    "-d", "--transport-gap", default=(Params().transport_distance, ),
+    "-d", "--transport-gap", default=(Params().transport_gap,),
     multiple=True, help="Расстояние между машинами в метрах",
     show_default=True
 )
@@ -110,7 +110,7 @@ def cli_run(**kwargs):
     else:
         model_result = run_multiple_simulation(variadic, **kwargs)
 
-    return result_processing(kwargs, model_result, variadic, print_res=False)
+    return result_processing(kwargs, model_result, variadic, print_res=True)
 
 
 def create_config(*args) -> Statistic:
@@ -119,8 +119,8 @@ def create_config(*args) -> Statistic:
         sign_prob=Params().sign_prob,
         num_prob=Params().num_prob,
         num_plates=kwargs["num_plates"],
-        speed_range=kwargs["speed"],
-        transport_distance=kwargs["transport_gap"],
+        speed_range=kwargs["speed_range"],
+        transport_gap=kwargs["transport_gap"],
         photo_distance=kwargs["photo_distance"],
         rfid_distance = kwargs["rfid_distance"],
         photo_error = kwargs["photo_error"],

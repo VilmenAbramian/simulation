@@ -37,7 +37,7 @@ def print_mult_results_to_terminal(initial_data: dict, results: list[Results], v
     """
     Выводит таблицу параметров и результатов для серии симуляций с изменяющимся параметром.
     """
-    params_names = ["photo_error", "rfid_error", "car_error", "speed", "transport_gap"]
+    params_names = ["photo_error", "rfid_error", "car_error", "speed_range", "transport_gap"]
     params_names.remove(variadic)
 
     print("\n# СТАТИЧЕСКИЕ ПАРАМЕТРЫ:\n")
