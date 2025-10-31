@@ -19,7 +19,7 @@ def result_processing(initial_data, results, variadic, save_results=False):
     if isinstance(results, list):
         # Результаты работы запуска нескольких симуляций
         initial_data[variadic] = sorted(set(initial_data[variadic]))
-        print_the_mult_results_to_the_terminal(initial_data, results, variadic)
+        print_mult_results_to_terminal(initial_data, results, variadic)
         if save_results:
             save_mult_results_to_file(initial_data, results, variadic)
         plot_results(initial_data, results, variadic)
@@ -54,7 +54,7 @@ def results_to_dict(ret):
         results_dict["read_tid_time"].append(getattr(item, "read_tid_time"))
     return results_dict
 
-def print_the_mult_results_to_the_terminal(initial_data, results, variadic):
+def print_mult_results_to_terminal(initial_data, results, variadic):
     """
     Результаты выводим в двух таблицах: таблице параметров и
     таблице результатов. В последней - значение изменяющегося аргумента

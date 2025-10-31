@@ -107,8 +107,8 @@ def solve_collision(
     best = min(candidates, key=_score)
     if best.real_plate != rfid_detection.rfid_num:
         model.statistics.error_correction_after_collision.append(best)
-        print(f"RFID номер: {rfid_detection}")
-        print(f"Номер от камеры: {best}")
+        # print(f"RFID номер: {rfid_detection}")
+        # print(f"Номер от камеры: {best}")
 
     if best is None:
         model.statistics.rfid_unresolved_collision.append(rfid_detection)
