@@ -24,8 +24,9 @@ def formalize_results(
         rfid_detect_without_collision_prob=rfid_without_collision_prob,
         rfid_detect_with_collision_prob=rfid_with_collision_prob,
         total_prob=cam_prob + rfid_without_collision_prob + rfid_with_collision_prob,
-        collision_amount_to_nums=(resolve_collisions + unresolved_collisions)
-                                 / params["num_plates"],
+        total_collisions = model_statistics.total_collisions,
+        collision_amount_to_nums=(resolve_collisions + unresolved_collisions),
+                                 # / params["num_plates"],
         error_collision_resolve_amount=resolve_collisions,
         unresolved_collision_amount=unresolved_collisions
     )

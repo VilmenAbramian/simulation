@@ -43,8 +43,12 @@ def generate_plate(
     for _ in range(3): # Три случайные цифры
         plate_num += generate_sign(num_prob)
 
+    region_num = ""
+    for _ in range(2): # Две случайные цифры региона
+        region_num += generate_sign(num_prob)
+
     return CarNumber(
-        plate = plate_sign + plate_num + generate_sign(sign_prob),
+        plate = plate_sign + plate_num + generate_sign(sign_prob) + region_num,
         car_model = np.random.randint(Consts.MIN_MODEL_TYPE, Consts.MAX_MODEL_TYPE)
     )
 

@@ -19,9 +19,10 @@ class Params(BaseModel):
     )
     sign_prob: dict[str, float] = Field(
         default_factory=lambda: {
-            "A": 0.1, "B": 0.1, "C": 0.1, "D": 0.1, "E": 0.1,
-            "T": 0.1, "P": 0.1, "M": 0.1, "K": 0.1, "O": 0.1
-        },
+        "A": 1/12, "B": 1/12, "E": 1/12, "K": 1/12,
+        "M": 1/12, "H": 1/12, "O": 1/12, "P": 1/12,
+        "C": 1/12, "T": 1/12, "Y": 1/12, "X": 1/12
+    },
         description="Вероятности появления буквенных символов в"
                     "номерной табличке"
     )
@@ -47,7 +48,7 @@ class Params(BaseModel):
         description="Разброс возможных расстояний идентификации RFID системой"
     )
     number_plate_symbols_amount: int = Field(
-        6, description="Количество символов в номерной табличке"
+        8, description="Количество символов в номерной табличке"
     )
     photo_error: float = Field(
         0.7, description="Вероятность ошибки идентификации номерной таблички"
@@ -136,6 +137,9 @@ class Statistic(BaseModel):
         ..., description="Список автомобилей, которые не удалось распознать ни"
                          "камерой, не RFID системой"
     )
+    total_collisions: int = Field(
+        ..., description="Общее количество коллизий"
+    )
     rfid_correction_after_collision: list[RfidDetection] = Field(
         ..., description="Список автомобилей, которые удалось распознать"
                          "RFID системой и которые попали в коллизию"
@@ -166,6 +170,9 @@ class Results(BaseModel):
     total_prob: float = Field(
         ..., description="Вероятность идентификации машины гибридной системой"
     )
+    total_collisions: int = Field(
+        ..., description=""
+    )
     collision_amount_to_nums: float = Field(
         ..., description="Отношение количества номеров, попавших в коллизию"
                          "к суммарному количеству номеров"
@@ -192,6 +199,7 @@ class Model:
             error_cam_detections = [],
             rfid_correction_without_collision = [],
             error_rfid_detection = [],
+            total_collisions = 0,
             rfid_correction_after_collision = [],
             error_correction_after_collision = [],
             rfid_unresolved_collision = []

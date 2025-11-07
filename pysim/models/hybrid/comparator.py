@@ -149,6 +149,7 @@ def compare_camera_and_rfid_detections(
         model.statistics.rfid_correction_without_collision.append(matching_numbers[0])
     if len(matching_numbers) > 1:
         # Случай с коллизиями
+        model.statistics.total_collisions += 1
         solve_collision(matching_numbers, rfid_detection, sim)
 
     # print(f"Номер RFID: {rfid_detection}")
