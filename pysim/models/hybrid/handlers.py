@@ -94,10 +94,9 @@ def on_start_merge(sim: Simulator, rfid_detection) -> None:
     от RFID системы.
     """
     assert isinstance(sim.context, Model)
-    model: Model = sim.context
 
     compare_camera_and_rfid_detections(
-        model.statistics.error_cam_detections,
+        sim.context.statistics.error_cam_detections,
         rfid_detection,
         sim
     )
