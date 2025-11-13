@@ -5,20 +5,16 @@
 # Используется в блокноте:
 # hybrid.ipynb
 # ##################################################
-from symtable import Class
-from typing import Callable, Any
-import copy
+from typing import Any
 import json
 
 from tqdm.notebook import tqdm
 import matplotlib.pyplot as plt
-import numpy as np
 import os
 
 from pysim.experiments.utility.graphs_style import savefig, setup_matplotlib
 from pysim.experiments.utility.rfid_helper import convert_non_serializable
-from pysim.models.hybrid.cli import check_vars_for_multiprocessing, run_multiple_simulation
-from pysim.models.hybrid.objects import Params
+from pysim.models.hybrid.cli import run_multiple_simulation
 from pysim.models.hybrid.processing import result_processing
 
 
@@ -165,12 +161,14 @@ def plot_experiment_lines(
     image_name: str = "Probs",
     image_directory: str = IMAGE_DIRECTORY,
     save_fig: bool = SAVE_FIG,
+    inversion: bool = True
 ):
     fig, ax = plt.subplots(figsize=(10, 6), layout="constrained")
-    n_lines = len(y_lines)
     for i, (y, label) in enumerate(zip(y_lines, labels)):
+        if inversion:
+            y = y[::-1]
         ax.plot(
-            x_values, y[::-1],
+            x_values, y,
             linewidth=3, linestyle="dashdot",
             label=label,
         )

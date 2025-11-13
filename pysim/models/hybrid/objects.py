@@ -180,8 +180,8 @@ class Results(BaseModel):
     error_collision_resolve_amount: float = Field(
         ..., description="Количество неправильно разрешённых коллизий"
     )
-    unresolved_collision_amount: float = Field(
-        ..., description="Количество неразрешённых коллизий"
+    unresolved_collision_prob: float = Field(
+        ..., description="Вероятность неразрешённой коллизии"
     )
 
 

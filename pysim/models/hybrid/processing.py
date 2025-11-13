@@ -16,7 +16,7 @@ def formalize_results(
     rfid_with_collision_prob = len(
         model_statistics.rfid_correction_after_collision
     ) / params["num_plates"]
-    resolve_collisions = len(model_statistics.error_correction_after_collision)
+    incorrect_resolve_collisions = len(model_statistics.error_correction_after_collision)
     unresolved_collisions = len(model_statistics.rfid_unresolved_collision)
 
     results = Results(
@@ -25,12 +25,10 @@ def formalize_results(
         rfid_detect_with_collision_prob=rfid_with_collision_prob,
         total_prob=cam_prob + rfid_without_collision_prob + rfid_with_collision_prob,
         total_collisions = model_statistics.total_collisions,
-        collision_amount_to_nums=(resolve_collisions + unresolved_collisions),
-                                 # / params["num_plates"],
-        error_collision_resolve_amount=resolve_collisions,
-        unresolved_collision_amount=unresolved_collisions
+        collision_amount_to_nums=model_statistics.total_collisions / params["num_plates"],
+        error_collision_resolve_amount=incorrect_resolve_collisions,
+        unresolved_collision_prob=unresolved_collisions / params["num_plates"]
     )
-
     return results
 
 
@@ -52,7 +50,7 @@ def print_mult_results_to_terminal(initial_data: dict, results: list[Results], v
         "total_prob",
         "collision_amount_to_nums",
         "error_collision_resolve_amount",
-        "unresolved_collision_amount"
+        "unresolved_collision_prob"
     ]
     readable_headers = [
         "Идентификация камерой",
@@ -113,5 +111,5 @@ def print_single_results(params:dict, results: Results) -> None:
     print("-" * 60)
     print(f"{'Частота коллизий':35} {results.collision_amount_to_nums:<.3f}")
     print(f"{'Неправильно разрешённые':35} {results.error_collision_resolve_amount}")
-    print(f"{'Неразрешённые коллизии':35} {results.unresolved_collision_amount}")
+    print(f"{'Неразрешённые коллизии':35} {results.unresolved_collision_prob}")
     print("-" * 60)
