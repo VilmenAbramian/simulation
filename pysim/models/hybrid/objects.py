@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, confloat, conint
-from typing import List, Tuple, Optional
+from pydantic import BaseModel, Field, conint
+from typing import Optional
 
 from pysim.sim.logger import ModelLogger
 
@@ -19,10 +19,10 @@ class Params(BaseModel):
     )
     sign_prob: dict[str, float] = Field(
         default_factory=lambda: {
-        "A": 1/12, "B": 1/12, "E": 1/12, "K": 1/12,
-        "M": 1/12, "H": 1/12, "O": 1/12, "P": 1/12,
-        "C": 1/12, "T": 1/12, "Y": 1/12, "X": 1/12
-    },
+            "A": 1/12, "B": 1/12, "E": 1/12, "K": 1/12,
+            "M": 1/12, "H": 1/12, "O": 1/12, "P": 1/12,
+            "C": 1/12, "T": 1/12, "Y": 1/12, "X": 1/12
+        },
         description="Вероятности появления буквенных символов в"
                     "номерной табличке"
     )
@@ -62,6 +62,7 @@ class Params(BaseModel):
         0.3,
         description="Вероятность ошибки идентификации модели машины камерой"
     )
+
     @property
     def symbol_error(self) -> float:
         """
@@ -104,7 +105,7 @@ class CamDetection(BaseModel):
     )
     car_model: Optional[int] = Field(
         None, description="Идентификатор определённой модели машины."
-                         "Если None, то не распознана"
+                          "Если None, то не распознана"
     )
 
 
@@ -195,15 +196,14 @@ class Model:
     def __init__(self, params: Params, logger: ModelLogger):
         self.params: Params = params
         self.statistics: Statistic = Statistic(
-            clear_cam_detections = [],
-            error_cam_detections = [],
-            rfid_correction_without_collision = [],
-            error_rfid_detection = [],
-            total_collisions = 0,
-            rfid_correction_after_collision = [],
-            error_correction_after_collision = [],
-            rfid_unresolved_collision = []
+            clear_cam_detections=[],
+            error_cam_detections=[],
+            rfid_correction_without_collision=[],
+            error_rfid_detection=[],
+            total_collisions=0,
+            rfid_correction_after_collision=[],
+            error_correction_after_collision=[],
+            rfid_unresolved_collision=[]
         )
         self.current_detection: int = 0
         logger.debug("Модель успешно инициализирована")
-

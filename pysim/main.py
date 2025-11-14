@@ -14,14 +14,14 @@ def cli():
 
 @cli.command('list')
 def list_models():
-    '''Выводит список моделей.'''
+    """Выводит список моделей."""
     for model_name in models_list:
         print(f"* {model_name}")
 
 
 @cli.group('run')
 def run():
-    '''Запустить модель.'''
+    """Запустить модель."""
     pass
 
 

@@ -20,7 +20,7 @@ from pysim.models.rfid.cli import prepare_multiple_simulation
 from pysim.models.rfid.params import (
     default_params, multipliers, inner_params
 )
-from pysim.experiments.utility.channel_helper import(
+from pysim.experiments.utility.channel_helper import (
     find_zones, get_tag_rx
 )
 
@@ -81,7 +81,7 @@ def calculate_simulations(
     inventory_probs = {}
     read_user_probs = {}
     times_count = {}
-    collision_counts = {} # Среднее количество коллизий
+    collision_counts = {}  # Среднее количество коллизий
     execution_times = {}
     if use_json and os.path.exists(directory):
         with open(directory, "r") as f:
@@ -153,14 +153,18 @@ def plot_simulations_results(
         image_directory: директория сохранения картинки;
         integer_labels: использовать целые числа по оси абсцисс.
     """
-    graphs_amount = len(results_list) # Количество графиков
-    fig, axes = plt.subplots(figsize=(7 * graphs_amount, 5), ncols=graphs_amount)
+    graphs_amount = len(results_list)  # Количество графиков
+    _, axes = plt.subplots(
+        figsize=(7 * graphs_amount, 5), ncols=graphs_amount
+    )
 
     if graphs_amount == 1:
         axes = [axes]
         labels_list = [labels_list]
 
-    graph_num = 0 # В случае использования общей легенды для 2х изображений нужно считать построенные графики
+    # В случае использования общей легенды для 2х изображений нужно считать
+    # построенные графики
+    graph_num = 0
     for ax, results, labels, title in zip(
         axes, results_list, labels_list, titles
     ):
@@ -194,10 +198,11 @@ def estimate_generation_interval(
     speed: float = default_params.speed
 ) -> float:
     """
-    Пересчитывает желаемое количество меток в зоне чтения в требуемый интервал генерации.
+    Пересчитывает желаемое количество меток в зоне чтения в требуемый
+    интервал генерации.
 
-    На количество меток в зоне чтения влияет размер зоны чтения (зависит от канала),
-    скорость движения и период генерации меток.
+    На количество меток в зоне чтения влияет размер зоны чтения
+    (зависит от канала), скорость движения и период генерации меток.
 
     Args:
         tags_amount: желаемое количество меток в зоне
@@ -215,8 +220,9 @@ def compute_reading_zone(
         power_dbm: float = default_params.power_dbm,
 ) -> float:
     """
-    Вычисляет суммарную длину зоны активности меток, то есть суммарную длину отрезков,
-    на которых принимаемая мощность сигнала от считывателя на метке превышает порог.
+    Вычисляет суммарную длину зоны активности меток, то есть суммарную длину
+    отрезков, на которых принимаемая мощность сигнала от считывателя на метке
+    превышает порог.
 
     Args:
         speed: скорость считывателя, км/ч
@@ -226,11 +232,15 @@ def compute_reading_zone(
         Суммарная длина зон активации (в метрах)
     """
     ox_axis = np.linspace(
-        - inner_params.geometry_params.initial_distance_to_reader, # Начальная точка движения
-        inner_params.geometry_params.initial_distance_to_reader, # Конечная точка движения
+        # Начальная точка движения
+        - inner_params.geometry_params.initial_distance_to_reader,
+        # Конечная точка движения
+        inner_params.geometry_params.initial_distance_to_reader,
         inner_params.geometry_params.grid_step
     )
-    tag_accepted_power = [get_tag_rx(x, speed=speed, t=0, power=power_dbm) for x in ox_axis]
+    tag_accepted_power = [
+        get_tag_rx(x, speed=speed, t=0, power=power_dbm) for x in ox_axis
+    ]
     tag_on_intervals = find_zones(ox_axis, tag_accepted_power, use_upper=True)
     return sum(end - start for start, end in tag_on_intervals)
 

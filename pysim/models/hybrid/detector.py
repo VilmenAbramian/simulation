@@ -3,7 +3,14 @@ import numpy as np
 from pysim.models.hybrid.objects import (
     CamDetection, CarNumber, Consts, RfidDetection
 )
-from pysim.models.hybrid.utils import check_probs
+
+
+def check_probs(probs: dict[str, float]):
+    """Валидация величин вероятности"""
+    for value in probs.values():
+        assert 0 <= value <= 1
+
+    assert abs(sum(probs.values()) - 1) < 1e-6
 
 
 def generate_sign(probs: dict[str, float]) -> str:
@@ -36,20 +43,22 @@ def generate_plate(
     check_probs(num_prob)
 
     plate_sign = ""
-    for _ in range(2): # Две случайные буквы
+    for _ in range(2):  # Две случайные буквы
         plate_sign += generate_sign(sign_prob)
 
     plate_num = ""
-    for _ in range(3): # Три случайные цифры
+    for _ in range(3):  # Три случайные цифры
         plate_num += generate_sign(num_prob)
 
     region_num = ""
-    for _ in range(2): # Две случайные цифры региона
+    for _ in range(2):  # Две случайные цифры региона
         region_num += generate_sign(num_prob)
 
     return CarNumber(
-        plate = plate_sign + plate_num + generate_sign(sign_prob) + region_num,
-        car_model = np.random.randint(Consts.MIN_MODEL_TYPE, Consts.MAX_MODEL_TYPE)
+        plate=plate_sign + plate_num + generate_sign(sign_prob) + region_num,
+        car_model=np.random.randint(
+            Consts.MIN_MODEL_TYPE, Consts.MAX_MODEL_TYPE
+        )
     )
 
 
@@ -80,8 +89,10 @@ def detect_car_by_camera(
     """
     car = generate_plate(sign_prob=sign_prob, num_prob=num_prob)
     number_plate = car.plate
-    _speed = np.random.uniform(low=speed[0], high=speed[1]) # Случайная скорость конкретной машины
-    _photo_distance = np.random.uniform(low=distance[0], high=distance[1])  # Случайное расстояние до конкретной машины
+    # Случайная скорость конкретной машины
+    _speed = np.random.uniform(low=speed[0], high=speed[1])
+    # Случайное расстояние до конкретной машины
+    _photo_distance = np.random.uniform(low=distance[0], high=distance[1])
     num_val = []
     for value in list(number_plate):
         if np.random.uniform() <= photo_error:

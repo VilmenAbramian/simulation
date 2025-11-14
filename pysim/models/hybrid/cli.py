@@ -34,7 +34,7 @@ def check_vars_for_multiprocessing(**kwargs):
     return kwargs, variadic
 
 
-def run_multiple_simulation(variadic, **kwargs)-> List[Results]:
+def run_multiple_simulation(variadic, **kwargs) -> List[Results]:
     """
     Какой-то параметр варьируется. Запускаем параллельно расчеты через
     пул рабочих.
@@ -114,6 +114,7 @@ def cli_run(**kwargs):
 
 
 def create_config(*args) -> Statistic:
+    """Подготовка входных данных в модель"""
     kwargs = args[0]
     return run_model(Params(
         sign_prob=Params().sign_prob,
@@ -122,11 +123,12 @@ def create_config(*args) -> Statistic:
         speed_range=kwargs["speed_range"],
         transport_gap=kwargs["transport_gap"],
         photo_distance=kwargs["photo_distance"],
-        rfid_distance = kwargs["rfid_distance"],
-        photo_error = kwargs["photo_error"],
-        rfid_error = kwargs["rfid_error"],
-        car_error = kwargs["car_error"],
+        rfid_distance=kwargs["rfid_distance"],
+        photo_error=kwargs["photo_error"],
+        rfid_error=kwargs["rfid_error"],
+        car_error=kwargs["car_error"],
     ), ModelLoggerConfig())
+
 
 def run_model(
     config: Params,
@@ -135,6 +137,7 @@ def run_model(
     max_sim_time: float | None = None,
     max_num_events: int | None = None,
 ) -> Statistic:
+    """Запуск симуляции, используя готовые входные данные"""
     sim_time, _, result = run_simulation(
         build_simulation(
             Params().model_name,

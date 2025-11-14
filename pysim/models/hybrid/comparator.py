@@ -75,22 +75,26 @@ def solve_collision(
     model = sim.context
 
     # 1. Сначала пытаемся найти уникальное совпадение по модели машины
-    model_matches = [m for m in matching_numbers if m.car_model == rfid_detection.car_model]
+    model_matches = [
+        m for m in matching_numbers if m.car_model == rfid_detection.car_model
+    ]
     if model_matches:
         matching_numbers = model_matches
     else:
         # Если все модели различаются — зафиксируем этот случай для статистики
         model.statistics.rfid_unresolved_collision.append(rfid_detection)
-        # print( f"[!] Нет совпадений по модели для RFID {rfid_detection.rfid_num}, car_model={rfid_detection.car_model}")
         return
     if len(model_matches) == 1:
-        model.statistics.rfid_correction_after_collision.append(model_matches[0])
+        model.statistics.rfid_correction_after_collision.append(
+            model_matches[0]
+        )
         return
-
 
     def _score(det: CamDetection) -> tuple[int, float]:
         stars = det.photo_num.count("*")
-        rfid_time = rfid_detection.rfid_detection_time or det.photo_detection_time
+        rfid_time = (
+            rfid_detection.rfid_detection_time or det.photo_detection_time
+        )
         time_diff = abs(det.photo_detection_time - rfid_time)
         return stars, time_diff
 
@@ -131,21 +135,16 @@ def compare_camera_and_rfid_detections(
 
     matching_numbers = []
     if len(corresponding_car_numbers) > 0:
-        matching_numbers = is_partial_match(corresponding_car_numbers, rfid_detection)
-    # else:
-    #     pass # Учесть номера, не совпавшие по времени
-    #
-    # if len(matching_numbers) == 0:
-    #     print("Я тут!")
+        matching_numbers = is_partial_match(
+            corresponding_car_numbers, rfid_detection
+        )
     if len(matching_numbers) == 1:
         # Случай без коллизий
-        model.statistics.rfid_correction_without_collision.append(matching_numbers[0])
+        model.statistics.rfid_correction_without_collision.append(
+            matching_numbers[0]
+        )
     if len(matching_numbers) > 1:
         # Случай с коллизиями
         model.statistics.total_collisions += 1
         solve_collision(matching_numbers, rfid_detection, sim)
-
-    # print(f"Номер RFID: {rfid_detection}")
-    # print(f"Номера машин: {matching_numbers}")
-
     return None

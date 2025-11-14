@@ -1,17 +1,20 @@
 import numpy as np
-from pprint import pprint
 
 from pysim.sim import Simulator
 from pysim.models.hybrid.comparator import compare_camera_and_rfid_detections
-from pysim.models.hybrid.detector import detect_car_by_camera, detect_car_by_rfid
-from pysim.models.hybrid.objects import CamDetection, Model, Params, Statistic
+from pysim.models.hybrid.detector import (
+    detect_car_by_camera, detect_car_by_rfid
+)
+from pysim.models.hybrid.objects import (
+    CamDetection, Model, Params, RfidDetection, Statistic
+)
 
 
 def initialize(sim: Simulator, config: Params) -> None:
     """
     Первое событие, которое попадает в очередь событий.
     """
-    model = Model(params=config, logger=sim.logger) # Задать контекст симуляции
+    model = Model(params=config, logger=sim.logger)  # Задать контекст
     sim.context = model
     sim.call(on_camera_detection, (sim,))
 
@@ -33,7 +36,7 @@ def on_camera_detection(sim: Simulator, _) -> None:
     assert isinstance(sim.context, Model)
     model: Model = sim.context
     cam_detection = detect_car_by_camera(
-        cur_time = sim.time,
+        cur_time=sim.time,
         sign_prob=model.params.sign_prob,
         num_prob=model.params.num_prob,
         speed=model.params.speed_range,
@@ -48,9 +51,9 @@ def on_camera_detection(sim: Simulator, _) -> None:
         # Идентифицируем эту же машину RFID системой
         sim.schedule(
             _get_rfid_detection_time(
-                speed = cam_detection.speed,
-                photo_distance = cam_detection.photo_distance,
-                rfid_distance = model.params.rfid_distance,
+                speed=cam_detection.speed,
+                photo_distance=cam_detection.photo_distance,
+                rfid_distance=model.params.rfid_distance,
             ),
             on_rfid_detection,
             (cam_detection,)
@@ -61,8 +64,8 @@ def on_camera_detection(sim: Simulator, _) -> None:
     if model.current_detection < model.params.num_plates:
         sim.schedule(
             _get_photo_time(
-                speed = cam_detection.speed,
-                distance_between_transports = model.params.transport_gap,
+                speed=cam_detection.speed,
+                distance_between_transports=model.params.transport_gap,
             ),
             on_camera_detection,
             (sim,)
@@ -88,7 +91,7 @@ def on_rfid_detection(sim: Simulator, cam_detection: CamDetection) -> None:
         model.statistics.error_rfid_detection.append(cam_detection)
 
 
-def on_start_merge(sim: Simulator, rfid_detection) -> None:
+def on_start_merge(sim: Simulator, rfid_detection: RfidDetection) -> None:
     """
     Обработчик события уточнения неполных данных с камеры данными
     от RFID системы.
@@ -132,4 +135,3 @@ def _get_rfid_detection_time(
     return (photo_distance - np.random.uniform(
         low=rfid_distance[0], high=rfid_distance[1]
     )) / speed
-

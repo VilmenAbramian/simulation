@@ -10,16 +10,15 @@ class GraphConsts:
     """
     Класс для хранения констант оформления графиков.
     """
-    CMAP_NAME = 'inferno' # Цветовая схема для графиков
-    IMAGE_BASE_DIR = '../results/result_images' # Папка для сохранения изображений
-    IMAGE_EXTENSIONS = ('pdf', 'png') # Расширения файлов для сохранения
+    CMAP_NAME = "inferno"  # Цветовая схема для графиков
+    IMAGE_BASE_DIR = "../results/result_images"  # Папка для изображений
+    IMAGE_EXTENSIONS = ("pdf", "png")  # Расширения файлов для сохранения
     FONT_SIZE = 16
     FIGSIZE = (8, 5)
-    LEGEND_FONTSIZE = 14 # Легенда чуть меньше
+    LEGEND_FONTSIZE = 14  # Легенда чуть меньше
     LINEWIDTH = 2
     MARKERSIZE = 8
     MARKEVERY = 20
-
 
 
 def setup_matplotlib() -> None:
@@ -27,21 +26,21 @@ def setup_matplotlib() -> None:
     Настроить параметры matplotlib и локали.
     """
     matplotlib.rcParams.update({
-        'image.cmap': GraphConsts.CMAP_NAME,
-        'axes.formatter.use_locale': True,
-        'font.size': GraphConsts.FONT_SIZE,
-        'font.family': 'sans-serif',
-        'lines.linewidth': GraphConsts.LINEWIDTH,
-        'lines.markersize': GraphConsts.MARKERSIZE,
-        'legend.fontsize': GraphConsts.LEGEND_FONTSIZE,
-        'figure.figsize': GraphConsts.FIGSIZE,
+        "image.cmap": GraphConsts.CMAP_NAME,
+        "axes.formatter.use_locale": True,
+        "font.size": GraphConsts.FONT_SIZE,
+        "font.family": "sans-serif",
+        "lines.linewidth": GraphConsts.LINEWIDTH,
+        "lines.markersize": GraphConsts.MARKERSIZE,
+        "legend.fontsize": GraphConsts.LEGEND_FONTSIZE,
+        "figure.figsize": GraphConsts.FIGSIZE,
 
         # Шрифт PT Serif Caption можно установить с Google Fonts.
         # После установки шрифта нужно удалить кэш matplitlib,
         # на Ubuntu: ~/.cache/matplotlib
-        'font.sans-serif': ['PT Serif Caption',],
+        "font.sans-serif": ["PT Serif Caption",],
     })
-    locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
+    locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 
 
 def get_color(x: float):
@@ -58,7 +57,7 @@ def get_color(x: float):
 
 
 def savefig(name: str, exts: Sequence[str] = GraphConsts.IMAGE_EXTENSIONS,
-            directory: str = 'res_img') -> None:
+            directory: str = "res_img") -> None:
     """
     Сохранить изображение в файлы с общим именем и разными расширениями.
     Изображения будут сохранены в папку GraphConsts.IMAGE_BASE_DIR/directory.

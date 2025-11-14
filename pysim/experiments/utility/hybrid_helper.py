@@ -20,6 +20,7 @@ from pysim.models.hybrid.processing import result_processing
 
 setup_matplotlib()
 
+
 IMAGE_DIRECTORY = "hybrid/"
 JSON_DIRECTORY = "../results/result_jsons/hybrid/"
 SAVE_FIG = True          # Сохранять ли изображения
@@ -31,12 +32,12 @@ class Consts:
     NUM_POINTS = 25
     NUM_LINES = 5
 
+
 class Probs:
     MIN_ERROR_CAM_PROB = 0
     MAX_ERROR_CAM_PROB = 1
     MIN_ERROR_RFID_PROB = 0
     MAX_ERROR_RFID_PROB = 1
-
 
 
 def plate_to_symbol_error(prob: float, symbols_in_plate: int) -> float:
@@ -62,7 +63,8 @@ def get_experiments_results(
     file_name: str = "probs.json",
 ) -> list[list[float]]:
     """
-    Возвращает результаты работы нескольких последовательных пакетов имитационок.
+    Возвращает результаты работы нескольких последовательных пакетов
+    имитационок.
 
     Данные могут быть как прочитаны из json-файла, так и вычислены снова
     (что требует длительного ожидания). Также имеется возможность сохранить
@@ -72,9 +74,11 @@ def get_experiments_results(
     variadic: название параметра, изменяющегося внутри одной кривой;
     variadic_values: значения параметра для одной кривой;
     line_variable: название параметра, который меняется для каждой кривой;
-    line_variable_values: значения параметра для разных кривых (как правило, около 5 значений);
+    line_variable_values: значения параметра для разных кривых (как правило,
+      около 5 значений);
     params_list: входные параметры для нескольких кривых;
-    result_param_name: название поля pydantic-объекта Results, в котором хранятся требуемые значения;
+    result_param_name: название поля pydantic-объекта Results,
+      в котором хранятся требуемые значения;
     use_json: если True, то попытаться загрузить результаты из JSON;
     save_results: если True, сохранить результаты в JSON;
     json_directory: директория сохранения результатов в JSON;
@@ -97,7 +101,9 @@ def get_experiments_results(
                 unit="кривая"
         ):
             statistica = run_multiple_simulation(variadic, **params)
-            results_list.append(result_processing(params, statistica, variadic, print_res=False))
+            results_list.append(result_processing(
+                params, statistica, variadic, print_res=False)
+            )
 
     res_probs = []
     for line in results_list:
@@ -131,7 +137,8 @@ def save_json_results(
     Args:
         directory: путь, в котором будут сохраняться результаты;
         line_variable: название параметра, который меняется для каждой кривой;
-        line_variable_values: значения параметра для разных кривых (как правило, около 5 значений);
+        line_variable_values: значения параметра для разных кривых
+          (как правило, около 5 значений);
         variadic: Название параметра, изменяющегося внутри одной кривой;
         variadic_values: значения параметра для одной кривой;
         params_list: входные параметры для нескольких кривых;
@@ -141,8 +148,10 @@ def save_json_results(
     os.makedirs(os.path.dirname(directory), exist_ok=True)
     with open(directory, "w", encoding="utf-8") as f:
         json.dump({
-            f"Значение {line_variable} для каждой кривой": line_variable_values,
-            f"Изменяющаяся переменная одной кривой {variadic}": variadic_values,
+            f"Значение {line_variable} для каждой "
+            f"кривой": line_variable_values,
+            f"Изменяющаяся переменная одной "
+            f"кривой {variadic}": variadic_values,
             f"Входные параметры модели: {params_list}": params_list,
             "Results": [
                 [res.model_dump() for res in result_sublist]
@@ -176,7 +185,7 @@ def plot_experiment_lines(
     ax.set_ylabel(ylabel)
     plt.tick_params(axis="both", which="major")
     plt.title(title)
-    plt.legend(prop={"size":15})
+    plt.legend(prop={"size": 15})
     plt.grid()
 
     if save_fig:

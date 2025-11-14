@@ -9,8 +9,13 @@ from pysim.models.rfid.params import (
 import pysim.models.rfid.epcstd as epc
 
 
-READER_POS = np.array((default_params.reader_offset, 0, default_params.altitude))
-TAG_POS = np.array((default_params.tag_offset, 0, inner_params.tag_params.tag_altitude))
+READER_POS = np.array((
+    default_params.reader_offset, 0, default_params.altitude
+))
+TAG_POS = np.array((
+    default_params.tag_offset, 0, inner_params.tag_params.tag_altitude
+))
+
 
 def get_noise(reader_noise, thermal_noise):
     return channel.to_log(
@@ -46,10 +51,12 @@ def get_pathloss(
         wavelen=(inner_params.geometry_params.speed_of_light /
                  inner_params.channel_params.frequency_hz),
         # Параметры считывателя: ---------------------------
-        tx_pos=np.array((READER_POS[0], y, READER_POS[2])), # Координата y изменяется
+        # Координата y изменяется
+        tx_pos=np.array((READER_POS[0], y, READER_POS[2])),
         tx_antenna_dir=inner_params.geometry_params.reader_antenna_direction,
         tx_rp=channel.rp_dipole,
-        tx_velocity=np.array((0, channel.kmph2mps(speed), 0)), # Движение только по оси OY
+        # Движение только по оси OY
+        tx_velocity=np.array((0, channel.kmph2mps(speed), 0)),
         # Параметры метки: ---------------------------------
         rx_pos=TAG_POS,
         rx_antenna_dir=inner_params.geometry_params.tag_antenna_direction,
@@ -69,8 +76,10 @@ def get_tag_rx(
         y: float,
         speed: float,
         t: float,
-        reader_pol: float = inner_params.channel_params.reader_default_polarization,
-        tag_pol:float = inner_params.channel_params.tag_default_polarization,
+        reader_pol: float = (
+            inner_params.channel_params.reader_default_polarization
+        ),
+        tag_pol: float = inner_params.channel_params.tag_default_polarization,
         power: float = default_params.power_dbm
 ) -> float:
     """
@@ -88,7 +97,9 @@ def get_tag_rx(
     """
     path_loss = get_pathloss(y, reader_pol, speed, t)
     pol_loss = (
-        0 if reader_pol==tag_pol else inner_params.energy_params.polarization_loss
+        0 if reader_pol == tag_pol else (
+            inner_params.energy_params.polarization_loss
+        )
     )
     gain = (inner_params.energy_params.reader_antenna_gain +
             inner_params.energy_params.tag_antenna_gain)
@@ -98,7 +109,7 @@ def get_tag_rx(
 
 def get_tag_tx(
         power: float,
-        tag_backscatter_loss = inner_params.energy_params.tag_modulation_loss
+        tag_backscatter_loss=inner_params.energy_params.tag_modulation_loss
 ) -> float:
     """Вычислить мощность сигнала, отраженного меткой (в dBm)."""
     return power + tag_backscatter_loss
@@ -109,11 +120,11 @@ def get_reader_rx(
         speed: float,
         t: float,
         power: float,
-        tag_pol = inner_params.channel_params.tag_default_polarization,
-        reader_pol = inner_params.channel_params.reader_default_polarization,
-        reader_gain = inner_params.energy_params.reader_antenna_gain,
-        tag_gain = inner_params.energy_params.tag_antenna_gain ,
-        reader_cable_loss = inner_params.energy_params.reader_cable_loss
+        tag_pol=inner_params.channel_params.tag_default_polarization,
+        reader_pol=inner_params.channel_params.reader_default_polarization,
+        reader_gain=inner_params.energy_params.reader_antenna_gain,
+        tag_gain=inner_params.energy_params.tag_antenna_gain,
+        reader_cable_loss=inner_params.energy_params.reader_cable_loss
 ) -> float:
     """
     Вычислить мощность сигнала, принятого считывателем (в dBm).
@@ -121,7 +132,9 @@ def get_reader_rx(
     Скорость должна быть в км/ч
     """
     path_loss = get_pathloss(y, tag_pol, speed, t)
-    pol_loss = 0 if reader_pol == tag_pol else inner_params.energy_params.polarization_loss
+    pol_loss = 0 if reader_pol == tag_pol else (
+        inner_params.energy_params.polarization_loss
+    )
     gain = reader_gain + tag_gain
     return power + path_loss + pol_loss + gain + reader_cable_loss
 
@@ -130,7 +143,7 @@ def get_snr(
         rx: float,
         m: int,
         trcal: float,
-        reader_noise:float = inner_params.energy_params.reader_noise,
+        reader_noise: float = inner_params.energy_params.reader_noise,
         thermal_noise: float = inner_params.energy_params.thermal_noise,
         trext: bool = False,
         dr: epc.DivideRatio = inner_params.tag_params.dr,

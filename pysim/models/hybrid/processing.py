@@ -1,13 +1,14 @@
-from typing import List, Union
 from tabulate import tabulate
+from typing import Union, Any
 
 from pysim.models.hybrid.objects import Results, Statistic, Params
 
 
 def formalize_results(
-        params: dict,
+        params: dict[str, Any],
         model_statistics: Statistic
 ) -> Results:
+    """Обработка данных, полученных после симуляции"""
     cam_prob = (len(model_statistics.clear_cam_detections) /
                 params["num_plates"])
     rfid_without_collision_prob = len(
@@ -16,27 +17,36 @@ def formalize_results(
     rfid_with_collision_prob = len(
         model_statistics.rfid_correction_after_collision
     ) / params["num_plates"]
-    incorrect_resolve_collisions = len(model_statistics.error_correction_after_collision)
+    incorrect_resolve_collisions = len(
+        model_statistics.error_correction_after_collision
+    )
     unresolved_collisions = len(model_statistics.rfid_unresolved_collision)
 
     results = Results(
         cam_detect_prob=cam_prob,
         rfid_detect_without_collision_prob=rfid_without_collision_prob,
         rfid_detect_with_collision_prob=rfid_with_collision_prob,
-        total_prob=cam_prob + rfid_without_collision_prob + rfid_with_collision_prob,
-        total_collisions = model_statistics.total_collisions,
-        collision_amount_to_nums=model_statistics.total_collisions / params["num_plates"],
+        total_prob=(
+            cam_prob + rfid_without_collision_prob + rfid_with_collision_prob
+        ),
+        total_collisions=model_statistics.total_collisions,
+        collision_amount_to_nums=(
+            model_statistics.total_collisions / params["num_plates"]
+        ),
         error_collision_resolve_amount=incorrect_resolve_collisions,
         unresolved_collision_prob=unresolved_collisions / params["num_plates"]
     )
     return results
 
 
-def print_mult_results_to_terminal(initial_data: dict, results: list[Results], variadic: str):
+def print_mult_results_to_terminal(initial_data: dict[str, Any],
+                                   results: list[Results], variadic: str):
     """
-    Выводит таблицу параметров и результатов для серии симуляций с изменяющимся параметром.
+    Выводит таблицу параметров и результатов для серии симуляций с
+    изменяющимся параметром.
     """
-    params_names = ["photo_error", "rfid_error", "car_error", "speed_range", "transport_gap"]
+    params_names = ["photo_error", "rfid_error", "car_error",
+                    "speed_range", "transport_gap"]
     params_names.remove(variadic)
 
     print("\n# СТАТИЧЕСКИЕ ПАРАМЕТРЫ:\n")
@@ -63,7 +73,9 @@ def print_mult_results_to_terminal(initial_data: dict, results: list[Results], v
     ]
 
     results_table = [
-        [round(getattr(item, col), 3) if isinstance(getattr(item, col), float) else getattr(item, col)
+        [round(getattr(item, col), 3) if isinstance(
+            getattr(item, col), float
+        ) else getattr(item, col)
          for col in ret_cols]
         for item in results
     ]
@@ -77,11 +89,12 @@ def print_mult_results_to_terminal(initial_data: dict, results: list[Results], v
 
 
 def result_processing(
-        params: Union[dict, list[dict]],
+        params: Union[dict[str, Any], list[dict]],
         model_statistics: Union[Statistic, list[Statistic]],
         variadic: Union[str, None],
         print_res: bool = False
 ) -> Union[Results, list[Results]]:
+    """В зависимости от входных данных решает, как их обрабатывать"""
     if variadic is None:
         results = formalize_results(params, model_statistics)
         if print_res:
@@ -97,19 +110,26 @@ def result_processing(
         return results
 
 
-def print_single_results(params:dict, results: Results) -> None:
+def print_single_results(params: dict[str, Any], results: Results) -> None:
+    """Вывод результатов одиночного запуска в консоль"""
     print("\n📊 Результаты моделирования")
     print("-" * 60)
-    print(f"{'Ошибка камеры':35} {1 - (1 - params['photo_error']) ** Params().number_plate_symbols_amount:<.3f}")
+    print(f"{'Ошибка камеры':35}"
+          f"{1 - (1 - params['photo_error']) **
+             Params().number_plate_symbols_amount:<.3f}")
     print(f"{'Ошибка RFID':35} {params['rfid_error']}")
     print(f"{'Ошибка модели автомобиля':35} {params['car_error']:<.3f}")
     print("-" * 60)
     print(f"{'Идентификация камерой':35} {results.cam_detect_prob:<.3f}")
-    print(f"{'Уточнение без коллизий (RFID)':35} {results.rfid_detect_without_collision_prob:<.3f}")
-    print(f"{'Уточнение с коллизиями (RFID)':35} {results.rfid_detect_with_collision_prob:<.3f}")
+    print(f"{'Уточнение без коллизий (RFID)':35} "
+          f"{results.rfid_detect_without_collision_prob:<.3f}")
+    print(f"{'Уточнение с коллизиями (RFID)':35} "
+          f"{results.rfid_detect_with_collision_prob:<.3f}")
     print(f"{'Суммарная вероятность':35} {results.total_prob:<.3f}")
     print("-" * 60)
     print(f"{'Частота коллизий':35} {results.collision_amount_to_nums:<.3f}")
-    print(f"{'Неправильно разрешённые':35} {results.error_collision_resolve_amount}")
-    print(f"{'Неразрешённые коллизии':35} {results.unresolved_collision_prob}")
+    print(f"{'Неправильно разрешённые':35} "
+          f"{results.error_collision_resolve_amount}")
+    print(f"{'Неразрешённые коллизии':35} "
+          f"{results.unresolved_collision_prob}")
     print("-" * 60)
