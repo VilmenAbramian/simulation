@@ -35,9 +35,9 @@ class Consts:
 
 class Probs:
     MIN_ERROR_CAM_PROB = 0
-    MAX_ERROR_CAM_PROB = 1
+    MAX_ERROR_CAM_PROB = 0.5
     MIN_ERROR_RFID_PROB = 0
-    MAX_ERROR_RFID_PROB = 1
+    MAX_ERROR_RFID_PROB = 0.5
 
 
 def plate_to_symbol_error(prob: float, symbols_in_plate: int) -> float:

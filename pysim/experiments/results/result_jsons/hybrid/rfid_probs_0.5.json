@@ -1,0 +1,1503 @@
+{
+  "Значение photo_error для каждой кривой": "[0.    0.125 0.25  0.375 0.5  ]",
+  "Изменяющаяся переменная одной кривой rfid_error": "[0.         0.02083333 0.04166667 0.0625     0.08333333 0.10416667\n 0.125      0.14583333 0.16666667 0.1875     0.20833333 0.22916667\n 0.25       0.27083333 0.29166667 0.3125     0.33333333 0.35416667\n 0.375      0.39583333 0.41666667 0.4375     0.45833333 0.47916667\n 0.5       ]",
+  "Входные параметры модели: [{'model_name': 'Hybrid system', 'num_plates': 20000, 'sign_prob': {'A': 0.08333333333333333, 'B': 0.08333333333333333, 'E': 0.08333333333333333, 'K': 0.08333333333333333, 'M': 0.08333333333333333, 'H': 0.08333333333333333, 'O': 0.08333333333333333, 'P': 0.08333333333333333, 'C': 0.08333333333333333, 'T': 0.08333333333333333, 'Y': 0.08333333333333333, 'X': 0.08333333333333333}, 'num_prob': {'0': 0.1, '1': 0.1, '2': 0.1, '3': 0.1, '4': 0.1, '5': 0.1, '6': 0.1, '7': 0.1, '8': 0.1, '9': 0.1}, 'speed_range': (16.666666666666668, 27.77777777777778), 'transport_gap': 10, 'photo_distance': (30, 50), 'rfid_distance': (-5, 5), 'number_plate_symbols_amount': 8, 'photo_error': np.float64(0.0), 'rfid_error': array([0.        , 0.02083333, 0.04166667, 0.0625    , 0.08333333,\n       0.10416667, 0.125     , 0.14583333, 0.16666667, 0.1875    ,\n       0.20833333, 0.22916667, 0.25      , 0.27083333, 0.29166667,\n       0.3125    , 0.33333333, 0.35416667, 0.375     , 0.39583333,\n       0.41666667, 0.4375    , 0.45833333, 0.47916667, 0.5       ]), 'car_error': 0.3}, {'model_name': 'Hybrid system', 'num_plates': 20000, 'sign_prob': {'A': 0.08333333333333333, 'B': 0.08333333333333333, 'E': 0.08333333333333333, 'K': 0.08333333333333333, 'M': 0.08333333333333333, 'H': 0.08333333333333333, 'O': 0.08333333333333333, 'P': 0.08333333333333333, 'C': 0.08333333333333333, 'T': 0.08333333333333333, 'Y': 0.08333333333333333, 'X': 0.08333333333333333}, 'num_prob': {'0': 0.1, '1': 0.1, '2': 0.1, '3': 0.1, '4': 0.1, '5': 0.1, '6': 0.1, '7': 0.1, '8': 0.1, '9': 0.1}, 'speed_range': (16.666666666666668, 27.77777777777778), 'transport_gap': 10, 'photo_distance': (30, 50), 'rfid_distance': (-5, 5), 'number_plate_symbols_amount': 8, 'photo_error': np.float64(0.016552894084366776), 'rfid_error': array([0.        , 0.02083333, 0.04166667, 0.0625    , 0.08333333,\n       0.10416667, 0.125     , 0.14583333, 0.16666667, 0.1875    ,\n       0.20833333, 0.22916667, 0.25      , 0.27083333, 0.29166667,\n       0.3125    , 0.33333333, 0.35416667, 0.375     , 0.39583333,\n       0.41666667, 0.4375    , 0.45833333, 0.47916667, 0.5       ]), 'car_error': 0.3}, {'model_name': 'Hybrid system', 'num_plates': 20000, 'sign_prob': {'A': 0.08333333333333333, 'B': 0.08333333333333333, 'E': 0.08333333333333333, 'K': 0.08333333333333333, 'M': 0.08333333333333333, 'H': 0.08333333333333333, 'O': 0.08333333333333333, 'P': 0.08333333333333333, 'C': 0.08333333333333333, 'T': 0.08333333333333333, 'Y': 0.08333333333333333, 'X': 0.08333333333333333}, 'num_prob': {'0': 0.1, '1': 0.1, '2': 0.1, '3': 0.1, '4': 0.1, '5': 0.1, '6': 0.1, '7': 0.1, '8': 0.1, '9': 0.1}, 'speed_range': (16.666666666666668, 27.77777777777778), 'transport_gap': 10, 'photo_distance': (30, 50), 'rfid_distance': (-5, 5), 'number_plate_symbols_amount': 8, 'photo_error': np.float64(0.0353213700396906), 'rfid_error': array([0.        , 0.02083333, 0.04166667, 0.0625    , 0.08333333,\n       0.10416667, 0.125     , 0.14583333, 0.16666667, 0.1875    ,\n       0.20833333, 0.22916667, 0.25      , 0.27083333, 0.29166667,\n       0.3125    , 0.33333333, 0.35416667, 0.375     , 0.39583333,\n       0.41666667, 0.4375    , 0.45833333, 0.47916667, 0.5       ]), 'car_error': 0.3}, {'model_name': 'Hybrid system', 'num_plates': 20000, 'sign_prob': {'A': 0.08333333333333333, 'B': 0.08333333333333333, 'E': 0.08333333333333333, 'K': 0.08333333333333333, 'M': 0.08333333333333333, 'H': 0.08333333333333333, 'O': 0.08333333333333333, 'P': 0.08333333333333333, 'C': 0.08333333333333333, 'T': 0.08333333333333333, 'Y': 0.08333333333333333, 'X': 0.08333333333333333}, 'num_prob': {'0': 0.1, '1': 0.1, '2': 0.1, '3': 0.1, '4': 0.1, '5': 0.1, '6': 0.1, '7': 0.1, '8': 0.1, '9': 0.1}, 'speed_range': (16.666666666666668, 27.77777777777778), 'transport_gap': 10, 'photo_distance': (30, 50), 'rfid_distance': (-5, 5), 'number_plate_symbols_amount': 8, 'photo_error': np.float64(0.05705795245971701), 'rfid_error': array([0.        , 0.02083333, 0.04166667, 0.0625    , 0.08333333,\n       0.10416667, 0.125     , 0.14583333, 0.16666667, 0.1875    ,\n       0.20833333, 0.22916667, 0.25      , 0.27083333, 0.29166667,\n       0.3125    , 0.33333333, 0.35416667, 0.375     , 0.39583333,\n       0.41666667, 0.4375    , 0.45833333, 0.47916667, 0.5       ]), 'car_error': 0.3}, {'model_name': 'Hybrid system', 'num_plates': 20000, 'sign_prob': {'A': 0.08333333333333333, 'B': 0.08333333333333333, 'E': 0.08333333333333333, 'K': 0.08333333333333333, 'M': 0.08333333333333333, 'H': 0.08333333333333333, 'O': 0.08333333333333333, 'P': 0.08333333333333333, 'C': 0.08333333333333333, 'T': 0.08333333333333333, 'Y': 0.08333333333333333, 'X': 0.08333333333333333}, 'num_prob': {'0': 0.1, '1': 0.1, '2': 0.1, '3': 0.1, '4': 0.1, '5': 0.1, '6': 0.1, '7': 0.1, '8': 0.1, '9': 0.1}, 'speed_range': (16.666666666666668, 27.77777777777778), 'transport_gap': 10, 'photo_distance': (30, 50), 'rfid_distance': (-5, 5), 'number_plate_symbols_amount': 8, 'photo_error': np.float64(0.08299595679532878), 'rfid_error': array([0.        , 0.02083333, 0.04166667, 0.0625    , 0.08333333,\n       0.10416667, 0.125     , 0.14583333, 0.16666667, 0.1875    ,\n       0.20833333, 0.22916667, 0.25      , 0.27083333, 0.29166667,\n       0.3125    , 0.33333333, 0.35416667, 0.375     , 0.39583333,\n       0.41666667, 0.4375    , 0.45833333, 0.47916667, 0.5       ]), 'car_error': 0.3}]": [
+    {
+      "model_name": "Hybrid system",
+      "num_plates": 20000,
+      "sign_prob": {
+        "A": 0.08333333333333333,
+        "B": 0.08333333333333333,
+        "E": 0.08333333333333333,
+        "K": 0.08333333333333333,
+        "M": 0.08333333333333333,
+        "H": 0.08333333333333333,
+        "O": 0.08333333333333333,
+        "P": 0.08333333333333333,
+        "C": 0.08333333333333333,
+        "T": 0.08333333333333333,
+        "Y": 0.08333333333333333,
+        "X": 0.08333333333333333
+      },
+      "num_prob": {
+        "0": 0.1,
+        "1": 0.1,
+        "2": 0.1,
+        "3": 0.1,
+        "4": 0.1,
+        "5": 0.1,
+        "6": 0.1,
+        "7": 0.1,
+        "8": 0.1,
+        "9": 0.1
+      },
+      "speed_range": [
+        16.666666666666668,
+        27.77777777777778
+      ],
+      "transport_gap": 10,
+      "photo_distance": [
+        30,
+        50
+      ],
+      "rfid_distance": [
+        -5,
+        5
+      ],
+      "number_plate_symbols_amount": 8,
+      "photo_error": 0.0,
+      "rfid_error": "[0.         0.02083333 0.04166667 0.0625     0.08333333 0.10416667\n 0.125      0.14583333 0.16666667 0.1875     0.20833333 0.22916667\n 0.25       0.27083333 0.29166667 0.3125     0.33333333 0.35416667\n 0.375      0.39583333 0.41666667 0.4375     0.45833333 0.47916667\n 0.5       ]",
+      "car_error": 0.3
+    },
+    {
+      "model_name": "Hybrid system",
+      "num_plates": 20000,
+      "sign_prob": {
+        "A": 0.08333333333333333,
+        "B": 0.08333333333333333,
+        "E": 0.08333333333333333,
+        "K": 0.08333333333333333,
+        "M": 0.08333333333333333,
+        "H": 0.08333333333333333,
+        "O": 0.08333333333333333,
+        "P": 0.08333333333333333,
+        "C": 0.08333333333333333,
+        "T": 0.08333333333333333,
+        "Y": 0.08333333333333333,
+        "X": 0.08333333333333333
+      },
+      "num_prob": {
+        "0": 0.1,
+        "1": 0.1,
+        "2": 0.1,
+        "3": 0.1,
+        "4": 0.1,
+        "5": 0.1,
+        "6": 0.1,
+        "7": 0.1,
+        "8": 0.1,
+        "9": 0.1
+      },
+      "speed_range": [
+        16.666666666666668,
+        27.77777777777778
+      ],
+      "transport_gap": 10,
+      "photo_distance": [
+        30,
+        50
+      ],
+      "rfid_distance": [
+        -5,
+        5
+      ],
+      "number_plate_symbols_amount": 8,
+      "photo_error": 0.016552894084366776,
+      "rfid_error": "[0.         0.02083333 0.04166667 0.0625     0.08333333 0.10416667\n 0.125      0.14583333 0.16666667 0.1875     0.20833333 0.22916667\n 0.25       0.27083333 0.29166667 0.3125     0.33333333 0.35416667\n 0.375      0.39583333 0.41666667 0.4375     0.45833333 0.47916667\n 0.5       ]",
+      "car_error": 0.3
+    },
+    {
+      "model_name": "Hybrid system",
+      "num_plates": 20000,
+      "sign_prob": {
+        "A": 0.08333333333333333,
+        "B": 0.08333333333333333,
+        "E": 0.08333333333333333,
+        "K": 0.08333333333333333,
+        "M": 0.08333333333333333,
+        "H": 0.08333333333333333,
+        "O": 0.08333333333333333,
+        "P": 0.08333333333333333,
+        "C": 0.08333333333333333,
+        "T": 0.08333333333333333,
+        "Y": 0.08333333333333333,
+        "X": 0.08333333333333333
+      },
+      "num_prob": {
+        "0": 0.1,
+        "1": 0.1,
+        "2": 0.1,
+        "3": 0.1,
+        "4": 0.1,
+        "5": 0.1,
+        "6": 0.1,
+        "7": 0.1,
+        "8": 0.1,
+        "9": 0.1
+      },
+      "speed_range": [
+        16.666666666666668,
+        27.77777777777778
+      ],
+      "transport_gap": 10,
+      "photo_distance": [
+        30,
+        50
+      ],
+      "rfid_distance": [
+        -5,
+        5
+      ],
+      "number_plate_symbols_amount": 8,
+      "photo_error": 0.0353213700396906,
+      "rfid_error": "[0.         0.02083333 0.04166667 0.0625     0.08333333 0.10416667\n 0.125      0.14583333 0.16666667 0.1875     0.20833333 0.22916667\n 0.25       0.27083333 0.29166667 0.3125     0.33333333 0.35416667\n 0.375      0.39583333 0.41666667 0.4375     0.45833333 0.47916667\n 0.5       ]",
+      "car_error": 0.3
+    },
+    {
+      "model_name": "Hybrid system",
+      "num_plates": 20000,
+      "sign_prob": {
+        "A": 0.08333333333333333,
+        "B": 0.08333333333333333,
+        "E": 0.08333333333333333,
+        "K": 0.08333333333333333,
+        "M": 0.08333333333333333,
+        "H": 0.08333333333333333,
+        "O": 0.08333333333333333,
+        "P": 0.08333333333333333,
+        "C": 0.08333333333333333,
+        "T": 0.08333333333333333,
+        "Y": 0.08333333333333333,
+        "X": 0.08333333333333333
+      },
+      "num_prob": {
+        "0": 0.1,
+        "1": 0.1,
+        "2": 0.1,
+        "3": 0.1,
+        "4": 0.1,
+        "5": 0.1,
+        "6": 0.1,
+        "7": 0.1,
+        "8": 0.1,
+        "9": 0.1
+      },
+      "speed_range": [
+        16.666666666666668,
+        27.77777777777778
+      ],
+      "transport_gap": 10,
+      "photo_distance": [
+        30,
+        50
+      ],
+      "rfid_distance": [
+        -5,
+        5
+      ],
+      "number_plate_symbols_amount": 8,
+      "photo_error": 0.05705795245971701,
+      "rfid_error": "[0.         0.02083333 0.04166667 0.0625     0.08333333 0.10416667\n 0.125      0.14583333 0.16666667 0.1875     0.20833333 0.22916667\n 0.25       0.27083333 0.29166667 0.3125     0.33333333 0.35416667\n 0.375      0.39583333 0.41666667 0.4375     0.45833333 0.47916667\n 0.5       ]",
+      "car_error": 0.3
+    },
+    {
+      "model_name": "Hybrid system",
+      "num_plates": 20000,
+      "sign_prob": {
+        "A": 0.08333333333333333,
+        "B": 0.08333333333333333,
+        "E": 0.08333333333333333,
+        "K": 0.08333333333333333,
+        "M": 0.08333333333333333,
+        "H": 0.08333333333333333,
+        "O": 0.08333333333333333,
+        "P": 0.08333333333333333,
+        "C": 0.08333333333333333,
+        "T": 0.08333333333333333,
+        "Y": 0.08333333333333333,
+        "X": 0.08333333333333333
+      },
+      "num_prob": {
+        "0": 0.1,
+        "1": 0.1,
+        "2": 0.1,
+        "3": 0.1,
+        "4": 0.1,
+        "5": 0.1,
+        "6": 0.1,
+        "7": 0.1,
+        "8": 0.1,
+        "9": 0.1
+      },
+      "speed_range": [
+        16.666666666666668,
+        27.77777777777778
+      ],
+      "transport_gap": 10,
+      "photo_distance": [
+        30,
+        50
+      ],
+      "rfid_distance": [
+        -5,
+        5
+      ],
+      "number_plate_symbols_amount": 8,
+      "photo_error": 0.08299595679532878,
+      "rfid_error": "[0.         0.02083333 0.04166667 0.0625     0.08333333 0.10416667\n 0.125      0.14583333 0.16666667 0.1875     0.20833333 0.22916667\n 0.25       0.27083333 0.29166667 0.3125     0.33333333 0.35416667\n 0.375      0.39583333 0.41666667 0.4375     0.45833333 0.47916667\n 0.5       ]",
+      "car_error": 0.3
+    }
+  ],
+  "Results": [
+    [
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 1.0,
+        "rfid_detect_without_collision_prob": 0.0,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      }
+    ],
+    [
+      {
+        "cam_detect_prob": 0.871,
+        "rfid_detect_without_collision_prob": 0.129,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8793,
+        "rfid_detect_without_collision_prob": 0.11805,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.99735,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8746,
+        "rfid_detect_without_collision_prob": 0.1205,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9951000000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87455,
+        "rfid_detect_without_collision_prob": 0.11745,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.992,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.875,
+        "rfid_detect_without_collision_prob": 0.1151,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9901,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8766,
+        "rfid_detect_without_collision_prob": 0.11125,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.98785,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87425,
+        "rfid_detect_without_collision_prob": 0.1115,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.98575,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87555,
+        "rfid_detect_without_collision_prob": 0.1064,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9819500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8762,
+        "rfid_detect_without_collision_prob": 0.103,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9792,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87315,
+        "rfid_detect_without_collision_prob": 0.1023,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9754499999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87135,
+        "rfid_detect_without_collision_prob": 0.10125,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9725999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87545,
+        "rfid_detect_without_collision_prob": 0.09505,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9704999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.872,
+        "rfid_detect_without_collision_prob": 0.0956,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9676,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87405,
+        "rfid_detect_without_collision_prob": 0.09415,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9682,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8738,
+        "rfid_detect_without_collision_prob": 0.08955,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.96335,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.877,
+        "rfid_detect_without_collision_prob": 0.0848,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9618,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87385,
+        "rfid_detect_without_collision_prob": 0.0832,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.95705,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8762,
+        "rfid_detect_without_collision_prob": 0.07875,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.95495,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87955,
+        "rfid_detect_without_collision_prob": 0.07555,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9551000000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8757,
+        "rfid_detect_without_collision_prob": 0.07615,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9518500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87795,
+        "rfid_detect_without_collision_prob": 0.0696,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.94755,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.87385,
+        "rfid_detect_without_collision_prob": 0.0718,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.94565,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8745,
+        "rfid_detect_without_collision_prob": 0.06925,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9437500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8744,
+        "rfid_detect_without_collision_prob": 0.0671,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9415,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.8715,
+        "rfid_detect_without_collision_prob": 0.0652,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9367000000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      }
+    ],
+    [
+      {
+        "cam_detect_prob": 0.7527,
+        "rfid_detect_without_collision_prob": 0.2473,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.74875,
+        "rfid_detect_without_collision_prob": 0.2463,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.99505,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7502,
+        "rfid_detect_without_collision_prob": 0.2396,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9898,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7479,
+        "rfid_detect_without_collision_prob": 0.2373,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9852000000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7517,
+        "rfid_detect_without_collision_prob": 0.22685,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.97855,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.754,
+        "rfid_detect_without_collision_prob": 0.2205,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9745,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.75725,
+        "rfid_detect_without_collision_prob": 0.21215,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9694,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.755,
+        "rfid_detect_without_collision_prob": 0.2107,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9657,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.75235,
+        "rfid_detect_without_collision_prob": 0.2062,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.95855,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.74875,
+        "rfid_detect_without_collision_prob": 0.20515,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9539,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.75095,
+        "rfid_detect_without_collision_prob": 0.19725,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9482,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7513,
+        "rfid_detect_without_collision_prob": 0.1923,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9436,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.74785,
+        "rfid_detect_without_collision_prob": 0.19155,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9394,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.75175,
+        "rfid_detect_without_collision_prob": 0.1796,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.93135,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.74565,
+        "rfid_detect_without_collision_prob": 0.17835,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.924,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.75045,
+        "rfid_detect_without_collision_prob": 0.1725,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9229499999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7489,
+        "rfid_detect_without_collision_prob": 0.1701,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.919,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7522,
+        "rfid_detect_without_collision_prob": 0.1587,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9109,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7519,
+        "rfid_detect_without_collision_prob": 0.15615,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.90805,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.75385,
+        "rfid_detect_without_collision_prob": 0.1528,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.90665,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7514,
+        "rfid_detect_without_collision_prob": 0.1435,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8948999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.74905,
+        "rfid_detect_without_collision_prob": 0.1387,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.88775,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7518,
+        "rfid_detect_without_collision_prob": 0.13665,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.88845,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.7434,
+        "rfid_detect_without_collision_prob": 0.13325,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8766499999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.74685,
+        "rfid_detect_without_collision_prob": 0.1277,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.87455,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      }
+    ],
+    [
+      {
+        "cam_detect_prob": 0.6278,
+        "rfid_detect_without_collision_prob": 0.3722,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6212,
+        "rfid_detect_without_collision_prob": 0.3704,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9916,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6248,
+        "rfid_detect_without_collision_prob": 0.3596,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9843999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62995,
+        "rfid_detect_without_collision_prob": 0.3452,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.97515,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62615,
+        "rfid_detect_without_collision_prob": 0.34215,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9682999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6238,
+        "rfid_detect_without_collision_prob": 0.3373,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9611000000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6262,
+        "rfid_detect_without_collision_prob": 0.32685,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.95305,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.63325,
+        "rfid_detect_without_collision_prob": 0.3121,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9453499999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62555,
+        "rfid_detect_without_collision_prob": 0.3105,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.93605,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62955,
+        "rfid_detect_without_collision_prob": 0.3022,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9317500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6208,
+        "rfid_detect_without_collision_prob": 0.3008,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9216,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62485,
+        "rfid_detect_without_collision_prob": 0.29055,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9154,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62715,
+        "rfid_detect_without_collision_prob": 0.27735,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9045,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6265,
+        "rfid_detect_without_collision_prob": 0.2698,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8962999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62715,
+        "rfid_detect_without_collision_prob": 0.2652,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.89235,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6286,
+        "rfid_detect_without_collision_prob": 0.25235,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8809500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6284,
+        "rfid_detect_without_collision_prob": 0.24875,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.87715,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6269,
+        "rfid_detect_without_collision_prob": 0.24155,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8684499999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6269,
+        "rfid_detect_without_collision_prob": 0.2333,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8602000000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62495,
+        "rfid_detect_without_collision_prob": 0.2255,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.85045,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6286,
+        "rfid_detect_without_collision_prob": 0.21775,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.84635,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62755,
+        "rfid_detect_without_collision_prob": 0.2075,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8350500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6254,
+        "rfid_detect_without_collision_prob": 0.2022,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8275999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.6234,
+        "rfid_detect_without_collision_prob": 0.2,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8233999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.62525,
+        "rfid_detect_without_collision_prob": 0.1847,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.80995,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      }
+    ],
+    [
+      {
+        "cam_detect_prob": 0.4996,
+        "rfid_detect_without_collision_prob": 0.5004,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 1.0,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4994,
+        "rfid_detect_without_collision_prob": 0.49035,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.98975,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4969,
+        "rfid_detect_without_collision_prob": 0.48425,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.98115,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.50125,
+        "rfid_detect_without_collision_prob": 0.468,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.96925,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.5062,
+        "rfid_detect_without_collision_prob": 0.45595,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9621500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.5039,
+        "rfid_detect_without_collision_prob": 0.44415,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.9480500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4966,
+        "rfid_detect_without_collision_prob": 0.43975,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.93635,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4965,
+        "rfid_detect_without_collision_prob": 0.43305,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.92955,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.49725,
+        "rfid_detect_without_collision_prob": 0.4208,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.91805,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.50255,
+        "rfid_detect_without_collision_prob": 0.4022,
+        "rfid_detect_with_collision_prob": 5e-05,
+        "total_prob": 0.9048,
+        "total_collisions": 1,
+        "collision_amount_to_nums": 5e-05,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.501,
+        "rfid_detect_without_collision_prob": 0.3942,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8952,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.49945,
+        "rfid_detect_without_collision_prob": 0.3848,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.88425,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4934,
+        "rfid_detect_without_collision_prob": 0.3781,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8714999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4941,
+        "rfid_detect_without_collision_prob": 0.36975,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.86385,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.49345,
+        "rfid_detect_without_collision_prob": 0.3589,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8523499999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4962,
+        "rfid_detect_without_collision_prob": 0.34445,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8406499999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.49065,
+        "rfid_detect_without_collision_prob": 0.3391,
+        "rfid_detect_with_collision_prob": 5e-05,
+        "total_prob": 0.8298,
+        "total_collisions": 1,
+        "collision_amount_to_nums": 5e-05,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.497,
+        "rfid_detect_without_collision_prob": 0.3258,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8228,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4908,
+        "rfid_detect_without_collision_prob": 0.31795,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8087500000000001,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.5041,
+        "rfid_detect_without_collision_prob": 0.3001,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.8042,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.49625,
+        "rfid_detect_without_collision_prob": 0.29445,
+        "rfid_detect_with_collision_prob": 5e-05,
+        "total_prob": 0.79075,
+        "total_collisions": 1,
+        "collision_amount_to_nums": 5e-05,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.50825,
+        "rfid_detect_without_collision_prob": 0.27475,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.7829999999999999,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.5064,
+        "rfid_detect_without_collision_prob": 0.26795,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.77435,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.50365,
+        "rfid_detect_without_collision_prob": 0.26005,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.7637,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      },
+      {
+        "cam_detect_prob": 0.4972,
+        "rfid_detect_without_collision_prob": 0.25095,
+        "rfid_detect_with_collision_prob": 0.0,
+        "total_prob": 0.74815,
+        "total_collisions": 0,
+        "collision_amount_to_nums": 0.0,
+        "error_collision_resolve_amount": 0.0,
+        "unresolved_collision_prob": 0.0
+      }
+    ]
+  ]
+}
