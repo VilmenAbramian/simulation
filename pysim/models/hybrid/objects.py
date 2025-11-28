@@ -14,8 +14,8 @@ class Params(BaseModel):
     Входные параметры модели
     """
     model_name: str = "Hybrid system"
-    num_plates: conint(ge=1, le=50000) = Field(
-        20000, description="Количество идентифицируемых автомобилей"
+    num_plates: conint(ge=1, le=300000) = Field(
+        300000, description="Количество идентифицируемых автомобилей"
     )
     sign_prob: dict[str, float] = Field(
         default_factory=lambda: {
