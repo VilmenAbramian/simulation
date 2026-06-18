@@ -172,15 +172,19 @@ def plot_experiment_lines(
     save_fig: bool = SAVE_FIG,
     inversion: bool = True
 ):
+    b = ["o", "s", "^"]
+    counter = 0
     fig, ax = plt.subplots(figsize=(10, 6), layout="constrained")
     for i, (y, label) in enumerate(zip(y_lines, labels)):
         if inversion:
             y = y[::-1]
         ax.plot(
             x_values, y,
-            linewidth=3, linestyle="dashdot",
+            linewidth=2,
+            marker = b[counter],
             label=label,
         )
+        counter += 1
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     plt.tick_params(axis="both", which="major")

@@ -85,7 +85,8 @@ def run_multiple_simulation(variadic, **kwargs) -> List[Results]:
 )
 @click.option(
     "-pe", "--photo-error", default=(Params().symbol_error, ), multiple=True,
-    help="Вероятность ошибки идентификации номерной таблички камерой",
+    help="Вероятность ошибки идентификации одного символа в"
+         "номерной табличке камерой",
     show_default=True
 )
 @click.option(

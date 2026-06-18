@@ -44,8 +44,11 @@ def on_camera_detection(sim: Simulator, _) -> None:
         photo_error=model.params.photo_error,
         car_error=model.params.car_error,
     )
-    if "*" not in cam_detection.photo_num:
+    star_count = cam_detection.photo_num.count("*")
+    if star_count == 0:
         model.statistics.clear_cam_detections.append(cam_detection)
+    elif star_count >= 4:
+        model.statistics.many_camera_errors.append(cam_detection)
     else:
         model.statistics.error_cam_detections.append(cam_detection)
         # Идентифицируем эту же машину RFID системой

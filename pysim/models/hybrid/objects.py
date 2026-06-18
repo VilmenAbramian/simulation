@@ -153,6 +153,9 @@ class Statistic(BaseModel):
         ..., description="Список автомобилей, которые не удалось распознать"
                          "после попадания в коллизию"
     )
+    many_camera_errors: list[CamDetection] = Field(
+        ..., description="Список номеров, в которых более 5 символов - *"
+    )
 
 
 class Results(BaseModel):
@@ -203,7 +206,8 @@ class Model:
             total_collisions=0,
             rfid_correction_after_collision=[],
             error_correction_after_collision=[],
-            rfid_unresolved_collision=[]
+            rfid_unresolved_collision=[],
+            many_camera_errors=[],
         )
         self.current_detection: int = 0
         logger.debug("Модель успешно инициализирована")

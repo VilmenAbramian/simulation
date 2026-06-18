@@ -1,8 +1,145 @@
 import numpy as np
+from typing import Tuple
 
 from pysim.models.hybrid.objects import (
-    CamDetection, CarNumber, Consts, RfidDetection
+    CamDetection, CarNumber, Consts, Params, RfidDetection
 )
+
+
+SYMBOLS_AMOUNT = 8
+
+
+def w_full_from_photo_error(photo_error: float) -> float:
+    """Доля полностью нераспознанных номеров как функция от вероятности ошибки номера.
+
+    Требования (приблизительно):
+      photo_error=0.5 -> w_full≈0.8
+      photo_error=0.25 -> w_full≈0.4
+      photo_error=0.1 -> w_full≈0.1
+
+    Используется гладкая S-образная зависимость вида:
+      w = p^a / (p^a + c*(1-p)^a)
+    где c=0.25 (чтобы w(0.5)=0.8), а a≈1.63093 (чтобы w(0.1)=0.1).
+    """
+    if not (0.0 <= photo_error <= 1.0):
+        raise ValueError("photo_error must be in [0, 1]")
+
+    if photo_error == 0.0:
+        return 0.0
+    if photo_error == 1.0:
+        return 1.0
+
+    a = 1.6309297535714575
+    c = 0.25
+    p = float(photo_error)
+    pa = p ** a
+    qa = (1.0 - p) ** a
+    return pa / (pa + c * qa)
+
+
+def weights_from_photo_error(
+    photo_error: float,
+    ratio_2: float = 1.0,
+    ratio_3: float = 1.0,
+) -> tuple[float, float, float]:
+    """Возвращает (w_full, w_3, w_2) как функции от photo_error.
+
+    Оставшуюся после w_full массу распределяем между случаями "2 звезды" и "3 звезды"
+    в фиксированной пропорции ratio_3:ratio_2.
+    """
+    w_full = w_full_from_photo_error(photo_error)
+    rest = max(0.0, 1.0 - w_full)
+
+    s = ratio_2 + ratio_3
+    if s <= 0:
+        raise ValueError("ratio_2 and ratio_3 must sum to positive")
+
+    w_2 = rest * (ratio_2 / s)
+    w_3 = rest * (ratio_3 / s)
+    return w_full, w_3, w_2
+
+def make_miss_count_dist(
+    photo_error: float,
+    w_full: float = None,
+    w_3: float = None,
+    w_2: float = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Пересчёт долей нераспозннаных символов в номере в:
+    values: количество нераспознанных символов в номере k. k ∈ {0, 2, 3, 8}
+      т.е. при k = 0 распознаны все символы в номере, а при k = 8 не распознан
+      ни один символ в номере.
+    probs: вероятность того, что в номере не будет распознано ровно k символов.
+      Сумма probs ОБЯЗАТЕЛЬНО должна быть равна 1. Только в этом случае будут
+      покрыты все возможные случаи нераспознавания того или иного количества
+      симвлов в номере.
+
+    Args:
+        photo_error: вероятность, что хотя бы один символ в номере не распознан
+        w_full: доля полностью не распознанных номеров
+        w_3: доля "не распознано 3 символа"
+        w_2: доля "не распознано 2 символа"
+    """
+    if not (0.0 <= photo_error <= 1.0):
+        raise ValueError("photo_error must be in [0, 1]")
+
+    s = w_full + w_3 + w_2
+    if s <= 0:
+        raise ValueError("weights must sum to positive")
+
+    # нормируем на всякий случай
+    w_full, w_3, w_2 = w_full / s, w_3 / s, w_2 / s
+
+    values = np.array([0, 2, 3, SYMBOLS_AMOUNT], dtype=int)
+    probs = np.array([
+        1.0 - photo_error,
+        photo_error * w_2,
+        photo_error * w_3,
+        photo_error * w_full,
+    ], dtype=float)
+
+    # микрокоррекция на float-ошибки
+    probs[-1] += 1.0 - probs.sum()
+    return values, probs
+
+
+def recognize_plate_camera(
+    number_plate: str,
+    photo_error: float,
+    rng: np.random.Generator | None = None,
+    w_full: float = 0.33,
+    w_3: float = 0.0,
+    w_2: float = 0.67,
+    mask_char: str = "*",
+) -> str:
+    """
+    Посимвольное распознавание номера камерой.
+    Args:
+        number_plate: автомобильный номер - строка длины 8
+        photo_error: вероятность ошибки РАСПОЗНАВАНИЯ ВСЕГО НОМЕРА (0..1)
+        rng:
+        w_full: доля полностью не распознанных номеров (если None, вычисляется автоматически по photo_error)
+        w_3: доля "не распознано 3 символа" (если None, вычисляется автоматически по photo_error)
+        w_2: доля "не распознано 2 символа" (если None, вычисляется автоматически по photo_error)
+        mask_char: заменитель для нераспознанного символа в номере
+    """
+    if len(number_plate) != SYMBOLS_AMOUNT:
+        raise ValueError(f"number_plate must have length {SYMBOLS_AMOUNT}")
+
+    rng = rng or np.random.default_rng()
+
+    values, probs = make_miss_count_dist(photo_error, w_full=w_full, w_3=w_3, w_2=w_2)
+    k = int(rng.choice(values, p=probs))  # сколько символов замаскировать
+
+    if k == 0:
+        return number_plate
+
+    # выбираем k позиций под звёздочки
+    idx = rng.choice(SYMBOLS_AMOUNT, size=k, replace=False)
+    chars = list(number_plate)
+    for i in idx:
+        chars[i] = mask_char
+    return "".join(chars)
 
 
 def check_probs(probs: dict[str, float]):
@@ -93,13 +230,16 @@ def detect_car_by_camera(
     _speed = np.random.uniform(low=speed[0], high=speed[1])
     # Случайное расстояние до конкретной машины
     _photo_distance = np.random.uniform(low=distance[0], high=distance[1])
-    num_val = []
-    for value in list(number_plate):
-        if np.random.uniform() <= photo_error:
-            num_val.append("*")
-        else:
-            num_val.append(value)
-    photo_number = "".join(num_val)
+    # num_val = []
+    # for value in list(number_plate):
+    #     if np.random.uniform() <= photo_error:
+    #         num_val.append("*")
+    #     else:
+    #         num_val.append(value)
+    # photo_number = "".join(num_val)
+
+    full_number_error = 1 - (1 - photo_error) ** SYMBOLS_AMOUNT
+    photo_number = recognize_plate_camera(number_plate, full_number_error)
 
     if np.random.uniform() > car_error:
         car_model_detected = car.car_model
