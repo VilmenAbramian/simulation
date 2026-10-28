@@ -9,14 +9,6 @@ from pysim.models.rfid.params import (
 import pysim.models.rfid.epcstd as epc
 
 
-READER_POS = np.array((
-    default_params.reader_offset, 0, default_params.altitude
-))
-TAG_POS = np.array((
-    default_params.tag_offset, 0, inner_params.tag_params.tag_altitude
-))
-
-
 def get_noise(reader_noise, thermal_noise):
     return channel.to_log(
         value=(
@@ -29,16 +21,17 @@ def get_noise(reader_noise, thermal_noise):
 
 
 def get_pathloss(
-    y: float, pol: float, speed: float = default_params.speed, t: float = 0.1
+    tag_pos: list, reader_pos: list, tx_antenna_dir, rx_antenna_dir,  pol: float, speed: float = default_params.speed, t: float = 0.1
 ) -> float:
     """
-    Расчёт затухания в двухлучевом канале (с отражением от стены).
+    Расчёт затухания в двухлучевом канале (с отражением от дороги).
     Значения затухания будут разными для каналов от считывателя к метке
     и обратно только из-за поляризации, так как от нее зависит
     коэффициент отражения. Все остальное - симметрично.
 
     Args:
-        y: координата считывателя вдоль оси OY
+        tag_pos: координаты движущейся метки вдоль оси OY
+        reader_pos: координаты статичного считывателя
         pol: поляризация сигнала (принимает значения: 0, 0.5, 1)
         speed: скорость считывателя вдоль оси OY, км/ч
         t: время с момента начала передачи
@@ -51,17 +44,17 @@ def get_pathloss(
         wavelen=(inner_params.geometry_params.speed_of_light /
                  inner_params.channel_params.frequency_hz),
         # Параметры считывателя: ---------------------------
-        # Координата y изменяется
-        tx_pos=np.array((READER_POS[0], y, READER_POS[2])),
-        tx_antenna_dir=inner_params.geometry_params.reader_antenna_direction,
         tx_rp=channel.rp_dipole,
-        # Движение только по оси OY
-        tx_velocity=np.array((0, channel.kmph2mps(speed), 0)),
+        tx_pos=reader_pos,
+        tx_antenna_dir=tx_antenna_dir,
+        tx_velocity= np.zeros(inner_params.geometry_params.dimension_of_space),
         # Параметры метки: ---------------------------------
-        rx_pos=TAG_POS,
-        rx_antenna_dir=inner_params.geometry_params.tag_antenna_direction,
+        # Координата y изменяется
+        rx_pos=tag_pos,
+        rx_antenna_dir=rx_antenna_dir,
         rx_rp=channel.rp_dipole,
-        rx_velocity=np.zeros(inner_params.geometry_params.dimension_of_space),
+        # Движение только по оси OY
+        rx_velocity= np.array((0, channel.kmph2mps(speed), 0)),
         # Параметры отражения: -----------------------------
         tx_polarization=pol,
         ground_reflection=channel.reflection,

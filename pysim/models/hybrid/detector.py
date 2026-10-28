@@ -173,8 +173,6 @@ def generate_plate(
     """
     Сгенерировать номерную табличку из случайных символов, взятых из словаря
     возможных символов.
-
-    Внимание! Пока что не генерирует регион
     """
     check_probs(sign_prob)
     check_probs(num_prob)
@@ -225,6 +223,7 @@ def detect_car_by_camera(
           для разрешения коллизий).
     """
     car = generate_plate(sign_prob=sign_prob, num_prob=num_prob)
+    print(f"Автомобильный номер: {car.plate}")
     number_plate = car.plate
     # Случайная скорость конкретной машины
     _speed = np.random.uniform(low=speed[0], high=speed[1])

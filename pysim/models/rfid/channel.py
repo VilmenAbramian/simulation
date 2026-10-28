@@ -184,23 +184,33 @@ def pathloss_model(
 
     pathloss = (0.5 / k) ** 2 * np.abs(g0 / d * np.exp(phase_shift_0)) ** 2
     if ground_reflection is not None:
-        wall_normal = np.array([1, 0, 0])  # Нормаль к стене
+        ground_normal = np.array([0, 0, 1])  # Нормаль к дороге (плоскость XOY)
+
+        # Координаты "зазеркальной" метки
         rx_pos_refl = rx_pos.copy()
-        rx_pos_refl[0] *= -1
+        rx_pos_refl[2] *= -1
 
         d1_vector = rx_pos_refl - tx_pos
         d1 = np.linalg.norm(d1_vector)
         d1_vector_tx_n = d1_vector / d1
-        d1_vector_rx_n = np.array(
-            [-d1_vector_tx_n[0], d1_vector_tx_n[1], d1_vector_tx_n[2]]
-        )
+
+        # Направление луча от точки отражения к реальной метке
+        d1_vector_refl_to_rx_n = np.array([
+            d1_vector_tx_n[0],
+            d1_vector_tx_n[1],
+            -d1_vector_tx_n[2]
+        ])
+
+        d1_vector_rx_n = -d1_vector_refl_to_rx_n
 
         tx_azimuth_1 = np.dot(d1_vector_tx_n, tx_antenna_dir)
-        rx_azimuth_1 = -1 * np.dot(d1_vector_rx_n, rx_antenna_dir)
+        rx_azimuth_1 = np.dot(d1_vector_rx_n, rx_antenna_dir)
+
         velocity_pr_1 = np.dot(d1_vector_tx_n, relative_velocity)
 
         g1 = tx_rp(azimuth=tx_azimuth_1) * rx_rp(azimuth=rx_azimuth_1)
-        grazing_angle = -1 * np.dot(d1_vector_rx_n, wall_normal)
+
+        grazing_angle = abs(np.dot(d1_vector_tx_n, ground_normal))
         r1 = ground_reflection(
             cosine=grazing_angle, wavelen=wavelen,
             conductivity=conductivity, permittivity=permittivity,

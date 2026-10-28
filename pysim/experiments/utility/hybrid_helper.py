@@ -19,6 +19,7 @@ from pysim.models.hybrid.processing import result_processing
 
 
 setup_matplotlib()
+plt.rcParams['axes.formatter.use_locale'] = False
 
 
 IMAGE_DIRECTORY = "hybrid/"

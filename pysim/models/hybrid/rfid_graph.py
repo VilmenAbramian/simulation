@@ -781,18 +781,31 @@ x_23, y_23 = extract_xy(results_23)
 x_12, y_12 = extract_xy(results_12)
 x_13, y_13 = extract_xy(results_13)
 
+# Экспериментальные данные для Q = 0.33
+x_exp = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+y_exp = [0.86, 0.86, 0.92, 0.96, 0.99, 1.00]
+
 plt.figure(figsize=(10, 6))
 
-plt.plot(x_13, y_13, marker="o", linewidth=2, label="Proportion of license plates with ≥ 4 unrecognized characters 33%")
-plt.plot(x_12, y_12, marker="s", linewidth=2,label="Proportion of license plates with ≥ 4 unrecognized characters 50%")
-plt.plot(x_23, y_23, marker="^", linewidth=2, label="Proportion of license plates with ≥ 4 unrecognized characters 67%")
+plt.plot(x_13, y_13, marker="o", linewidth=2, label="Q = 0.33")
+# plt.plot(x_12, y_12, marker="s", linewidth=2,label="Q = 0.5")
+# plt.plot(x_23, y_23, marker="^", linewidth=2, label="Q = 0.67")
+
+plt.scatter(
+    x_exp,
+    y_exp,
+    marker="D",
+    s=70,
+    label="Experiment, Q = 0.33",
+    zorder=5
+)
 
 plt.xlabel("Probability of successful identification of a vehicle by a camera", fontsize=15)
 plt.ylabel("Probability of vehicle identification\nby the HANPR system", fontsize=15)
 
 plt.ylim(0.5, 1.0)
 plt.grid(True, alpha=0.3)
-plt.legend(fontsize=14)
+plt.legend(fontsize=14, loc="lower right")
 # plt.title("Вероятность распознавания автомобиля гибридной системой", fontsize=18)
 
 plt.xticks(fontsize=12)
